@@ -3,9 +3,11 @@ const CACHE_KEY = "homerOrNot.homerCache.v2";
 const META_KEY = "homerOrNot.homerMeta.v2";
 const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";
 const SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v1";
+const HISTORY_KEY = "homerOrNot.visitHistory.v1";
 const SYNC_AREA = "sync";
 const LOCAL_AREA = "local";
 const QUICK_LINK_META_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const VISIT_HISTORY_LIMIT = 50;
 const HOMER_SYNC_INTERVAL_MINUTES = 5;
 const HOMER_FETCH_TIMEOUT_MS = 7000;
 const LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
@@ -64,6 +66,7 @@ let homerCache = null;
 let syncMeta = null;
 let quickLinkMeta = {};
 let searchEngineMeta = {};
+let visitHistory = [];
 let settingsDraft = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -78,6 +81,7 @@ async function init() {
   syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
   quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
   searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
+  visitHistory = await loadVisitHistory();
   applyTheme();
   renderAll();
   void refreshSearchEngineMetadata({ force: false });
@@ -96,7 +100,10 @@ function bindRefs() {
   refs.searchInput = byId("searchInput");
   refs.searchButtons = byId("searchButtons");
   refs.quickLinks = byId("quickLinks");
+  refs.servicesLayout = byId("servicesLayout");
   refs.servicesGrid = byId("servicesGrid");
+  refs.historyPanel = byId("historyPanel");
+  refs.historyList = byId("historyList");
   refs.settingsOverlay = byId("settingsOverlay");
   refs.closeSettingsButton = byId("closeSettingsButton");
   refs.engineRows = byId("engineRows");
@@ -125,6 +132,14 @@ function bindEvents() {
     if (event.key === "Escape" && !refs.settingsOverlay.classList.contains("hidden")) {
       closeSettings();
     }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void refreshVisitHistory();
+    }
+  });
+  window.addEventListener("focus", () => {
+    void refreshVisitHistory();
   });
   refs.addEngineButton.addEventListener("click", () => {
     if (!settingsDraft) {
@@ -171,11 +186,12 @@ function bindEvents() {
     homerCache = null;
     quickLinkMeta = {};
     searchEngineMeta = {};
+    visitHistory = [];
     settingsDraft = clone(state);
     syncMeta = null;
     await Promise.all([
       storageRemove(STATE_KEY, SYNC_AREA),
-      storageRemove([CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY], LOCAL_AREA),
+      storageRemove([CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA),
     ]);
     renderAll();
     renderSettings();
@@ -221,6 +237,7 @@ function renderAll() {
   renderSearchButtons();
   renderQuickLinks();
   renderServices(getVisibleServices(), getEmptyServicesMessage());
+  renderVisitHistory();
   setStatusFromCurrentData();
 }
 
@@ -287,6 +304,13 @@ function createQuickLink(link) {
   anchor.target = "_blank";
   anchor.rel = "noreferrer";
   anchor.title = title;
+  anchor.addEventListener("click", () => {
+    void addVisitHistoryItem({
+      title,
+      url: link.url,
+      source: "quick",
+    });
+  });
 
   const icon = document.createElement("span");
   icon.className = "quick-icon";
@@ -570,6 +594,13 @@ function createServiceRow(item) {
   anchor.target = item.target || "_blank";
   anchor.rel = "noreferrer";
   anchor.title = item.name;
+  anchor.addEventListener("click", () => {
+    void addVisitHistoryItem({
+      title: item.name || item.url,
+      url: item.url,
+      source: "homer",
+    });
+  });
 
   const logo = document.createElement("span");
   logo.className = "service-logo";
@@ -611,7 +642,7 @@ function handleSearchSubmit(event) {
   }
   const engine = getDefaultSearchEngine();
   if (engine) {
-    runSearch(engine, rawQuery);
+    void runSearch(engine, rawQuery);
   }
 }
 
@@ -619,9 +650,100 @@ function getDefaultSearchEngine() {
   return state.search.engines.find((item) => item.id === state.search.defaultEngineId) || state.search.engines[0];
 }
 
-function runSearch(engine, query) {
+async function runSearch(engine, query) {
   const target = engine.template.replace("{q}", encodeURIComponent(query));
+  await addVisitHistoryItem({
+    title: `${engine.title}: ${query}`,
+    url: target,
+    source: "search",
+  });
   window.location.assign(target);
+}
+
+function renderVisitHistory() {
+  refs.historyList.replaceChildren();
+  const isEmpty = !visitHistory.length;
+  refs.servicesLayout.classList.toggle("history-empty", isEmpty);
+  refs.historyPanel.classList.toggle("hidden", isEmpty);
+  if (isEmpty) {
+    return;
+  }
+
+  for (const item of visitHistory) {
+    const anchor = document.createElement("a");
+    anchor.className = "history-row";
+    anchor.href = item.url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.title = item.url;
+    anchor.addEventListener("click", () => {
+      void addVisitHistoryItem(item);
+    });
+
+    const title = document.createElement("span");
+    title.className = "history-title";
+    title.textContent = item.title || toDomain(item.url) || item.url;
+
+    const meta = document.createElement("span");
+    meta.className = "history-meta";
+    meta.textContent = formatHistoryMeta(item);
+
+    anchor.append(title, meta);
+    refs.historyList.append(anchor);
+  }
+}
+
+async function addVisitHistoryItem(item) {
+  const normalized = normalizeVisitHistoryItem(item);
+  if (!normalized) {
+    return;
+  }
+  normalized.visitedAt = Date.now();
+  visitHistory = [
+    normalized,
+    ...visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url)),
+  ].slice(0, VISIT_HISTORY_LIMIT);
+  renderVisitHistory();
+  if (hasBrowserHistoryApi()) {
+    return;
+  }
+  await storageSet(HISTORY_KEY, visitHistory, LOCAL_AREA);
+}
+
+async function loadVisitHistory() {
+  if (!hasBrowserHistoryApi()) {
+    return normalizeVisitHistory(await storageGet(HISTORY_KEY));
+  }
+  return await new Promise((resolve) => {
+    const chromeApi = globalThis.chrome;
+    chromeApi.history.search(
+      {
+        text: "",
+        startTime: 0,
+        maxResults: VISIT_HISTORY_LIMIT * 3,
+      },
+      (results) => {
+        if (chromeApi.runtime.lastError) {
+          resolve([]);
+          return;
+        }
+        resolve(normalizeVisitHistory((results || []).filter((item) => isHttpUrl(item.url))));
+      },
+    );
+  });
+}
+
+async function refreshVisitHistory() {
+  const nextHistory = await loadVisitHistory();
+  if (!nextHistory.length && !visitHistory.length) {
+    return;
+  }
+  visitHistory = nextHistory;
+  renderVisitHistory();
+}
+
+function hasBrowserHistoryApi() {
+  return typeof globalThis.chrome?.history?.search === "function";
 }
 
 async function syncHomer({ force }) {
@@ -1018,6 +1140,45 @@ function normalizeSearchEngineMeta(raw) {
     };
   }
   return out;
+}
+
+function normalizeVisitHistory(raw) {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const seen = new Set();
+  const out = [];
+  for (const item of raw) {
+    const normalized = normalizeVisitHistoryItem(item);
+    const key = normalized ? normalizeUrlKey(normalized.url) : "";
+    if (!normalized || !key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(normalized);
+    if (out.length >= VISIT_HISTORY_LIMIT) {
+      break;
+    }
+  }
+  return out;
+}
+
+function normalizeVisitHistoryItem(raw) {
+  if (!raw || typeof raw !== "object" || !isHttpUrl(raw.url)) {
+    return null;
+  }
+  const title = String(raw.title || "").replace(/\s+/g, " ").trim();
+  const fallbackTitle = toDomain(raw.url) || raw.url;
+  return {
+    title: title ? truncateHistoryTitle(title) : fallbackTitle,
+    url: raw.url,
+    source: typeof raw.source === "string" ? raw.source : "",
+    visitedAt: Number.isFinite(raw.visitedAt)
+      ? raw.visitedAt
+      : Number.isFinite(raw.lastVisitTime)
+        ? raw.lastVisitTime
+        : Date.now(),
+  };
 }
 
 function normalizeServiceGroups(raw, configUrl) {
@@ -1589,6 +1750,31 @@ function normalizeUrlKey(raw) {
 function truncateTitle(title) {
   const value = String(title || "").replace(/\s+/g, " ").trim();
   return value.length > 22 ? `${value.slice(0, 21).trim()}…` : value;
+}
+
+function truncateHistoryTitle(title) {
+  const value = String(title || "").replace(/\s+/g, " ").trim();
+  return value.length > 64 ? `${value.slice(0, 63).trim()}…` : value;
+}
+
+function formatHistoryMeta(item) {
+  const domain = toDomain(item.url);
+  const time = formatTime(item.visitedAt);
+  if (domain && time) {
+    return `${domain} · ${time}`;
+  }
+  return domain || time || "";
+}
+
+function formatTime(timestamp) {
+  try {
+    return new Intl.DateTimeFormat("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(timestamp));
+  } catch {
+    return "";
+  }
 }
 
 function blobToDataUrl(blob) {
