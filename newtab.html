@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>nikmedoed's home</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./newtab.config.js"></script>
+    <script src="./newtab.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <div class="top-actions" aria-label="Управление">
+        <button id="statusButton" class="status-button" type="button" title="Статус Homer">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">local</span>
+        </button>
+        <button id="syncButton" class="icon-button" type="button" title="Обновить Homer">↻</button>
+        <button id="settingsButton" class="icon-button" type="button" title="Настройки">⚙</button>
+      </div>
+
+      <section class="launch-panel" aria-label="Поиск и быстрые ссылки">
+        <form id="searchForm" class="search-row" autocomplete="off">
+          <input
+            id="searchInput"
+            class="search-input"
+            name="q"
+            type="search"
+            placeholder="Что ищем?"
+            spellcheck="false"
+            autofocus
+          />
+          <div id="searchButtons" class="search-buttons" aria-label="Поисковые сервисы"></div>
+        </form>
+        <nav id="quickLinks" class="quick-links" aria-label="Быстрые ссылки"></nav>
+      </section>
+
+      <section class="services-area" aria-label="Homer">
+        <div id="servicesGrid" class="services-grid"></div>
+      </section>
+    </main>
+
+    <div id="settingsOverlay" class="settings-overlay hidden">
+      <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header class="settings-header">
+          <h1 id="settingsTitle">Настройки</h1>
+          <button id="closeSettingsButton" class="icon-button" type="button" title="Закрыть">×</button>
+        </header>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Поиск</h2>
+            <button id="addEngineButton" class="secondary-button" type="button">Добавить</button>
+          </div>
+          <div id="engineRows" class="settings-rows"></div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Быстрые ссылки</h2>
+            <button id="addQuickLinkButton" class="secondary-button" type="button">Добавить</button>
+          </div>
+          <div id="quickLinkRows" class="settings-rows"></div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Homer</h2>
+          </div>
+          <div class="field-grid">
+            <label>
+              URL
+              <input id="homerUrlInput" type="url" placeholder="http://192.168.1.28/" />
+            </label>
+          </div>
+        </section>
+
+        <footer class="settings-footer">
+          <button id="resetButton" class="secondary-button danger-button" type="button">Сбросить</button>
+          <button id="saveButton" class="primary-button" type="button">Сохранить</button>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>

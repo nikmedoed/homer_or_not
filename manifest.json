@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt+pK7Pxdij0E1GjsEKwWOM+qX9BhHZyKpbu126YeJq7tbJTWFZmamUgKw815Goyg3ICxjID/V76JY5Z9rcCphw32G0GMRnXjmKcqNYW0GyRKsZP4kJqHSe5P5A5dc8vtaROs8VzmuFzZEX6aVzYKPH5lJWhMn7foojzqebZRYpQo4rz8Ng/o3cDI65VSw9YpOidhyCWywSNYN/Eb9RVx7/FqMZ0X7Km+qC855vZ9Km7FYQf183adcwdxYavrbfdn5Nfgyk42o4gAOGinI1ToZZORS57dSHjFgl52/U+Vsht8uzB4kLAmukumWFztiy1wQyFesvs3OMYtP5J0LsJ3GQIDAQAB",
+  "name": "Homer or Not",
+  "version": "0.2.0",
+  "description": "Local-first new tab with cached Homer services, configurable search, and quick links.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "action": {
+    "default_title": "Homer or Not"
+  }
+}
