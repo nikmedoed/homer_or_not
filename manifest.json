@@ -4,12 +4,24 @@
   "name": "Homer or Not",
   "version": "0.2.0",
   "description": "Local-first new tab with cached Homer services, configurable search, and quick links.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
   "action": {
-    "default_title": "Homer or Not"
+    "default_title": "Homer or Not",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }
