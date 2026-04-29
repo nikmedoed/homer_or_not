@@ -1,0 +1,5 @@
+node_modules/
+dist/
+homer_or_not-release/
+homer_or_not-release.zip
+*.map

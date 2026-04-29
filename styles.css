@@ -534,11 +534,11 @@ a {
 }
 
 .engine-row {
-  grid-template-columns: minmax(150px, 1fr) minmax(300px, 2fr) 66px 34px;
+  grid-template-columns: 34px minmax(150px, 1fr) minmax(300px, 2fr) 66px 34px;
 }
 
 .quick-row {
-  grid-template-columns: minmax(120px, 1fr) minmax(260px, 2fr) 34px;
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(260px, 2fr) 34px;
 }
 
 .settings-row input,
@@ -576,6 +576,42 @@ a {
 .check-field input {
   width: auto;
   height: auto;
+}
+
+.drag-handle {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  background: rgba(19, 17, 45, 0.7);
+  cursor: grab;
+  line-height: 1;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.drag-handle:hover,
+.dragging .drag-handle {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  background: rgba(38, 35, 83, 0.88);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.settings-row.dragging {
+  opacity: 0.55;
+}
+
+.settings-row.drag-over {
+  outline: 1px solid rgba(255, 255, 255, 0.34);
+  outline-offset: 3px;
 }
 
 .field-grid {
