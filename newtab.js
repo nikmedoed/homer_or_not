@@ -1,6 +1,7 @@
 (() => {
   // src/constants.js
   var STATE_KEY = "homerOrNot.state.v2";
+  var LOCAL_PATCH_KEY = "homerOrNot.localPatch.v1";
   var CACHE_KEY = "homerOrNot.homerCache.v2";
   var META_KEY = "homerOrNot.homerMeta.v2";
   var QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";
@@ -57,6 +58,9 @@
       homerUpdated: (date) => `Homer \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D: ${date}.`,
       homerOfflineCache: (date) => `Homer \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u043A\u0435\u0448: ${date}.`,
       homerOfflineNoCache: "Homer \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u043A\u0435\u0448\u0430 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.",
+      homerDisabled: "Homer \u043E\u0442\u043A\u043B\u044E\u0447\u0435\u043D \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E.",
+      disableHomerLocally: "\u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C Homer \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E",
+      localEnabled: "\u0412\u043A\u043B",
       inputTitle: "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435",
       inputSearchTemplate: "URL \u0441 {q}",
       remove: "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
@@ -109,6 +113,9 @@
       homerUpdated: (date) => `Homer updated: ${date}.`,
       homerOfflineCache: (date) => `Homer is unavailable, using cache: ${date}.`,
       homerOfflineNoCache: "Homer is unavailable, and there is no cache yet.",
+      homerDisabled: "Homer is disabled locally.",
+      disableHomerLocally: "Disable Homer locally",
+      localEnabled: "On",
       inputTitle: "Name",
       inputSearchTemplate: "URL with {q}",
       remove: "Remove",
@@ -800,6 +807,72 @@
       visits: normalizeVisitSettings(raw.visits, base.visits)
     };
   }
+  function normalizeSyncedState(raw, baseConfig) {
+    const state = normalizeState(raw, baseConfig);
+    state.search.defaultEngineId = "";
+    return state;
+  }
+  function createSyncedState(state) {
+    return {
+      search: {
+        engines: clone(state.search.engines)
+      },
+      quickLinks: clone(state.quickLinks),
+      homer: clone(state.homer),
+      visits: clone(state.visits)
+    };
+  }
+  function normalizeLocalPatch(raw, state) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const engineIds = new Set(state.search.engines.map((engine) => engine.id));
+    const quickLinkIds = new Set(state.quickLinks.map((link) => link.id));
+    const disabledEngineIds = normalizeIdList(source.search?.disabledEngineIds, engineIds);
+    const disabledLinkIds = normalizeIdList(source.quickLinks?.disabledLinkIds, quickLinkIds);
+    const visibleEngineIds = state.search.engines.map((engine) => engine.id).filter((id) => !disabledEngineIds.includes(id));
+    const defaultEngineId = typeof source.search?.defaultEngineId === "string" && visibleEngineIds.includes(source.search.defaultEngineId) ? source.search.defaultEngineId : visibleEngineIds[0] || "";
+    return {
+      search: {
+        defaultEngineId,
+        disabledEngineIds
+      },
+      quickLinks: {
+        disabledLinkIds
+      },
+      homer: {
+        disabled: source.homer?.disabled === true
+      }
+    };
+  }
+  function applyLocalPatch(state, localPatch) {
+    const next = normalizeState(state, state);
+    const patch = normalizeLocalPatch(localPatch, next);
+    next.search.defaultEngineId = patch.search.defaultEngineId || getVisibleSearchEngines({ state: next, localPatch: patch })[0]?.id || "";
+    return next;
+  }
+  function getVisibleSearchEngines(app2) {
+    const disabled = new Set(app2.localPatch?.search?.disabledEngineIds || []);
+    return app2.state.search.engines.filter((engine) => !disabled.has(engine.id));
+  }
+  function getVisibleQuickLinks(app2) {
+    const disabled = new Set(app2.localPatch?.quickLinks?.disabledLinkIds || []);
+    return app2.state.quickLinks.filter((link) => !disabled.has(link.id));
+  }
+  function normalizeIdList(raw, allowedIds) {
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const value of raw) {
+      const id = typeof value === "string" ? value.trim() : "";
+      if (!id || !allowedIds.has(id) || seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }
   function normalizeSearch(raw, fallback) {
     const fallbackSearch = fallback || FALLBACK_CONFIG.search;
     const engines = Array.isArray(raw?.engines) ? raw.engines.map(normalizeSearchEngine).filter(Boolean) : clone(fallbackSearch.engines);
@@ -1035,7 +1108,7 @@
     return truncateTitle(toDomain(link.url) || link.url);
   }
   async function refreshQuickLinkMetadata(app2, { force }) {
-    const links = app2.state.quickLinks.filter((link) => isHttpUrl(link.url));
+    const links = getVisibleQuickLinks(app2).filter((link) => isHttpUrl(link.url));
     let changed = false;
     const seen = /* @__PURE__ */ new Set();
     for (const link of links) {
@@ -1064,7 +1137,7 @@
     }
   }
   async function refreshSearchEngineMetadata(app2, { force }) {
-    const engines = app2.state.search.engines;
+    const engines = getVisibleSearchEngines(app2);
     let changed = false;
     const seen = /* @__PURE__ */ new Set();
     for (const engine of engines) {
@@ -1163,7 +1236,7 @@
   function renderSearchButtons(app2) {
     const { refs } = app2;
     refs.searchButtons.replaceChildren();
-    const engines = app2.state.search.engines;
+    const engines = getVisibleSearchEngines(app2);
     for (const engine of engines) {
       const button = document.createElement("button");
       button.type = "button";
@@ -1178,8 +1251,9 @@
           app2.runSearch(engine, query);
           return;
         }
+        app2.localPatch.search.defaultEngineId = engine.id;
+        void app2.persistLocalPatch();
         app2.state.search.defaultEngineId = engine.id;
-        void app2.persistState();
         renderSearchButtons(app2);
         refs.searchInput.focus();
       });
@@ -1206,7 +1280,7 @@
   }
   function renderQuickLinks(app2) {
     app2.refs.quickLinks.replaceChildren();
-    for (const link of app2.state.quickLinks) {
+    for (const link of getVisibleQuickLinks(app2)) {
       app2.refs.quickLinks.append(createQuickLink(app2, link));
     }
   }
@@ -1374,7 +1448,7 @@
     }
   }
   function getVisibleServices(app2) {
-    if (!app2.state.homer.url) {
+    if (app2.localPatch?.homer?.disabled || !app2.state.homer.url) {
       return [];
     }
     if (app2.homerCache?.services?.length) {
@@ -1383,6 +1457,9 @@
     return [];
   }
   function getEmptyServicesMessage(app2) {
+    if (app2.localPatch?.homer?.disabled) {
+      return t("homerDisabled");
+    }
     if (!app2.state.homer.url) {
       return t("homerUrlMissing");
     }
@@ -1392,6 +1469,10 @@
     return t("servicesEmptyFirstSync");
   }
   function setStatusFromCurrentData(app2) {
+    if (app2.localPatch?.homer?.disabled) {
+      setStatus(app2, "local", "off", t("homerDisabled"));
+      return;
+    }
     if (!app2.state.homer.url) {
       setStatus(app2, "local", "no url", t("homerUrlMissing"));
       return;
@@ -1411,6 +1492,7 @@
   // src/settings.js
   function openSettings(app2) {
     app2.settingsDraft = clone(app2.state);
+    app2.localPatchDraft = clone(app2.localPatch);
     renderSettings(app2);
     app2.refs.settingsOverlay.classList.remove("hidden");
     app2.refs.homerUrlInput.focus();
@@ -1418,6 +1500,7 @@
   function closeSettings(app2) {
     app2.refs.settingsOverlay.classList.add("hidden");
     app2.settingsDraft = null;
+    app2.localPatchDraft = null;
   }
   function renderSettings(app2) {
     if (!app2.settingsDraft) {
@@ -1426,11 +1509,13 @@
     renderEngineSettings(app2);
     renderQuickLinkSettings(app2);
     app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
+    app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
     app2.refs.frequentMinVisitsInput.value = String(app2.settingsDraft.visits.frequentMinVisits);
   }
   function renderEngineSettings(app2) {
     const { refs, settingsDraft } = app2;
+    const localPatchDraft = ensureLocalPatchDraft(app2);
     refs.engineRows.replaceChildren();
     for (const [index, engine] of settingsDraft.search.engines.entries()) {
       const row = document.createElement("div");
@@ -1439,12 +1524,14 @@
       attachReorderHandlers(row, dragHandle, settingsDraft.search.engines, index, () => renderSettings(app2));
       const title = createInput(t("inputTitle"), engine.title);
       const template = createInput(t("inputSearchTemplate"), engine.template);
+      const enabledWrap = createCheckField(t("localEnabled"), !localPatchDraft.search.disabledEngineIds.includes(engine.id));
       const defaultWrap = document.createElement("label");
       defaultWrap.className = "default-field";
       const defaultRadio = document.createElement("input");
       defaultRadio.type = "radio";
       defaultRadio.name = "defaultSearchEngine";
       defaultRadio.checked = engine.id === settingsDraft.search.defaultEngineId;
+      defaultRadio.disabled = localPatchDraft.search.disabledEngineIds.includes(engine.id);
       defaultWrap.append(defaultRadio, document.createTextNode("Enter"));
       const remove = createSmallButton("\xD7", t("remove"));
       title.addEventListener("input", () => {
@@ -1453,22 +1540,34 @@
       template.addEventListener("input", () => {
         engine.template = template.value;
       });
+      enabledWrap.input.addEventListener("change", () => {
+        updateDisabledId(localPatchDraft.search.disabledEngineIds, engine.id, !enabledWrap.input.checked);
+        if (!enabledWrap.input.checked && settingsDraft.search.defaultEngineId === engine.id) {
+          settingsDraft.search.defaultEngineId = getFirstEnabledEngineId(settingsDraft, localPatchDraft) || "";
+        }
+        if (enabledWrap.input.checked && !settingsDraft.search.defaultEngineId) {
+          settingsDraft.search.defaultEngineId = engine.id;
+        }
+        renderSettings(app2);
+      });
       defaultRadio.addEventListener("change", () => {
         settingsDraft.search.defaultEngineId = engine.id;
       });
       remove.addEventListener("click", () => {
         settingsDraft.search.engines = settingsDraft.search.engines.filter((item) => item.id !== engine.id);
+        updateDisabledId(localPatchDraft.search.disabledEngineIds, engine.id, false);
         if (settingsDraft.search.defaultEngineId === engine.id) {
-          settingsDraft.search.defaultEngineId = settingsDraft.search.engines[0]?.id || "";
+          settingsDraft.search.defaultEngineId = getFirstEnabledEngineId(settingsDraft, localPatchDraft) || "";
         }
         renderSettings(app2);
       });
-      row.append(dragHandle, title, template, defaultWrap, remove);
+      row.append(dragHandle, title, template, enabledWrap.label, defaultWrap, remove);
       refs.engineRows.append(row);
     }
   }
   function renderQuickLinkSettings(app2) {
     const { refs, settingsDraft } = app2;
+    const localPatchDraft = ensureLocalPatchDraft(app2);
     refs.quickLinkRows.replaceChildren();
     for (const [index, link] of settingsDraft.quickLinks.entries()) {
       const row = document.createElement("div");
@@ -1477,6 +1576,7 @@
       attachReorderHandlers(row, dragHandle, settingsDraft.quickLinks, index, () => renderSettings(app2));
       const title = createInput(t("inputQuickLinkTitle"), link.title);
       const url = createInput("URL", link.url, "url");
+      const enabledWrap = createCheckField(t("localEnabled"), !localPatchDraft.quickLinks.disabledLinkIds.includes(link.id));
       const remove = createSmallButton("\xD7", t("remove"));
       title.addEventListener("input", () => {
         link.title = title.value;
@@ -1484,11 +1584,15 @@
       url.addEventListener("input", () => {
         link.url = url.value;
       });
+      enabledWrap.input.addEventListener("change", () => {
+        updateDisabledId(localPatchDraft.quickLinks.disabledLinkIds, link.id, !enabledWrap.input.checked);
+      });
       remove.addEventListener("click", () => {
         settingsDraft.quickLinks = settingsDraft.quickLinks.filter((item) => item.id !== link.id);
+        updateDisabledId(localPatchDraft.quickLinks.disabledLinkIds, link.id, false);
         renderSettings(app2);
       });
-      row.append(dragHandle, title, url, remove);
+      row.append(dragHandle, title, url, enabledWrap.label, remove);
       refs.quickLinkRows.append(row);
     }
   }
@@ -1537,7 +1641,7 @@
 ${result.error}`);
       return;
     }
-    const blob = new Blob([`${JSON.stringify(result.state, null, 2)}
+    const blob = new Blob([`${JSON.stringify(createSyncedState(result.state), null, 2)}
 `], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1560,6 +1664,7 @@ ${result.error}`);
     try {
       const raw = JSON.parse(await file.text());
       app2.settingsDraft = normalizeState(raw, app2.baseConfig);
+      app2.localPatchDraft = normalizeLocalPatch(null, app2.settingsDraft);
       renderSettings(app2);
       window.alert(t("importSettingsLoaded"));
     } catch {
@@ -1611,7 +1716,28 @@ ${result.error}`);
         quickLinks: cleanedLinks,
         homer: nextHomer,
         visits: readVisitsDraft(app2)
-      }
+      },
+      localPatch: normalizeLocalPatch(
+        {
+          ...ensureLocalPatchDraft(app2),
+          search: {
+            ...ensureLocalPatchDraft(app2).search,
+            defaultEngineId: cleanedEngines.find((engine) => engine.id === settingsDraft.search.defaultEngineId)?.id || cleanedEngines[0].id
+          },
+          homer: {
+            disabled: app2.refs.homerDisabledInput.checked
+          }
+        },
+        {
+          search: {
+            engines: cleanedEngines,
+            defaultEngineId: ""
+          },
+          quickLinks: cleanedLinks,
+          homer: nextHomer,
+          visits: readVisitsDraft(app2)
+        }
+      )
     };
   }
   function readHomerDraft(app2) {
@@ -1638,6 +1764,15 @@ ${result.error}`);
     input.title = placeholder;
     return input;
   }
+  function createCheckField(text, checked) {
+    const label = document.createElement("label");
+    label.className = "check-field";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    label.append(input, document.createTextNode(text));
+    return { label, input };
+  }
   function createSmallButton(text, title) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1646,9 +1781,33 @@ ${result.error}`);
     button.title = title;
     return button;
   }
+  function ensureLocalPatchDraft(app2) {
+    if (!app2.localPatchDraft) {
+      app2.localPatchDraft = normalizeLocalPatch(null, app2.settingsDraft);
+    }
+    return app2.localPatchDraft;
+  }
+  function updateDisabledId(list, id, disabled) {
+    const index = list.indexOf(id);
+    if (disabled && index === -1) {
+      list.push(id);
+      return;
+    }
+    if (!disabled && index !== -1) {
+      list.splice(index, 1);
+    }
+  }
+  function getFirstEnabledEngineId(settingsDraft, localPatchDraft) {
+    return settingsDraft.search.engines.find((engine) => !localPatchDraft.search.disabledEngineIds.includes(engine.id))?.id || "";
+  }
 
   // src/sync.js
   async function syncHomer(app2, { force }) {
+    if (app2.localPatch?.homer?.disabled) {
+      setStatus(app2, "local", "off", t("homerDisabled"));
+      renderServices(app2, [], t("homerDisabled"));
+      return;
+    }
     if (!app2.state.homer.url) {
       setStatus(app2, "local", "no url", t("homerUrlMissing"));
       renderServices(app2, [], t("homerUrlMissing"));
@@ -1749,6 +1908,7 @@ ${result.error}`);
     refs: {},
     baseConfig: normalizeBootConfig(globalThis.HOMER_OR_NOT_CONFIG || FALLBACK_CONFIG),
     state: null,
+    localPatch: null,
     homerCache: null,
     syncMeta: null,
     quickLinkMeta: {},
@@ -1761,6 +1921,7 @@ ${result.error}`);
   app.addVisitHistoryItem = (item) => addVisitHistoryItem(app, item);
   app.applyTheme = () => applyTheme(app);
   app.persistState = persistState;
+  app.persistLocalPatch = persistLocalPatch;
   app.renderQuickLinks = () => renderQuickLinks(app);
   app.renderSearchButtons = () => renderSearchButtons(app);
   app.renderVisitPanels = () => renderVisitPanels(app);
@@ -1772,7 +1933,7 @@ ${result.error}`);
     bindRefs();
     applyLocalization();
     bindEvents();
-    app.state = await loadState();
+    await loadSettingsState();
     app.homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
     app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
     app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
@@ -1810,6 +1971,7 @@ ${result.error}`);
     refs.addEngineButton = byId("addEngineButton");
     refs.addQuickLinkButton = byId("addQuickLinkButton");
     refs.homerUrlInput = byId("homerUrlInput");
+    refs.homerDisabledInput = byId("homerDisabledInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
     refs.exportSettingsButton = byId("exportSettingsButton");
@@ -1873,21 +2035,47 @@ ${result.error}`);
     refs.saveButton.addEventListener("click", saveSettings);
     refs.resetButton.addEventListener("click", resetSettings);
   }
-  async function loadState() {
+  async function loadSettingsState() {
     const syncState = await storageGet(STATE_KEY, SYNC_AREA);
+    let syncedState;
+    let shouldPersistSyncedState = false;
+    let sourceDefaultEngineId = "";
     if (syncState) {
-      return normalizeState(syncState, app.baseConfig);
+      syncedState = normalizeSyncedState(syncState, app.baseConfig);
+      sourceDefaultEngineId = typeof syncState.search?.defaultEngineId === "string" ? syncState.search.defaultEngineId : "";
+      shouldPersistSyncedState = Boolean(sourceDefaultEngineId);
+    } else {
+      const legacyLocalState = await storageGet(STATE_KEY, LOCAL_AREA);
+      if (legacyLocalState) {
+        syncedState = normalizeSyncedState(legacyLocalState, app.baseConfig);
+        sourceDefaultEngineId = typeof legacyLocalState.search?.defaultEngineId === "string" ? legacyLocalState.search.defaultEngineId : "";
+        shouldPersistSyncedState = true;
+        await storageRemove(STATE_KEY, LOCAL_AREA);
+      } else {
+        syncedState = normalizeSyncedState(null, app.baseConfig);
+      }
     }
-    const legacyLocalState = await storageGet(STATE_KEY, LOCAL_AREA);
-    if (legacyLocalState) {
-      await storageSet(STATE_KEY, legacyLocalState, SYNC_AREA);
-      await storageRemove(STATE_KEY, LOCAL_AREA);
-      return normalizeState(legacyLocalState, app.baseConfig);
+    const rawLocalPatch = await storageGet(LOCAL_PATCH_KEY);
+    const localPatch = normalizeLocalPatch(rawLocalPatch, syncedState);
+    let shouldPersistLocalPatch = !rawLocalPatch;
+    if (!rawLocalPatch && sourceDefaultEngineId) {
+      localPatch.search.defaultEngineId = sourceDefaultEngineId;
+      shouldPersistLocalPatch = true;
     }
-    return normalizeState(null, app.baseConfig);
+    app.localPatch = normalizeLocalPatch(localPatch, syncedState);
+    app.state = applyLocalPatch(syncedState, app.localPatch);
+    await Promise.all([
+      shouldPersistSyncedState ? persistState() : Promise.resolve(),
+      shouldPersistLocalPatch ? persistLocalPatch() : Promise.resolve()
+    ]);
   }
   async function persistState() {
-    await storageSet(STATE_KEY, app.state, SYNC_AREA);
+    await storageSet(STATE_KEY, createSyncedState(app.state), SYNC_AREA);
+  }
+  async function persistLocalPatch() {
+    app.localPatch = normalizeLocalPatch(app.localPatch, app.state);
+    app.state = applyLocalPatch(app.state, app.localPatch);
+    await storageSet(LOCAL_PATCH_KEY, app.localPatch, LOCAL_AREA);
   }
   function handleSearchSubmit(event) {
     event.preventDefault();
@@ -1901,7 +2089,8 @@ ${result.error}`);
     }
   }
   function getDefaultSearchEngine() {
-    return app.state.search.engines.find((item) => item.id === app.state.search.defaultEngineId) || app.state.search.engines[0];
+    const engines = getVisibleSearchEngines(app);
+    return engines.find((item) => item.id === app.state.search.defaultEngineId) || engines[0];
   }
   function focusSearchInput(app2) {
     const active = document.activeElement;
@@ -1926,7 +2115,9 @@ ${result.error}`);
       return;
     }
     app.state = result.state;
-    await persistState();
+    app.localPatch = normalizeLocalPatch(result.localPatch, app.state);
+    app.state = applyLocalPatch(app.state, app.localPatch);
+    await Promise.all([persistState(), persistLocalPatch()]);
     closeSettings(app);
     renderAll(app);
     void refreshSearchEngineMetadata(app, { force: true });
@@ -1939,6 +2130,8 @@ ${result.error}`);
       return;
     }
     app.state = createDefaultState(app.baseConfig);
+    app.localPatch = normalizeLocalPatch(null, app.state);
+    app.state = applyLocalPatch(app.state, app.localPatch);
     app.homerCache = null;
     app.quickLinkMeta = {};
     app.searchEngineMeta = {};
@@ -1948,7 +2141,7 @@ ${result.error}`);
     app.syncMeta = null;
     await Promise.all([
       storageRemove(STATE_KEY, SYNC_AREA),
-      storageRemove([CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
+      storageRemove([LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
     ]);
     renderAll(app);
     renderSettings(app);
