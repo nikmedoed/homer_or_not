@@ -36,6 +36,7 @@ import {
   normalizeQuickLinkMeta,
   normalizeSearchEngineMeta,
   normalizeSyncedState,
+  normalizeViewMode,
   applyLocalPatch,
   getVisibleSearchEngines,
 } from "./state.js";
@@ -66,6 +67,7 @@ app.renderQuickLinks = () => renderQuickLinks(app);
 app.renderSearchButtons = () => renderSearchButtons(app);
 app.renderVisitPanels = () => renderVisitPanels(app);
 app.runSearch = runSearch;
+app.setViewMode = setViewMode;
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -83,6 +85,7 @@ async function init() {
   app.visitHistory = await loadVisitHistory();
   app.frequentVisits = await loadFrequentVisits(app);
   applyTheme(app);
+  renderViewMode(app);
   renderAll(app);
   void refreshSearchEngineMetadata(app, { force: false });
   void refreshQuickLinkMetadata(app, { force: false });
@@ -94,6 +97,7 @@ function bindRefs() {
   refs.statusButton = byId("statusButton");
   refs.statusDot = byId("statusDot");
   refs.statusText = byId("statusText");
+  refs.modeSwitcher = byId("modeSwitcher");
   refs.syncButton = byId("syncButton");
   refs.settingsButton = byId("settingsButton");
   refs.searchForm = byId("searchForm");
@@ -127,6 +131,12 @@ function bindRefs() {
 function bindEvents() {
   const { refs } = app;
   refs.searchForm.addEventListener("submit", handleSearchSubmit);
+  refs.modeSwitcher.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-mode]");
+    if (button) {
+      void setViewMode(button.dataset.mode);
+    }
+  });
   refs.syncButton.addEventListener("click", () => {
     void syncHomer(app, { force: true });
   });
@@ -228,6 +238,25 @@ async function persistLocalPatch() {
   await storageSet(LOCAL_PATCH_KEY, app.localPatch, LOCAL_AREA);
 }
 
+async function setViewMode(mode) {
+  if (!app.localPatch) {
+    app.localPatch = normalizeLocalPatch(null, app.state);
+  }
+  app.localPatch.viewMode = normalizeViewMode(mode);
+  renderViewMode(app);
+  await persistLocalPatch();
+}
+
+function renderViewMode({ refs, localPatch }) {
+  const mode = normalizeViewMode(localPatch?.viewMode);
+  document.body.dataset.viewMode = mode;
+  refs.modeSwitcher.querySelectorAll("[data-mode]").forEach((button) => {
+    const isActive = button.dataset.mode === mode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
 function handleSearchSubmit(event) {
   event.preventDefault();
   const rawQuery = app.refs.searchInput.value.trim();
@@ -291,6 +320,7 @@ async function resetSettings() {
     storageRemove(STATE_KEY, SYNC_AREA),
     storageRemove([LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA),
   ]);
+  renderViewMode(app);
   renderAll(app);
   renderSettings(app);
   void refreshSearchEngineMetadata(app, { force: true });

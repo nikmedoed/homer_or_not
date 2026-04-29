@@ -3,6 +3,10 @@ export const LOCALE = getPreferredLocale();
 const I18N = {
   ru: {
     topActions: "Управление",
+    viewMode: "Режим отображения",
+    viewModeFull: "Полный",
+    viewModeBase: "База",
+    viewModeZen: "Дзен",
     homerStatus: "Статус Homer",
     syncHomer: "Обновить Homer",
     settings: "Настройки",
@@ -60,6 +64,10 @@ const I18N = {
   },
   en: {
     topActions: "Controls",
+    viewMode: "View mode",
+    viewModeFull: "Full",
+    viewModeBase: "Base",
+    viewModeZen: "Zen",
     homerStatus: "Homer status",
     syncHomer: "Refresh Homer",
     settings: "Settings",

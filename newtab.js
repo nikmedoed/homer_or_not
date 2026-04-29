@@ -20,6 +20,10 @@
   var I18N = {
     ru: {
       topActions: "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435",
+      viewMode: "\u0420\u0435\u0436\u0438\u043C \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F",
+      viewModeFull: "\u041F\u043E\u043B\u043D\u044B\u0439",
+      viewModeBase: "\u0411\u0430\u0437\u0430",
+      viewModeZen: "\u0414\u0437\u0435\u043D",
       homerStatus: "\u0421\u0442\u0430\u0442\u0443\u0441 Homer",
       syncHomer: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C Homer",
       settings: "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
@@ -77,6 +81,10 @@
     },
     en: {
       topActions: "Controls",
+      viewMode: "View mode",
+      viewModeFull: "Full",
+      viewModeBase: "Base",
+      viewModeZen: "Zen",
       homerStatus: "Homer status",
       syncHomer: "Refresh Homer",
       settings: "Settings",
@@ -835,6 +843,7 @@
     const visibleEngineIds = state.search.engines.map((engine) => engine.id).filter((id) => !disabledEngineIds.includes(id));
     const defaultEngineId = typeof source.search?.defaultEngineId === "string" && visibleEngineIds.includes(source.search.defaultEngineId) ? source.search.defaultEngineId : visibleEngineIds[0] || "";
     return {
+      viewMode: normalizeViewMode(source.viewMode),
       search: {
         defaultEngineId,
         disabledEngineIds
@@ -850,6 +859,9 @@
         showRecent: source.visits?.showRecent !== false
       }
     };
+  }
+  function normalizeViewMode(value) {
+    return ["full", "base", "zen"].includes(value) ? value : "full";
   }
   function applyLocalPatch(state, localPatch) {
     const next = normalizeState(state, state);
@@ -1945,6 +1957,7 @@ ${result.error}`);
   app.renderSearchButtons = () => renderSearchButtons(app);
   app.renderVisitPanels = () => renderVisitPanels(app);
   app.runSearch = runSearch;
+  app.setViewMode = setViewMode;
   document.addEventListener("DOMContentLoaded", () => {
     void init();
   });
@@ -1960,6 +1973,7 @@ ${result.error}`);
     app.visitHistory = await loadVisitHistory();
     app.frequentVisits = await loadFrequentVisits(app);
     applyTheme(app);
+    renderViewMode(app);
     renderAll(app);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
@@ -1970,6 +1984,7 @@ ${result.error}`);
     refs.statusButton = byId("statusButton");
     refs.statusDot = byId("statusDot");
     refs.statusText = byId("statusText");
+    refs.modeSwitcher = byId("modeSwitcher");
     refs.syncButton = byId("syncButton");
     refs.settingsButton = byId("settingsButton");
     refs.searchForm = byId("searchForm");
@@ -2002,6 +2017,12 @@ ${result.error}`);
   function bindEvents() {
     const { refs } = app;
     refs.searchForm.addEventListener("submit", handleSearchSubmit);
+    refs.modeSwitcher.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-mode]");
+      if (button) {
+        void setViewMode(button.dataset.mode);
+      }
+    });
     refs.syncButton.addEventListener("click", () => {
       void syncHomer(app, { force: true });
     });
@@ -2097,6 +2118,23 @@ ${result.error}`);
     app.state = applyLocalPatch(app.state, app.localPatch);
     await storageSet(LOCAL_PATCH_KEY, app.localPatch, LOCAL_AREA);
   }
+  async function setViewMode(mode) {
+    if (!app.localPatch) {
+      app.localPatch = normalizeLocalPatch(null, app.state);
+    }
+    app.localPatch.viewMode = normalizeViewMode(mode);
+    renderViewMode(app);
+    await persistLocalPatch();
+  }
+  function renderViewMode({ refs, localPatch }) {
+    const mode = normalizeViewMode(localPatch?.viewMode);
+    document.body.dataset.viewMode = mode;
+    refs.modeSwitcher.querySelectorAll("[data-mode]").forEach((button) => {
+      const isActive = button.dataset.mode === mode;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+  }
   function handleSearchSubmit(event) {
     event.preventDefault();
     const rawQuery = app.refs.searchInput.value.trim();
@@ -2156,6 +2194,7 @@ ${result.error}`);
       storageRemove(STATE_KEY, SYNC_AREA),
       storageRemove([LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
     ]);
+    renderViewMode(app);
     renderAll(app);
     renderSettings(app);
     void refreshSearchEngineMetadata(app, { force: true });

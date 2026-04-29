@@ -34,6 +34,7 @@ export function createDefaultState(baseConfig) {
 
 export function createDefaultLocalPatch() {
   return {
+    viewMode: "full",
     search: {
       defaultEngineId: "",
       disabledEngineIds: [],
@@ -96,6 +97,7 @@ export function normalizeLocalPatch(raw, state) {
       : visibleEngineIds[0] || "";
 
   return {
+    viewMode: normalizeViewMode(source.viewMode),
     search: {
       defaultEngineId,
       disabledEngineIds,
@@ -111,6 +113,10 @@ export function normalizeLocalPatch(raw, state) {
       showRecent: source.visits?.showRecent !== false,
     },
   };
+}
+
+export function normalizeViewMode(value) {
+  return ["full", "base", "zen"].includes(value) ? value : "full";
 }
 
 export function applyLocalPatch(state, localPatch) {

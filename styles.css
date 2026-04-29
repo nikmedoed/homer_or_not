@@ -86,6 +86,52 @@ a {
   align-items: center;
 }
 
+#statusButton {
+  order: 1;
+}
+
+#syncButton {
+  order: 2;
+}
+
+#modeSwitcher {
+  order: 3;
+}
+
+#settingsButton {
+  order: 4;
+}
+
+.mode-switcher {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(19, 17, 45, 0.7);
+}
+
+.mode-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.mode-button:hover,
+.mode-button.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .icon-button,
 .status-button,
 .secondary-button,
@@ -480,6 +526,22 @@ a {
   border-radius: var(--radius);
   background: var(--card);
   color: var(--muted);
+}
+
+body[data-view-mode="base"] .visit-panel,
+body[data-view-mode="zen"] .services-area,
+body[data-view-mode="zen"] .status-button,
+body[data-view-mode="zen"] #syncButton {
+  display: none;
+}
+
+body[data-view-mode="zen"] .page-shell {
+  display: grid;
+  align-items: center;
+}
+
+body[data-view-mode="zen"] .launch-panel {
+  margin: 0 auto;
 }
 
 .settings-overlay {
