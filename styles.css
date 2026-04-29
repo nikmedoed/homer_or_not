@@ -13,6 +13,8 @@
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
   --page-top-space: clamp(34px, 5.8vh, 64px);
   --page-bottom-space: var(--page-top-space);
+  --side-column-width: 292px;
+  --layout-gap: 24px;
 }
 
 *,
@@ -751,12 +753,52 @@ body[data-view-mode="zen"] .launch-panel {
   margin-top: 22px;
 }
 
-@media (min-width: 2000px) {
+@media (min-width: 1600px) {
+  :root {
+    --center-column-width: calc(
+      100vw - 44px - var(--side-column-width) - var(--side-column-width) - var(--layout-gap) - var(--layout-gap)
+    );
+    --side-column-offset: max(
+      16px,
+      calc(
+        (
+            100vw - var(--center-column-width) - var(--side-column-width) - var(--side-column-width) -
+              var(--layout-gap) - var(--layout-gap)
+          ) / 2
+      )
+    );
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  .page-shell {
+    width: var(--center-column-width);
+    height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .page-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .launch-panel {
+    width: 100%;
+  }
+
+  .search-row {
+    grid-template-columns: minmax(320px, 1fr) auto;
+  }
+
   .visit-panel {
     position: fixed;
     top: var(--page-top-space);
     bottom: var(--page-bottom-space);
-    width: 292px;
+    width: var(--side-column-width);
     height: auto;
     margin-top: 0;
     padding: 16px 10px 10px;
@@ -769,11 +811,11 @@ body[data-view-mode="zen"] .launch-panel {
   }
 
   .frequent-panel {
-    left: max(16px, calc((100vw - var(--page-max)) / 2 - 316px));
+    left: var(--side-column-offset);
   }
 
   .history-panel {
-    right: max(16px, calc((100vw - var(--page-max)) / 2 - 316px));
+    right: var(--side-column-offset);
   }
 
   .visit-heading {
@@ -800,6 +842,14 @@ body[data-view-mode="zen"] .launch-panel {
 
   .visit-row {
     padding: 4px 6px;
+  }
+
+  body[data-view-mode="zen"] {
+    overflow: hidden;
+  }
+
+  body[data-view-mode="zen"] .page-shell {
+    overflow: hidden;
   }
 }
 

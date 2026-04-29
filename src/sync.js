@@ -26,7 +26,7 @@ export async function syncHomer(app, { force }) {
 
   if (!app.state.homer.url) {
     setStatus(app, "local", "no url", t("homerUrlMissing"));
-    renderServices(app, [], t("homerUrlMissing"));
+    renderServices(app, [], "");
     return;
   }
 
@@ -49,7 +49,7 @@ export async function syncHomer(app, { force }) {
       setStatus(app, "cache", "offline", t("homerRecentFailureCache", formatDateTime(app.homerCache.fetchedAt)));
       return;
     }
-    renderServices(app, [], t("homerNeverFetched"));
+    renderServices(app, [], "");
     setStatus(app, "local", "no homer", t("homerRecentFailureNoCache"));
     return;
   }
@@ -92,7 +92,7 @@ export async function syncHomer(app, { force }) {
       setStatus(app, "cache", "offline", t("homerOfflineCache", formatDateTime(app.homerCache.fetchedAt)));
       return;
     }
-    renderServices(app, [], t("homerNeverFetched"));
+    renderServices(app, [], "");
     setStatus(app, "local", "no homer", t("homerOfflineNoCache"));
   }
 }

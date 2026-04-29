@@ -51,13 +51,11 @@
       save: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C",
       searchAria: "\u041F\u043E\u0438\u0441\u043A",
       resetConfirm: "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u043E\u0439 \u043A newtab.config.js?",
-      servicesEmptyAfterSync: "\u041F\u043B\u0438\u0442\u043A\u0438 Homer \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0443\u0441\u043F\u0435\u0448\u043D\u043E\u0439 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u0438.",
       miscellaneous: "\u0420\u0430\u0437\u043D\u043E\u0435",
       homerUrlMissing: "URL Homer \u043D\u0435 \u0437\u0430\u0434\u0430\u043D.",
       homerUrlInvalid: "\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 URL Homer.",
       homerCache: (date) => `\u041A\u0435\u0448 Homer: ${date}.`,
       homerRecentFailureCache: (date) => `Homer \u043D\u0435\u0434\u0430\u0432\u043D\u043E \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u043A\u0435\u0448: ${date}.`,
-      homerNeverFetched: "\u042D\u0442\u043E\u0442 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0435\u0449\u0435 \u043D\u0438 \u0440\u0430\u0437\u0443 \u043D\u0435 \u043F\u043E\u043B\u0443\u0447\u0438\u043B Homer.",
       homerRecentFailureNoCache: "Homer \u043D\u0435\u0434\u0430\u0432\u043D\u043E \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B, \u043A\u0435\u0448\u0430 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.",
       homerAway: "\u041F\u043E\u0445\u043E\u0436\u0435, \u044D\u0442\u043E \u043D\u0435 \u0434\u043E\u043C\u0430\u0448\u043D\u044F\u044F \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u0435\u0442\u044C.",
       homerSyncing: "\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u044F Homer...",
@@ -76,7 +74,6 @@
       needSearchEngine: "\u041D\u0443\u0436\u0435\u043D \u0445\u043E\u0442\u044F \u0431\u044B \u043E\u0434\u0438\u043D \u043F\u043E\u0438\u0441\u043A\u043E\u0432\u0438\u043A.",
       searchTemplateMissingQuery: "\u0412 URL \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043F\u043E\u0438\u0441\u043A\u043E\u0432\u0438\u043A\u0430 \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C {q}.",
       quickLinkBadUrl: "\u0412 \u0431\u044B\u0441\u0442\u0440\u044B\u0445 \u0441\u0441\u044B\u043B\u043A\u0430\u0445 \u0435\u0441\u0442\u044C \u043D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 URL.",
-      servicesEmptyFirstSync: "\u041F\u043B\u0438\u0442\u043A\u0438 Homer \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0439 \u0443\u0441\u043F\u0435\u0448\u043D\u043E\u0439 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u0438.",
       visitCount: (count) => `${count} \u043F\u043E\u0441\u0435\u0449.`
     },
     en: {
@@ -112,13 +109,11 @@
       save: "Save",
       searchAria: "Search",
       resetConfirm: "Reset new tab settings to newtab.config.js?",
-      servicesEmptyAfterSync: "Homer tiles will appear after a successful sync.",
       miscellaneous: "Other",
       homerUrlMissing: "Homer URL is not set.",
       homerUrlInvalid: "Invalid Homer URL.",
       homerCache: (date) => `Homer cache: ${date}.`,
       homerRecentFailureCache: (date) => `Homer did not respond recently, using cache: ${date}.`,
-      homerNeverFetched: "This browser has not fetched Homer yet.",
       homerRecentFailureNoCache: "Homer did not respond recently, and there is no cache yet.",
       homerAway: "This does not look like the home local network.",
       homerSyncing: "Syncing Homer...",
@@ -137,7 +132,6 @@
       needSearchEngine: "At least one search engine is required.",
       searchTemplateMissingQuery: "Every search engine URL must include {q}.",
       quickLinkBadUrl: "One of the quick links has an invalid URL.",
-      servicesEmptyFirstSync: "Homer tiles will appear after the first successful sync.",
       visitCount: (count) => `${count} visits`
     }
   };
@@ -1339,7 +1333,7 @@
     anchor.append(icon, label);
     return anchor;
   }
-  function renderServices(app2, services, emptyMessage = t("servicesEmptyAfterSync")) {
+  function renderServices(app2, services, emptyMessage = "") {
     app2.refs.servicesGrid.replaceChildren();
     if (!services.length) {
       if (!emptyMessage) {
@@ -1482,16 +1476,7 @@
     return [];
   }
   function getEmptyServicesMessage(app2) {
-    if (app2.localPatch?.homer?.disabled) {
-      return "";
-    }
-    if (!app2.state.homer.url) {
-      return t("homerUrlMissing");
-    }
-    if (app2.homerCache?.services?.length) {
-      return "";
-    }
-    return t("servicesEmptyFirstSync");
+    return "";
   }
   function setStatusFromCurrentData(app2) {
     if (app2.localPatch?.homer?.disabled) {
@@ -1841,7 +1826,7 @@ ${result.error}`);
     }
     if (!app2.state.homer.url) {
       setStatus(app2, "local", "no url", t("homerUrlMissing"));
-      renderServices(app2, [], t("homerUrlMissing"));
+      renderServices(app2, [], "");
       return;
     }
     const endpoints = deriveHomerEndpoints(app2.state.homer.url);
@@ -1861,7 +1846,7 @@ ${result.error}`);
         setStatus(app2, "cache", "offline", t("homerRecentFailureCache", formatDateTime(app2.homerCache.fetchedAt)));
         return;
       }
-      renderServices(app2, [], t("homerNeverFetched"));
+      renderServices(app2, [], "");
       setStatus(app2, "local", "no homer", t("homerRecentFailureNoCache"));
       return;
     }
@@ -1902,7 +1887,7 @@ ${result.error}`);
         setStatus(app2, "cache", "offline", t("homerOfflineCache", formatDateTime(app2.homerCache.fetchedAt)));
         return;
       }
-      renderServices(app2, [], t("homerNeverFetched"));
+      renderServices(app2, [], "");
       setStatus(app2, "local", "no homer", t("homerOfflineNoCache"));
     }
   }

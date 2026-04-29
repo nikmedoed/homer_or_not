@@ -106,7 +106,7 @@ function createQuickLink(app, link) {
   return anchor;
 }
 
-export function renderServices(app, services, emptyMessage = t("servicesEmptyAfterSync")) {
+export function renderServices(app, services, emptyMessage = "") {
   app.refs.servicesGrid.replaceChildren();
   if (!services.length) {
     if (!emptyMessage) {
@@ -266,16 +266,7 @@ export function getVisibleServices(app) {
 }
 
 export function getEmptyServicesMessage(app) {
-  if (app.localPatch?.homer?.disabled) {
-    return "";
-  }
-  if (!app.state.homer.url) {
-    return t("homerUrlMissing");
-  }
-  if (app.homerCache?.services?.length) {
-    return "";
-  }
-  return t("servicesEmptyFirstSync");
+  return "";
 }
 
 export function setStatusFromCurrentData(app) {
