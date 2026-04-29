@@ -22,24 +22,14 @@ window.HOMER_OR_NOT_CONFIG = {
         template: "https://www.youtube.com/results?search_query={q}",
       },
       {
-        id: "ozon",
-        title: "Ozon",
-        template: "https://www.ozon.ru/search/?text={q}",
-      },
-      {
-        id: "wildberries",
-        title: "Wildberries",
-        template: "https://www.wildberries.ru/catalog/0/search.aspx?search={q}",
-      },
-      {
         id: "aliexpress",
         title: "AliExpress",
         template: "https://www.aliexpress.com/wholesale?SearchText={q}",
       },
       {
-        id: "rutracker",
-        title: "RuTracker",
-        template: "https://rutracker.org/forum/tracker.php?nm={q}",
+        id: "amazon",
+        title: "Amazon",
+        template: "https://www.amazon.com/s?k={q}",
       },
       {
         id: "kinorium",
@@ -54,11 +44,6 @@ window.HOMER_OR_NOT_CONFIG = {
   },
   quickLinks: [
     {
-      id: "images",
-      title: "Картинки",
-      url: "https://yandex.ru/images/",
-    },
-    {
       id: "calendar",
       title: "Календарь",
       url: "https://calendar.google.com/calendar/u/0/r?tab=gc",
@@ -69,34 +54,9 @@ window.HOMER_OR_NOT_CONFIG = {
       url: "https://yandex.ru/maps",
     },
     {
-      id: "translate",
-      title: "Переводчик",
-      url: "https://translate.yandex.ru/",
-    },
-    {
       id: "notion",
       title: "Notion",
       url: "https://www.notion.so/",
-    },
-    {
-      id: "ocr",
-      title: "OCR",
-      url: "https://translate.yandex.ru/ocr",
-    },
-    {
-      id: "ozon-orders",
-      title: "Ozon заказы",
-      url: "https://am.ozon.com/my/orderlist/",
-    },
-    {
-      id: "wb-orders",
-      title: "WB заказы",
-      url: "https://www.wildberries.ru/lk/myorders/delivery",
-    },
-    {
-      id: "chatgpt-usage",
-      title: "ChatGPT usage",
-      url: "https://chatgpt.com/codex/settings/usage",
     },
     {
       id: "chatgpt",

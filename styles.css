@@ -637,6 +637,21 @@ a {
   padding: 0 12px;
 }
 
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.import-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .primary-button {
   min-width: 120px;
   background: #3867d6;

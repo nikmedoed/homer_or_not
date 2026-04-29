@@ -110,6 +110,8 @@ function bindRefs() {
   refs.homerUrlInput = byId("homerUrlInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
+  refs.exportSettingsButton = byId("exportSettingsButton");
+  refs.importSettingsInput = byId("importSettingsInput");
   refs.resetButton = byId("resetButton");
   refs.saveButton = byId("saveButton");
 }
@@ -162,6 +164,8 @@ function bindEvents() {
     });
     renderSettings();
   });
+  refs.exportSettingsButton.addEventListener("click", handleExportSettings);
+  refs.importSettingsInput.addEventListener("change", handleImportSettings);
   refs.saveButton.addEventListener("click", async () => {
     const result = validateSettingsDraft();
     if (!result.ok) {
@@ -995,6 +999,42 @@ function attachReorderHandlers(row, handle, items, index, onMove) {
     moveItem(items, fromIndex, index);
     onMove();
   });
+}
+
+function handleExportSettings() {
+  const result = validateSettingsDraft();
+  if (!result.ok) {
+    window.alert(`${t("exportSettingsInvalid")}\n${result.error}`);
+    return;
+  }
+  const blob = new Blob([`${JSON.stringify(result.state, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `homer-or-not-settings-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function handleImportSettings(event) {
+  if (!settingsDraft) {
+    return;
+  }
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) {
+    return;
+  }
+  try {
+    const raw = JSON.parse(await file.text());
+    settingsDraft = normalizeState(raw);
+    renderSettings();
+    window.alert(t("importSettingsLoaded"));
+  } catch {
+    window.alert(t("importSettingsInvalid"));
+  }
 }
 
 function moveItem(items, fromIndex, toIndex) {

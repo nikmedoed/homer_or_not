@@ -35,6 +35,11 @@
       visits: "\u041F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u044F",
       historyPool: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C",
       minVisits: "\u041C\u0438\u043D\u0438\u043C\u0443\u043C \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u0439 \u0434\u043B\u044F \u0447\u0430\u0441\u0442\u044B\u0445",
+      exportSettings: "\u0412\u044B\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
+      exportSettingsInvalid: "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0438\u0441\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u043E\u0448\u0438\u0431\u043A\u0438 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445.",
+      importSettings: "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
+      importSettingsInvalid: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0438\u0437 \u0444\u0430\u0439\u043B\u0430.",
+      importSettingsLoaded: "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u044B. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C\xBB, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C.",
       reset: "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C",
       save: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C",
       searchAria: "\u041F\u043E\u0438\u0441\u043A",
@@ -82,6 +87,11 @@
       visits: "Visits",
       historyPool: "History entries to scan",
       minVisits: "Minimum visits for frequent sites",
+      exportSettings: "Export settings",
+      exportSettingsInvalid: "Fix the settings errors first.",
+      importSettings: "Import settings",
+      importSettingsInvalid: "Could not load settings from the file.",
+      importSettingsLoaded: "Settings loaded. Click Save to apply them.",
       reset: "Reset",
       save: "Save",
       searchAria: "Search",
@@ -816,6 +826,8 @@
     refs.homerUrlInput = byId("homerUrlInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
+    refs.exportSettingsButton = byId("exportSettingsButton");
+    refs.importSettingsInput = byId("importSettingsInput");
     refs.resetButton = byId("resetButton");
     refs.saveButton = byId("saveButton");
   }
@@ -867,6 +879,8 @@
       });
       renderSettings();
     });
+    refs.exportSettingsButton.addEventListener("click", handleExportSettings);
+    refs.importSettingsInput.addEventListener("change", handleImportSettings);
     refs.saveButton.addEventListener("click", async () => {
       const result = validateSettingsDraft();
       if (!result.ok) {
@@ -1574,6 +1588,42 @@
       moveItem(items, fromIndex, index);
       onMove();
     });
+  }
+  function handleExportSettings() {
+    const result = validateSettingsDraft();
+    if (!result.ok) {
+      window.alert(`${t("exportSettingsInvalid")}
+${result.error}`);
+      return;
+    }
+    const blob = new Blob([`${JSON.stringify(result.state, null, 2)}
+`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `homer-or-not-settings-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+  async function handleImportSettings(event) {
+    if (!settingsDraft) {
+      return;
+    }
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    try {
+      const raw = JSON.parse(await file.text());
+      settingsDraft = normalizeState(raw);
+      renderSettings();
+      window.alert(t("importSettingsLoaded"));
+    } catch {
+      window.alert(t("importSettingsInvalid"));
+    }
   }
   function moveItem(items, fromIndex, toIndex) {
     if (toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) {
