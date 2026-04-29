@@ -37,7 +37,7 @@ Default settings live in [newtab.config.js](./newtab.config.js):
 
 The settings button in the page can also edit search engines, quick links, and the Homer URL without changing files. `Reset` restores the values from `newtab.config.js`.
 
-Quick-link labels are manual when `title` is set. If `title` is empty, the extension tries to fetch the page title and falls back to the domain. Quick-link and search-engine icons are fetched from site favicons and cached locally.
+Quick-link labels are manual when `title` is set. If `title` is empty, the extension falls back to the domain. Quick-link and search-engine icons are fetched through Chrome's favicon endpoint and cached locally.
 
 ## Homer Sync
 

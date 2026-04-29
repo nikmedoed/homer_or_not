@@ -573,31 +573,13 @@ async function refreshSearchEngineMetadata({ force }) {
 }
 
 async function fetchQuickLinkMetadata(url) {
-  let pageUrl = url;
-  let title = "";
-  let iconUrl = "";
-
-  try {
-    const response = await fetchWithTimeout(url, 6500, { cache: "no-store" });
-    pageUrl = response.url || url;
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("text/html") || contentType.includes("application/xhtml")) {
-      const html = await response.text();
-      const parsed = parsePageMetadata(html, pageUrl);
-      title = parsed.title;
-      iconUrl = parsed.iconUrl;
-    }
-  } catch {
-    // Some sites block HTML fetches. Favicon fallback below still often works.
-  }
-
-  if (!iconUrl) {
-    iconUrl = getDefaultFaviconUrl(pageUrl);
-  }
+  const pageUrl = url;
+  const chromeFaviconUrl = getChromeFaviconUrl(pageUrl, 32);
+  const iconDataUrl = chromeFaviconUrl ? await fetchIconDataUrl(chromeFaviconUrl) : "";
 
   return {
-    title,
-    iconDataUrl: iconUrl ? await fetchIconDataUrl(iconUrl) : "",
+    title: "",
+    iconDataUrl: iconDataUrl || (await fetchIconDataUrl(getDefaultFaviconUrl(pageUrl))),
   };
 }
 
@@ -665,6 +647,16 @@ function getDefaultFaviconUrl(url) {
   } catch {
     return "";
   }
+}
+
+function getChromeFaviconUrl(pageUrl, size) {
+  if (typeof globalThis.chrome?.runtime?.getURL !== "function" || !isHttpUrl(pageUrl)) {
+    return "";
+  }
+  const url = new URL(globalThis.chrome.runtime.getURL("/_favicon/"));
+  url.searchParams.set("pageUrl", pageUrl);
+  url.searchParams.set("size", String(size));
+  return url.href;
 }
 
 function pruneQuickLinkMeta(activeKeys) {
