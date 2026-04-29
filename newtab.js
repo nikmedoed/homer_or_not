@@ -1322,6 +1322,9 @@
   function renderServices(app2, services, emptyMessage = t("servicesEmptyAfterSync")) {
     app2.refs.servicesGrid.replaceChildren();
     if (!services.length) {
+      if (!emptyMessage) {
+        return;
+      }
       const empty = document.createElement("p");
       empty.className = "empty-message";
       empty.textContent = emptyMessage;
@@ -1458,7 +1461,7 @@
   }
   function getEmptyServicesMessage(app2) {
     if (app2.localPatch?.homer?.disabled) {
-      return t("homerDisabled");
+      return "";
     }
     if (!app2.state.homer.url) {
       return t("homerUrlMissing");
@@ -1805,7 +1808,7 @@ ${result.error}`);
   async function syncHomer(app2, { force }) {
     if (app2.localPatch?.homer?.disabled) {
       setStatus(app2, "local", "off", t("homerDisabled"));
-      renderServices(app2, [], t("homerDisabled"));
+      renderServices(app2, [], "");
       return;
     }
     if (!app2.state.homer.url) {

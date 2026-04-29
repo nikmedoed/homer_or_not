@@ -1,11 +1,12 @@
 import { FALLBACK_CONFIG } from "./default-config.js";
 import { deriveHomerEndpoints } from "./homer.js";
 import { t } from "./i18n.js";
-import { normalizeState, normalizeVisitSettings } from "./state.js";
+import { createSyncedState, normalizeLocalPatch, normalizeState, normalizeVisitSettings } from "./state.js";
 import { clone, isHttpUrl, makeId } from "./utils.js";
 
 export function openSettings(app) {
   app.settingsDraft = clone(app.state);
+  app.localPatchDraft = clone(app.localPatch);
   renderSettings(app);
   app.refs.settingsOverlay.classList.remove("hidden");
   app.refs.homerUrlInput.focus();
@@ -14,6 +15,7 @@ export function openSettings(app) {
 export function closeSettings(app) {
   app.refs.settingsOverlay.classList.add("hidden");
   app.settingsDraft = null;
+  app.localPatchDraft = null;
 }
 
 export function renderSettings(app) {
@@ -23,12 +25,14 @@ export function renderSettings(app) {
   renderEngineSettings(app);
   renderQuickLinkSettings(app);
   app.refs.homerUrlInput.value = app.settingsDraft.homer.url;
+  app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
   app.refs.frequentMinVisitsInput.value = String(app.settingsDraft.visits.frequentMinVisits);
 }
 
 function renderEngineSettings(app) {
   const { refs, settingsDraft } = app;
+  const localPatchDraft = ensureLocalPatchDraft(app);
   refs.engineRows.replaceChildren();
   for (const [index, engine] of settingsDraft.search.engines.entries()) {
     const row = document.createElement("div");
@@ -38,12 +42,14 @@ function renderEngineSettings(app) {
 
     const title = createInput(t("inputTitle"), engine.title);
     const template = createInput(t("inputSearchTemplate"), engine.template);
+    const enabledWrap = createCheckField(t("localEnabled"), !localPatchDraft.search.disabledEngineIds.includes(engine.id));
     const defaultWrap = document.createElement("label");
     defaultWrap.className = "default-field";
     const defaultRadio = document.createElement("input");
     defaultRadio.type = "radio";
     defaultRadio.name = "defaultSearchEngine";
     defaultRadio.checked = engine.id === settingsDraft.search.defaultEngineId;
+    defaultRadio.disabled = localPatchDraft.search.disabledEngineIds.includes(engine.id);
     defaultWrap.append(defaultRadio, document.createTextNode("Enter"));
     const remove = createSmallButton("×", t("remove"));
 
@@ -53,24 +59,36 @@ function renderEngineSettings(app) {
     template.addEventListener("input", () => {
       engine.template = template.value;
     });
+    enabledWrap.input.addEventListener("change", () => {
+      updateDisabledId(localPatchDraft.search.disabledEngineIds, engine.id, !enabledWrap.input.checked);
+      if (!enabledWrap.input.checked && settingsDraft.search.defaultEngineId === engine.id) {
+        settingsDraft.search.defaultEngineId = getFirstEnabledEngineId(settingsDraft, localPatchDraft) || "";
+      }
+      if (enabledWrap.input.checked && !settingsDraft.search.defaultEngineId) {
+        settingsDraft.search.defaultEngineId = engine.id;
+      }
+      renderSettings(app);
+    });
     defaultRadio.addEventListener("change", () => {
       settingsDraft.search.defaultEngineId = engine.id;
     });
     remove.addEventListener("click", () => {
       settingsDraft.search.engines = settingsDraft.search.engines.filter((item) => item.id !== engine.id);
+      updateDisabledId(localPatchDraft.search.disabledEngineIds, engine.id, false);
       if (settingsDraft.search.defaultEngineId === engine.id) {
-        settingsDraft.search.defaultEngineId = settingsDraft.search.engines[0]?.id || "";
+        settingsDraft.search.defaultEngineId = getFirstEnabledEngineId(settingsDraft, localPatchDraft) || "";
       }
       renderSettings(app);
     });
 
-    row.append(dragHandle, title, template, defaultWrap, remove);
+    row.append(dragHandle, title, template, enabledWrap.label, defaultWrap, remove);
     refs.engineRows.append(row);
   }
 }
 
 function renderQuickLinkSettings(app) {
   const { refs, settingsDraft } = app;
+  const localPatchDraft = ensureLocalPatchDraft(app);
   refs.quickLinkRows.replaceChildren();
   for (const [index, link] of settingsDraft.quickLinks.entries()) {
     const row = document.createElement("div");
@@ -80,6 +98,7 @@ function renderQuickLinkSettings(app) {
 
     const title = createInput(t("inputQuickLinkTitle"), link.title);
     const url = createInput("URL", link.url, "url");
+    const enabledWrap = createCheckField(t("localEnabled"), !localPatchDraft.quickLinks.disabledLinkIds.includes(link.id));
     const remove = createSmallButton("×", t("remove"));
 
     title.addEventListener("input", () => {
@@ -88,12 +107,16 @@ function renderQuickLinkSettings(app) {
     url.addEventListener("input", () => {
       link.url = url.value;
     });
+    enabledWrap.input.addEventListener("change", () => {
+      updateDisabledId(localPatchDraft.quickLinks.disabledLinkIds, link.id, !enabledWrap.input.checked);
+    });
     remove.addEventListener("click", () => {
       settingsDraft.quickLinks = settingsDraft.quickLinks.filter((item) => item.id !== link.id);
+      updateDisabledId(localPatchDraft.quickLinks.disabledLinkIds, link.id, false);
       renderSettings(app);
     });
 
-    row.append(dragHandle, title, url, remove);
+    row.append(dragHandle, title, url, enabledWrap.label, remove);
     refs.quickLinkRows.append(row);
   }
 }
@@ -144,7 +167,7 @@ export function handleExportSettings(app) {
     window.alert(`${t("exportSettingsInvalid")}\n${result.error}`);
     return;
   }
-  const blob = new Blob([`${JSON.stringify(result.state, null, 2)}\n`], { type: "application/json" });
+  const blob = new Blob([`${JSON.stringify(createSyncedState(result.state), null, 2)}\n`], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -167,6 +190,7 @@ export async function handleImportSettings(app, event) {
   try {
     const raw = JSON.parse(await file.text());
     app.settingsDraft = normalizeState(raw, app.baseConfig);
+    app.localPatchDraft = normalizeLocalPatch(null, app.settingsDraft);
     renderSettings(app);
     window.alert(t("importSettingsLoaded"));
   } catch {
@@ -232,6 +256,29 @@ export function validateSettingsDraft(app) {
       homer: nextHomer,
       visits: readVisitsDraft(app),
     },
+    localPatch: normalizeLocalPatch(
+      {
+        ...ensureLocalPatchDraft(app),
+        search: {
+          ...ensureLocalPatchDraft(app).search,
+          defaultEngineId:
+            cleanedEngines.find((engine) => engine.id === settingsDraft.search.defaultEngineId)?.id ||
+            cleanedEngines[0].id,
+        },
+        homer: {
+          disabled: app.refs.homerDisabledInput.checked,
+        },
+      },
+      {
+        search: {
+          engines: cleanedEngines,
+          defaultEngineId: "",
+        },
+        quickLinks: cleanedLinks,
+        homer: nextHomer,
+        visits: readVisitsDraft(app),
+      },
+    ),
   };
 }
 
@@ -265,6 +312,16 @@ function createInput(placeholder, value, type = "text") {
   return input;
 }
 
+function createCheckField(text, checked) {
+  const label = document.createElement("label");
+  label.className = "check-field";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = checked;
+  label.append(input, document.createTextNode(text));
+  return { label, input };
+}
+
 function createSmallButton(text, title) {
   const button = document.createElement("button");
   button.type = "button";
@@ -272,4 +329,26 @@ function createSmallButton(text, title) {
   button.textContent = text;
   button.title = title;
   return button;
+}
+
+function ensureLocalPatchDraft(app) {
+  if (!app.localPatchDraft) {
+    app.localPatchDraft = normalizeLocalPatch(null, app.settingsDraft);
+  }
+  return app.localPatchDraft;
+}
+
+function updateDisabledId(list, id, disabled) {
+  const index = list.indexOf(id);
+  if (disabled && index === -1) {
+    list.push(id);
+    return;
+  }
+  if (!disabled && index !== -1) {
+    list.splice(index, 1);
+  }
+}
+
+function getFirstEnabledEngineId(settingsDraft, localPatchDraft) {
+  return settingsDraft.search.engines.find((engine) => !localPatchDraft.search.disabledEngineIds.includes(engine.id))?.id || "";
 }

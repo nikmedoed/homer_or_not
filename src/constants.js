@@ -1,4 +1,5 @@
 export const STATE_KEY = "homerOrNot.state.v2";
+export const LOCAL_PATCH_KEY = "homerOrNot.localPatch.v1";
 export const CACHE_KEY = "homerOrNot.homerCache.v2";
 export const META_KEY = "homerOrNot.homerMeta.v2";
 export const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";

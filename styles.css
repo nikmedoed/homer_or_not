@@ -550,11 +550,11 @@ a {
 }
 
 .engine-row {
-  grid-template-columns: 34px minmax(150px, 1fr) minmax(300px, 2fr) 66px 34px;
+  grid-template-columns: 34px minmax(130px, 1fr) minmax(240px, 2fr) 72px 66px 34px;
 }
 
 .quick-row {
-  grid-template-columns: 34px minmax(120px, 1fr) minmax(260px, 2fr) 34px;
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 72px 34px;
 }
 
 .settings-row input,
@@ -651,6 +651,13 @@ a {
   min-height: 34px;
   border-radius: 6px;
   padding: 0 12px;
+}
+
+.field-grid .check-field {
+  display: inline-flex;
+  align-items: center;
+  align-self: end;
+  min-height: 38px;
 }
 
 .import-button {

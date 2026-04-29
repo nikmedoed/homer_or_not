@@ -1,4 +1,5 @@
 import { LOCAL_AREA, QUICK_LINK_META_KEY, QUICK_LINK_META_TTL_MS, SEARCH_ENGINE_META_KEY } from "./constants.js";
+import { getVisibleQuickLinks, getVisibleSearchEngines } from "./state.js";
 import { blobToDataUrl, fetchWithTimeout, isHttpUrl, normalizeUrlKey, storageSet, toDomain, truncateTitle } from "./utils.js";
 
 const FAVICON_SIZE = 64;
@@ -42,7 +43,7 @@ export function getQuickLinkTitle(link, meta) {
 }
 
 export async function refreshQuickLinkMetadata(app, { force }) {
-  const links = app.state.quickLinks.filter((link) => isHttpUrl(link.url));
+  const links = getVisibleQuickLinks(app).filter((link) => isHttpUrl(link.url));
   let changed = false;
   const seen = new Set();
 
@@ -76,7 +77,7 @@ export async function refreshQuickLinkMetadata(app, { force }) {
 }
 
 export async function refreshSearchEngineMetadata(app, { force }) {
-  const engines = app.state.search.engines;
+  const engines = getVisibleSearchEngines(app);
   let changed = false;
   const seen = new Set();
 

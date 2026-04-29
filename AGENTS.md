@@ -46,6 +46,7 @@ Local overrides are stored under `LOCAL_PATCH_KEY`.
 - Settings UI logic is in `src/settings.js`.
 - Metadata refresh in `src/metadata.js` should use visible items only, so disabled corporate-network searches/links are not probed.
 - Import/export should preserve synced configuration only unless the user explicitly asks to include local overrides.
+- Local Homer disable is a silent mode: do not fetch Homer and do not show an empty Homer message/card in the services grid.
 
 ## Style
 

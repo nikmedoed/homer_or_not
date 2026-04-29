@@ -18,6 +18,12 @@ import {
 } from "./utils.js";
 
 export async function syncHomer(app, { force }) {
+  if (app.localPatch?.homer?.disabled) {
+    setStatus(app, "local", "off", t("homerDisabled"));
+    renderServices(app, [], "");
+    return;
+  }
+
   if (!app.state.homer.url) {
     setStatus(app, "local", "no url", t("homerUrlMissing"));
     renderServices(app, [], t("homerUrlMissing"));

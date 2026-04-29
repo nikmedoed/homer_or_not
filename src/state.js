@@ -32,6 +32,21 @@ export function createDefaultState(baseConfig) {
   };
 }
 
+export function createDefaultLocalPatch() {
+  return {
+    search: {
+      defaultEngineId: "",
+      disabledEngineIds: [],
+    },
+    quickLinks: {
+      disabledLinkIds: [],
+    },
+    homer: {
+      disabled: false,
+    },
+  };
+}
+
 export function normalizeState(raw, baseConfig) {
   const base = createDefaultState(baseConfig);
   if (!raw || typeof raw !== "object") {
@@ -43,6 +58,85 @@ export function normalizeState(raw, baseConfig) {
     homer: normalizeHomerSettings(raw.homer, base.homer),
     visits: normalizeVisitSettings(raw.visits, base.visits),
   };
+}
+
+export function normalizeSyncedState(raw, baseConfig) {
+  const state = normalizeState(raw, baseConfig);
+  state.search.defaultEngineId = "";
+  return state;
+}
+
+export function createSyncedState(state) {
+  return {
+    search: {
+      engines: clone(state.search.engines),
+    },
+    quickLinks: clone(state.quickLinks),
+    homer: clone(state.homer),
+    visits: clone(state.visits),
+  };
+}
+
+export function normalizeLocalPatch(raw, state) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const engineIds = new Set(state.search.engines.map((engine) => engine.id));
+  const quickLinkIds = new Set(state.quickLinks.map((link) => link.id));
+  const disabledEngineIds = normalizeIdList(source.search?.disabledEngineIds, engineIds);
+  const disabledLinkIds = normalizeIdList(source.quickLinks?.disabledLinkIds, quickLinkIds);
+  const visibleEngineIds = state.search.engines
+    .map((engine) => engine.id)
+    .filter((id) => !disabledEngineIds.includes(id));
+  const defaultEngineId =
+    typeof source.search?.defaultEngineId === "string" && visibleEngineIds.includes(source.search.defaultEngineId)
+      ? source.search.defaultEngineId
+      : visibleEngineIds[0] || "";
+
+  return {
+    search: {
+      defaultEngineId,
+      disabledEngineIds,
+    },
+    quickLinks: {
+      disabledLinkIds,
+    },
+    homer: {
+      disabled: source.homer?.disabled === true,
+    },
+  };
+}
+
+export function applyLocalPatch(state, localPatch) {
+  const next = normalizeState(state, state);
+  const patch = normalizeLocalPatch(localPatch, next);
+  next.search.defaultEngineId = patch.search.defaultEngineId || getVisibleSearchEngines({ state: next, localPatch: patch })[0]?.id || "";
+  return next;
+}
+
+export function getVisibleSearchEngines(app) {
+  const disabled = new Set(app.localPatch?.search?.disabledEngineIds || []);
+  return app.state.search.engines.filter((engine) => !disabled.has(engine.id));
+}
+
+export function getVisibleQuickLinks(app) {
+  const disabled = new Set(app.localPatch?.quickLinks?.disabledLinkIds || []);
+  return app.state.quickLinks.filter((link) => !disabled.has(link.id));
+}
+
+function normalizeIdList(raw, allowedIds) {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const seen = new Set();
+  const out = [];
+  for (const value of raw) {
+    const id = typeof value === "string" ? value.trim() : "";
+    if (!id || !allowedIds.has(id) || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
 }
 
 export function normalizeSearch(raw, fallback) {

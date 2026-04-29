@@ -1,6 +1,7 @@
 import { ICONS, normalizeSectionIcon } from "./homer.js";
 import { t } from "./i18n.js";
 import { getQuickLinkMeta, getQuickLinkTitle, getSearchEngineMeta } from "./metadata.js";
+import { getVisibleQuickLinks, getVisibleSearchEngines } from "./state.js";
 import { formatFrequentMeta, formatHistoryMeta, formatDateTime, makeInitial, toDomain } from "./utils.js";
 
 export function renderAll(app) {
@@ -14,7 +15,7 @@ export function renderAll(app) {
 export function renderSearchButtons(app) {
   const { refs } = app;
   refs.searchButtons.replaceChildren();
-  const engines = app.state.search.engines;
+  const engines = getVisibleSearchEngines(app);
   for (const engine of engines) {
     const button = document.createElement("button");
     button.type = "button";
@@ -29,8 +30,9 @@ export function renderSearchButtons(app) {
         app.runSearch(engine, query);
         return;
       }
+      app.localPatch.search.defaultEngineId = engine.id;
+      void app.persistLocalPatch();
       app.state.search.defaultEngineId = engine.id;
-      void app.persistState();
       renderSearchButtons(app);
       refs.searchInput.focus();
     });
@@ -59,7 +61,7 @@ function createSearchEngineIcon(app, engine) {
 
 export function renderQuickLinks(app) {
   app.refs.quickLinks.replaceChildren();
-  for (const link of app.state.quickLinks) {
+  for (const link of getVisibleQuickLinks(app)) {
     app.refs.quickLinks.append(createQuickLink(app, link));
   }
 }
@@ -107,6 +109,9 @@ function createQuickLink(app, link) {
 export function renderServices(app, services, emptyMessage = t("servicesEmptyAfterSync")) {
   app.refs.servicesGrid.replaceChildren();
   if (!services.length) {
+    if (!emptyMessage) {
+      return;
+    }
     const empty = document.createElement("p");
     empty.className = "empty-message";
     empty.textContent = emptyMessage;
@@ -249,7 +254,7 @@ function renderVisitList({ panel, list, items, metaFormatter, showVisitCount = f
 }
 
 export function getVisibleServices(app) {
-  if (!app.state.homer.url) {
+  if (app.localPatch?.homer?.disabled || !app.state.homer.url) {
     return [];
   }
   if (app.homerCache?.services?.length) {
@@ -259,6 +264,9 @@ export function getVisibleServices(app) {
 }
 
 export function getEmptyServicesMessage(app) {
+  if (app.localPatch?.homer?.disabled) {
+    return "";
+  }
   if (!app.state.homer.url) {
     return t("homerUrlMissing");
   }
@@ -269,6 +277,10 @@ export function getEmptyServicesMessage(app) {
 }
 
 export function setStatusFromCurrentData(app) {
+  if (app.localPatch?.homer?.disabled) {
+    setStatus(app, "local", "off", t("homerDisabled"));
+    return;
+  }
   if (!app.state.homer.url) {
     setStatus(app, "local", "no url", t("homerUrlMissing"));
     return;
