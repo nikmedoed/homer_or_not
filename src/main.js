@@ -301,8 +301,6 @@ function createQuickLink(link) {
   const anchor = document.createElement("a");
   anchor.className = "quick-link";
   anchor.href = link.url;
-  anchor.target = "_blank";
-  anchor.rel = "noreferrer";
   anchor.title = title;
   anchor.addEventListener("click", () => {
     void addVisitHistoryItem({
@@ -583,8 +581,10 @@ function createServiceRow(item) {
   const anchor = document.createElement("a");
   anchor.className = "service-row";
   anchor.href = item.url;
-  anchor.target = item.target || "_blank";
-  anchor.rel = "noreferrer";
+  anchor.target = item.target || "_self";
+  if (anchor.target !== "_self") {
+    anchor.rel = "noreferrer";
+  }
   anchor.title = item.name;
   anchor.addEventListener("click", () => {
     void addVisitHistoryItem({
@@ -1331,4 +1331,4 @@ function getHomerWallpaperUrl() {
   const fileName = prefersLight ? "wallpaper-light.webp" : "wallpaper.webp";
   return resolveAssetUrl(`assets/themes/${theme}/${fileName}`, configUrl);
 }
-
+

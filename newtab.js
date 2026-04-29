@@ -464,7 +464,7 @@
     return {
       name,
       url,
-      target: typeof raw.target === "string" ? raw.target : "_blank",
+      target: typeof raw.target === "string" ? raw.target : "_self",
       logo: remoteLogo,
       fallbackLogo: ""
     };
@@ -995,8 +995,6 @@
     const anchor = document.createElement("a");
     anchor.className = "quick-link";
     anchor.href = link.url;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
     anchor.title = title;
     anchor.addEventListener("click", () => {
       void addVisitHistoryItem({
@@ -1203,8 +1201,10 @@
     const anchor = document.createElement("a");
     anchor.className = "service-row";
     anchor.href = item.url;
-    anchor.target = item.target || "_blank";
-    anchor.rel = "noreferrer";
+    anchor.target = item.target || "_self";
+    if (anchor.target !== "_self") {
+      anchor.rel = "noreferrer";
+    }
     anchor.title = item.name;
     anchor.addEventListener("click", () => {
       void addVisitHistoryItem({

@@ -64,7 +64,7 @@ export function normalizeServiceItem(raw, configUrl) {
   return {
     name,
     url,
-    target: typeof raw.target === "string" ? raw.target : "_blank",
+    target: typeof raw.target === "string" ? raw.target : "_self",
     logo: remoteLogo,
     fallbackLogo: "",
   };
