@@ -769,941 +769,7 @@
     }
   }
 
-  // src/main.js
-  var refs = {};
-  var baseConfig = normalizeBootConfig(globalThis.HOMER_OR_NOT_CONFIG || FALLBACK_CONFIG);
-  var state = createDefaultState();
-  var homerCache = null;
-  var syncMeta = null;
-  var quickLinkMeta = {};
-  var searchEngineMeta = {};
-  var visitHistory = [];
-  var frequentVisits = [];
-  var settingsDraft = null;
-  document.addEventListener("DOMContentLoaded", () => {
-    void init();
-  });
-  async function init() {
-    bindRefs();
-    applyLocalization();
-    bindEvents();
-    state = await loadState();
-    homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
-    syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
-    quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
-    searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
-    visitHistory = await loadVisitHistory();
-    frequentVisits = await loadFrequentVisits();
-    applyTheme();
-    renderAll();
-    void refreshSearchEngineMetadata({ force: false });
-    void refreshQuickLinkMetadata({ force: false });
-    await syncHomer({ force: false });
-    refs.searchInput.focus();
-  }
-  function bindRefs() {
-    refs.statusButton = byId("statusButton");
-    refs.statusDot = byId("statusDot");
-    refs.statusText = byId("statusText");
-    refs.syncButton = byId("syncButton");
-    refs.settingsButton = byId("settingsButton");
-    refs.searchForm = byId("searchForm");
-    refs.searchInput = byId("searchInput");
-    refs.searchButtons = byId("searchButtons");
-    refs.quickLinks = byId("quickLinks");
-    refs.servicesLayout = byId("servicesLayout");
-    refs.servicesGrid = byId("servicesGrid");
-    refs.frequentPanel = byId("frequentPanel");
-    refs.frequentList = byId("frequentList");
-    refs.historyPanel = byId("historyPanel");
-    refs.historyList = byId("historyList");
-    refs.settingsOverlay = byId("settingsOverlay");
-    refs.closeSettingsButton = byId("closeSettingsButton");
-    refs.engineRows = byId("engineRows");
-    refs.quickLinkRows = byId("quickLinkRows");
-    refs.addEngineButton = byId("addEngineButton");
-    refs.addQuickLinkButton = byId("addQuickLinkButton");
-    refs.homerUrlInput = byId("homerUrlInput");
-    refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
-    refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
-    refs.exportSettingsButton = byId("exportSettingsButton");
-    refs.importSettingsInput = byId("importSettingsInput");
-    refs.resetButton = byId("resetButton");
-    refs.saveButton = byId("saveButton");
-  }
-  function bindEvents() {
-    refs.searchForm.addEventListener("submit", handleSearchSubmit);
-    refs.syncButton.addEventListener("click", () => {
-      void syncHomer({ force: true });
-    });
-    refs.statusButton.addEventListener("click", openSettings);
-    refs.settingsButton.addEventListener("click", openSettings);
-    refs.closeSettingsButton.addEventListener("click", closeSettings);
-    refs.settingsOverlay.addEventListener("click", (event) => {
-      if (event.target === refs.settingsOverlay) {
-        closeSettings();
-      }
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !refs.settingsOverlay.classList.contains("hidden")) {
-        closeSettings();
-      }
-    });
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        void refreshVisitHistory();
-      }
-    });
-    window.addEventListener("focus", () => {
-      void refreshVisitHistory();
-    });
-    refs.addEngineButton.addEventListener("click", () => {
-      if (!settingsDraft) {
-        return;
-      }
-      settingsDraft.search.engines.push({
-        id: makeId("engine"),
-        title: "",
-        template: "https://example.com/search?q={q}"
-      });
-      renderSettings();
-    });
-    refs.addQuickLinkButton.addEventListener("click", () => {
-      if (!settingsDraft) {
-        return;
-      }
-      settingsDraft.quickLinks.push({
-        id: makeId("quick"),
-        title: "",
-        url: ""
-      });
-      renderSettings();
-    });
-    refs.exportSettingsButton.addEventListener("click", handleExportSettings);
-    refs.importSettingsInput.addEventListener("change", handleImportSettings);
-    refs.saveButton.addEventListener("click", async () => {
-      const result = validateSettingsDraft();
-      if (!result.ok) {
-        window.alert(result.error);
-        return;
-      }
-      state = result.state;
-      await persistState();
-      closeSettings();
-      renderAll();
-      void refreshSearchEngineMetadata({ force: true });
-      void refreshQuickLinkMetadata({ force: true });
-      await syncHomer({ force: true });
-    });
-    refs.resetButton.addEventListener("click", async () => {
-      const confirmed = window.confirm(t("resetConfirm"));
-      if (!confirmed) {
-        return;
-      }
-      state = createDefaultState();
-      homerCache = null;
-      quickLinkMeta = {};
-      searchEngineMeta = {};
-      visitHistory = [];
-      frequentVisits = [];
-      settingsDraft = clone(state);
-      syncMeta = null;
-      await Promise.all([
-        storageRemove(STATE_KEY, SYNC_AREA),
-        storageRemove([CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
-      ]);
-      renderAll();
-      renderSettings();
-      void refreshSearchEngineMetadata({ force: true });
-      await syncHomer({ force: true });
-    });
-  }
-  function applyTheme() {
-    const setWallpaper = () => {
-      const image = getHomerWallpaperUrl();
-      if (image) {
-        document.documentElement.style.setProperty("--wallpaper-image", `url("${image}")`);
-        return;
-      }
-      document.documentElement.style.removeProperty("--wallpaper-image");
-    };
-    setWallpaper();
-    globalThis.matchMedia?.("(prefers-color-scheme: light)")?.addEventListener?.("change", setWallpaper);
-  }
-  async function loadState() {
-    const syncState = await storageGet(STATE_KEY, SYNC_AREA);
-    if (syncState) {
-      return normalizeState(syncState);
-    }
-    const legacyLocalState = await storageGet(STATE_KEY, LOCAL_AREA);
-    if (legacyLocalState) {
-      await storageSet(STATE_KEY, legacyLocalState, SYNC_AREA);
-      await storageRemove(STATE_KEY, LOCAL_AREA);
-      return normalizeState(legacyLocalState);
-    }
-    return normalizeState(null);
-  }
-  async function persistState() {
-    await storageSet(STATE_KEY, state, SYNC_AREA);
-  }
-  function renderAll() {
-    renderSearchButtons();
-    renderQuickLinks();
-    renderServices(getVisibleServices(), getEmptyServicesMessage());
-    renderVisitPanels();
-    setStatusFromCurrentData();
-  }
-  function renderSearchButtons() {
-    refs.searchButtons.replaceChildren();
-    const engines = state.search.engines;
-    for (const engine of engines) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "search-button";
-      button.title = engine.title;
-      button.setAttribute("aria-label", button.title || t("searchAria"));
-      button.classList.toggle("active", engine.id === state.search.defaultEngineId);
-      button.append(createSearchEngineIcon(engine));
-      button.addEventListener("click", () => {
-        const query = refs.searchInput.value.trim();
-        if (query) {
-          runSearch(engine, query);
-          return;
-        }
-        state.search.defaultEngineId = engine.id;
-        void persistState();
-        renderSearchButtons();
-        refs.searchInput.focus();
-      });
-      refs.searchButtons.append(button);
-    }
-  }
-  function createSearchEngineIcon(engine) {
-    const icon = document.createElement("span");
-    icon.className = "search-icon";
-    const meta = getSearchEngineMeta(engine);
-    if (meta?.iconDataUrl) {
-      const image = document.createElement("img");
-      image.src = meta.iconDataUrl;
-      image.alt = "";
-      image.addEventListener("error", () => {
-        image.remove();
-        icon.textContent = makeInitial(engine.title || engine.id);
-      });
-      icon.append(image);
-      return icon;
-    }
-    icon.textContent = makeInitial(engine.title || engine.id);
-    return icon;
-  }
-  function renderQuickLinks() {
-    refs.quickLinks.replaceChildren();
-    for (const link of state.quickLinks) {
-      refs.quickLinks.append(createQuickLink(link));
-    }
-  }
-  function createQuickLink(link) {
-    const meta = getQuickLinkMeta(link.url);
-    const title = getQuickLinkTitle(link, meta);
-    const iconDataUrl = meta?.iconDataUrl || "";
-    const anchor = document.createElement("a");
-    anchor.className = "quick-link";
-    anchor.href = link.url;
-    anchor.title = title;
-    anchor.addEventListener("click", () => {
-      void addVisitHistoryItem({
-        title,
-        url: link.url,
-        source: "quick"
-      });
-    });
-    const icon = document.createElement("span");
-    icon.className = "quick-icon";
-    if (iconDataUrl) {
-      const image = document.createElement("img");
-      image.src = iconDataUrl;
-      image.alt = "";
-      image.addEventListener("error", () => {
-        image.remove();
-        icon.textContent = makeInitial(title);
-      });
-      icon.append(image);
-    } else {
-      icon.textContent = makeInitial(title);
-    }
-    const label = document.createElement("span");
-    label.className = "quick-label";
-    label.textContent = title;
-    anchor.append(icon, label);
-    return anchor;
-  }
-  function getQuickLinkMeta(url) {
-    const key = normalizeUrlKey(url);
-    return key ? quickLinkMeta[key] || null : null;
-  }
-  function getSearchEngineMeta(engine) {
-    const key = getSearchEngineMetaKey(engine);
-    return key ? searchEngineMeta[key] || null : null;
-  }
-  function getSearchEngineMetaKey(engine) {
-    return normalizeUrlKey(getSearchEngineIconPageUrl(engine));
-  }
-  function getSearchEngineIconPageUrl(engine) {
-    const template = typeof engine?.template === "string" ? engine.template.trim() : "";
-    if (!template) {
-      return "";
-    }
-    try {
-      const url = new URL(template.replace(/\{q\}/g, ""));
-      return `${url.origin}/`;
-    } catch {
-      return "";
-    }
-  }
-  function getQuickLinkTitle(link, meta) {
-    const customTitle = typeof link.title === "string" ? link.title.trim() : "";
-    if (customTitle) {
-      return truncateTitle(customTitle);
-    }
-    if (meta?.title) {
-      return truncateTitle(meta.title);
-    }
-    return truncateTitle(toDomain(link.url) || link.url);
-  }
-  async function refreshQuickLinkMetadata({ force }) {
-    const links = state.quickLinks.filter((link) => isHttpUrl(link.url));
-    let changed = false;
-    const seen = /* @__PURE__ */ new Set();
-    for (const link of links) {
-      const key = normalizeUrlKey(link.url);
-      if (!key || seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      const cached = quickLinkMeta[key];
-      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
-        continue;
-      }
-      const meta = await fetchQuickLinkMetadata(link.url);
-      quickLinkMeta[key] = {
-        fetchedAt: Date.now(),
-        title: meta.title || cached?.title || "",
-        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
-      };
-      changed = true;
-      renderQuickLinks();
-    }
-    if (changed) {
-      pruneQuickLinkMeta(seen);
-      await storageSet(QUICK_LINK_META_KEY, quickLinkMeta, LOCAL_AREA);
-    }
-  }
-  async function refreshSearchEngineMetadata({ force }) {
-    const engines = state.search.engines;
-    let changed = false;
-    const seen = /* @__PURE__ */ new Set();
-    for (const engine of engines) {
-      const key = getSearchEngineMetaKey(engine);
-      const iconPageUrl = getSearchEngineIconPageUrl(engine);
-      if (!key || !iconPageUrl || seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      const cached = searchEngineMeta[key];
-      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
-        continue;
-      }
-      const meta = await fetchQuickLinkMetadata(iconPageUrl);
-      searchEngineMeta[key] = {
-        fetchedAt: Date.now(),
-        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
-      };
-      changed = true;
-      renderSearchButtons();
-    }
-    if (changed) {
-      pruneSearchEngineMeta(seen);
-      await storageSet(SEARCH_ENGINE_META_KEY, searchEngineMeta, LOCAL_AREA);
-    }
-  }
-  async function fetchQuickLinkMetadata(url) {
-    const pageUrl = url;
-    const chromeFaviconUrl = getChromeFaviconUrl(pageUrl, 32);
-    const iconDataUrl = chromeFaviconUrl ? await fetchIconDataUrl(chromeFaviconUrl) : "";
-    return {
-      title: "",
-      iconDataUrl: iconDataUrl || await fetchIconDataUrl(getDefaultFaviconUrl(pageUrl))
-    };
-  }
-  async function fetchIconDataUrl(iconUrl) {
-    try {
-      const response = await fetchWithTimeout(iconUrl, 6500, { cache: "force-cache" });
-      if (!response.ok) {
-        return "";
-      }
-      const blob = await response.blob();
-      if (!blob.type.startsWith("image/") || blob.size > 192 * 1024) {
-        return "";
-      }
-      return await blobToDataUrl(blob);
-    } catch {
-      return "";
-    }
-  }
-  function getDefaultFaviconUrl(url) {
-    try {
-      return new URL("/favicon.ico", url).href;
-    } catch {
-      return "";
-    }
-  }
-  function getChromeFaviconUrl(pageUrl, size) {
-    if (typeof globalThis.chrome?.runtime?.getURL !== "function" || !isHttpUrl(pageUrl)) {
-      return "";
-    }
-    const url = new URL(globalThis.chrome.runtime.getURL("/_favicon/"));
-    url.searchParams.set("pageUrl", pageUrl);
-    url.searchParams.set("size", String(size));
-    return url.href;
-  }
-  function pruneQuickLinkMeta(activeKeys) {
-    for (const key of Object.keys(quickLinkMeta)) {
-      if (!activeKeys.has(key)) {
-        delete quickLinkMeta[key];
-      }
-    }
-  }
-  function pruneSearchEngineMeta(activeKeys) {
-    for (const key of Object.keys(searchEngineMeta)) {
-      if (!activeKeys.has(key)) {
-        delete searchEngineMeta[key];
-      }
-    }
-  }
-  function renderServices(services, emptyMessage = t("servicesEmptyAfterSync")) {
-    refs.servicesGrid.replaceChildren();
-    if (!services.length) {
-      const empty = document.createElement("p");
-      empty.className = "empty-message";
-      empty.textContent = emptyMessage;
-      refs.servicesGrid.append(empty);
-      return;
-    }
-    for (const group of services) {
-      const article = document.createElement("article");
-      article.className = "service-group";
-      const heading = document.createElement("h2");
-      heading.className = "service-heading";
-      heading.append(createSectionIcon(group.icon, group.name), document.createTextNode(group.name || t("miscellaneous")));
-      const card = document.createElement("div");
-      card.className = "service-card";
-      for (const item of group.items) {
-        card.append(createServiceRow(item));
-      }
-      article.append(heading, card);
-      refs.servicesGrid.append(article);
-    }
-  }
-  function createSectionIcon(icon, name) {
-    const span = document.createElement("span");
-    span.className = "section-icon";
-    const normalized = normalizeSectionIcon(icon, name);
-    span.innerHTML = ICONS[normalized] || ICONS.network;
-    return span;
-  }
-  function createServiceRow(item) {
-    const anchor = document.createElement("a");
-    anchor.className = "service-row";
-    anchor.href = item.url;
-    anchor.target = item.target || "_self";
-    if (anchor.target !== "_self") {
-      anchor.rel = "noreferrer";
-    }
-    anchor.title = item.name;
-    anchor.addEventListener("click", () => {
-      void addVisitHistoryItem({
-        title: item.name || item.url,
-        url: item.url,
-        source: "homer"
-      });
-    });
-    const logo = document.createElement("span");
-    logo.className = "service-logo";
-    if (item.logo) {
-      const image = document.createElement("img");
-      image.src = item.logo;
-      image.alt = "";
-      image.loading = "lazy";
-      if (item.fallbackLogo && item.fallbackLogo !== item.logo) {
-        image.dataset.fallbackLogo = item.fallbackLogo;
-      }
-      image.addEventListener("error", () => {
-        if (image.dataset.fallbackLogo && image.src !== image.dataset.fallbackLogo) {
-          image.src = image.dataset.fallbackLogo;
-          delete image.dataset.fallbackLogo;
-          return;
-        }
-        image.remove();
-        logo.textContent = makeInitial(item.name);
-      });
-      logo.append(image);
-    } else {
-      logo.textContent = makeInitial(item.name);
-    }
-    const text = document.createElement("span");
-    text.className = "service-title";
-    text.textContent = item.name || item.url;
-    anchor.append(logo, text);
-    return anchor;
-  }
-  function handleSearchSubmit(event) {
-    event.preventDefault();
-    const rawQuery = refs.searchInput.value.trim();
-    if (!rawQuery) {
-      return;
-    }
-    const engine = getDefaultSearchEngine();
-    if (engine) {
-      void runSearch(engine, rawQuery);
-    }
-  }
-  function getDefaultSearchEngine() {
-    return state.search.engines.find((item) => item.id === state.search.defaultEngineId) || state.search.engines[0];
-  }
-  async function runSearch(engine, query) {
-    const target = engine.template.replace("{q}", encodeURIComponent(query));
-    await addVisitHistoryItem({
-      title: `${engine.title}: ${query}`,
-      url: target,
-      source: "search"
-    });
-    window.location.assign(target);
-  }
-  function renderVisitPanels() {
-    renderVisitList({
-      panel: refs.frequentPanel,
-      list: refs.frequentList,
-      items: frequentVisits,
-      metaFormatter: formatFrequentMeta
-    });
-    renderVisitList({
-      panel: refs.historyPanel,
-      list: refs.historyList,
-      items: visitHistory,
-      metaFormatter: formatHistoryMeta
-    });
-  }
-  function renderVisitList({ panel, list, items, metaFormatter }) {
-    list.replaceChildren();
-    const isEmpty = !items.length;
-    panel.classList.toggle("hidden", isEmpty);
-    if (isEmpty) {
-      return;
-    }
-    for (const item of items) {
-      const anchor = document.createElement("a");
-      anchor.className = "visit-row";
-      anchor.href = item.url;
-      anchor.target = "_blank";
-      anchor.rel = "noreferrer";
-      anchor.title = item.url;
-      anchor.addEventListener("click", () => {
-        void addVisitHistoryItem(item);
-      });
-      const title = document.createElement("span");
-      title.className = "visit-title";
-      title.textContent = item.title || toDomain(item.url) || item.url;
-      const meta = document.createElement("span");
-      meta.className = "visit-meta";
-      meta.textContent = metaFormatter(item);
-      anchor.append(title, meta);
-      list.append(anchor);
-    }
-  }
-  async function addVisitHistoryItem(item) {
-    const normalized = normalizeVisitHistoryItem(item);
-    if (!normalized) {
-      return;
-    }
-    normalized.visitedAt = Date.now();
-    visitHistory = [
-      normalized,
-      ...visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url))
-    ].slice(0, VISIT_HISTORY_LIMIT);
-    renderVisitPanels();
-    if (hasBrowserHistoryApi()) {
-      return;
-    }
-    await storageSet(HISTORY_KEY, visitHistory, LOCAL_AREA);
-  }
-  async function loadVisitHistory() {
-    if (!hasBrowserHistoryApi()) {
-      return normalizeVisitHistory(await storageGet(HISTORY_KEY));
-    }
-    return await new Promise((resolve) => {
-      const chromeApi = globalThis.chrome;
-      chromeApi.history.search(
-        {
-          text: "",
-          startTime: 0,
-          maxResults: VISIT_HISTORY_LIMIT * 3
-        },
-        (results) => {
-          if (chromeApi.runtime.lastError) {
-            resolve([]);
-            return;
-          }
-          resolve(normalizeVisitHistory((results || []).filter((item) => isHttpUrl(item.url))));
-        }
-      );
-    });
-  }
-  async function refreshVisitHistory() {
-    const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits()]);
-    if (!nextHistory.length && !visitHistory.length && !nextFrequent.length && !frequentVisits.length) {
-      return;
-    }
-    visitHistory = nextHistory;
-    frequentVisits = nextFrequent;
-    renderVisitPanels();
-  }
-  function hasBrowserHistoryApi() {
-    return typeof globalThis.chrome?.history?.search === "function";
-  }
-  async function loadFrequentVisits() {
-    if (!hasBrowserHistoryApi()) {
-      return [];
-    }
-    const settings = normalizeVisitSettings(state.visits, FALLBACK_CONFIG.visits);
-    return await new Promise((resolve) => {
-      const chromeApi = globalThis.chrome;
-      chromeApi.history.search(
-        {
-          text: "",
-          startTime: 0,
-          maxResults: settings.frequentHistoryPool
-        },
-        (results) => {
-          if (chromeApi.runtime.lastError) {
-            resolve([]);
-            return;
-          }
-          const frequent = (results || []).filter(
-            (item) => isHttpUrl(item.url) && Number.isFinite(item.visitCount) && item.visitCount >= settings.frequentMinVisits
-          ).sort((a, b) => {
-            const visitsDiff = b.visitCount - a.visitCount;
-            if (visitsDiff) {
-              return visitsDiff;
-            }
-            return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
-          });
-          resolve(normalizeVisitHistory(frequent).slice(0, VISIT_HISTORY_LIMIT));
-        }
-      );
-    });
-  }
-  async function syncHomer({ force }) {
-    if (!state.homer.url) {
-      setStatus("local", "no url", t("homerUrlMissing"));
-      renderServices([], t("homerUrlMissing"));
-      return;
-    }
-    const endpoints = deriveHomerEndpoints(state.homer.url);
-    if (!endpoints) {
-      setStatus("error", "bad url", t("homerUrlInvalid"));
-      renderServices(getVisibleServices(), getEmptyServicesMessage());
-      return;
-    }
-    if (!force && isCacheFresh(homerCache, HOMER_SYNC_INTERVAL_MINUTES)) {
-      setStatus("cache", "cache", t("homerCache", formatDateTime(homerCache.fetchedAt)));
-      renderServices(getVisibleServices(), getEmptyServicesMessage());
-      return;
-    }
-    if (!force && isFailureFresh(syncMeta, HOMER_SYNC_INTERVAL_MINUTES, endpoints.configUrl)) {
-      if (homerCache?.services?.length) {
-        renderServices(homerCache.services);
-        setStatus("cache", "offline", t("homerRecentFailureCache", formatDateTime(homerCache.fetchedAt)));
-        return;
-      }
-      renderServices([], t("homerNeverFetched"));
-      setStatus("local", "no homer", t("homerRecentFailureNoCache"));
-      return;
-    }
-    if (!force && await shouldSkipHomerSyncByNetwork(endpoints)) {
-      renderServices(getVisibleServices(), getEmptyServicesMessage());
-      setStatus("cache", homerCache?.services?.length ? "away" : "no homer", t("homerAway"));
-      return;
-    }
-    setStatus("sync", "sync", t("homerSyncing"));
-    try {
-      const configText = await fetchTextWithTimeout(withCacheBuster(endpoints.configUrl), HOMER_FETCH_TIMEOUT_MS);
-      const parsed = parseHomerConfig(configText, endpoints.configUrl);
-      const services = normalizeServiceGroups(parsed.services, endpoints.configUrl);
-      if (!services.length) {
-        throw new Error("Homer config has no services.");
-      }
-      homerCache = {
-        fetchedAt: Date.now(),
-        sourceUrl: endpoints.configUrl,
-        theme: typeof parsed.theme === "string" ? parsed.theme : "",
-        services
-      };
-      await storageSet(CACHE_KEY, homerCache, LOCAL_AREA);
-      syncMeta = null;
-      await storageRemove(META_KEY, LOCAL_AREA);
-      applyTheme();
-      renderServices(services);
-      setStatus("live", "live", t("homerUpdated", formatDateTime(homerCache.fetchedAt)));
-    } catch (error) {
-      syncMeta = {
-        failedAt: Date.now(),
-        sourceUrl: endpoints.configUrl,
-        message: error?.message || String(error)
-      };
-      await storageSet(META_KEY, syncMeta, LOCAL_AREA);
-      if (homerCache?.services?.length) {
-        renderServices(homerCache.services);
-        setStatus("cache", "offline", t("homerOfflineCache", formatDateTime(homerCache.fetchedAt)));
-        return;
-      }
-      renderServices([], t("homerNeverFetched"));
-      setStatus("local", "no homer", t("homerOfflineNoCache"));
-    }
-  }
-  function openSettings() {
-    settingsDraft = clone(state);
-    renderSettings();
-    refs.settingsOverlay.classList.remove("hidden");
-    refs.homerUrlInput.focus();
-  }
-  function closeSettings() {
-    refs.settingsOverlay.classList.add("hidden");
-    settingsDraft = null;
-  }
-  function renderSettings() {
-    if (!settingsDraft) {
-      return;
-    }
-    renderEngineSettings();
-    renderQuickLinkSettings();
-    refs.homerUrlInput.value = settingsDraft.homer.url;
-    refs.frequentHistoryPoolInput.value = String(settingsDraft.visits.frequentHistoryPool);
-    refs.frequentMinVisitsInput.value = String(settingsDraft.visits.frequentMinVisits);
-  }
-  function renderEngineSettings() {
-    refs.engineRows.replaceChildren();
-    for (const [index, engine] of settingsDraft.search.engines.entries()) {
-      const row = document.createElement("div");
-      row.className = "settings-row engine-row";
-      const dragHandle = createDragHandle();
-      attachReorderHandlers(row, dragHandle, settingsDraft.search.engines, index, renderSettings);
-      const title = createInput(t("inputTitle"), engine.title);
-      const template = createInput(t("inputSearchTemplate"), engine.template);
-      const defaultWrap = document.createElement("label");
-      defaultWrap.className = "default-field";
-      const defaultRadio = document.createElement("input");
-      defaultRadio.type = "radio";
-      defaultRadio.name = "defaultSearchEngine";
-      defaultRadio.checked = engine.id === settingsDraft.search.defaultEngineId;
-      defaultWrap.append(defaultRadio, document.createTextNode("Enter"));
-      const remove = createSmallButton("\xD7", t("remove"));
-      title.addEventListener("input", () => {
-        engine.title = title.value;
-      });
-      template.addEventListener("input", () => {
-        engine.template = template.value;
-      });
-      defaultRadio.addEventListener("change", () => {
-        settingsDraft.search.defaultEngineId = engine.id;
-      });
-      remove.addEventListener("click", () => {
-        settingsDraft.search.engines = settingsDraft.search.engines.filter((item) => item.id !== engine.id);
-        if (settingsDraft.search.defaultEngineId === engine.id) {
-          settingsDraft.search.defaultEngineId = settingsDraft.search.engines[0]?.id || "";
-        }
-        renderSettings();
-      });
-      row.append(dragHandle, title, template, defaultWrap, remove);
-      refs.engineRows.append(row);
-    }
-  }
-  function renderQuickLinkSettings() {
-    refs.quickLinkRows.replaceChildren();
-    for (const [index, link] of settingsDraft.quickLinks.entries()) {
-      const row = document.createElement("div");
-      row.className = "settings-row quick-row";
-      const dragHandle = createDragHandle();
-      attachReorderHandlers(row, dragHandle, settingsDraft.quickLinks, index, renderSettings);
-      const title = createInput(t("inputQuickLinkTitle"), link.title);
-      const url = createInput("URL", link.url, "url");
-      const remove = createSmallButton("\xD7", t("remove"));
-      title.addEventListener("input", () => {
-        link.title = title.value;
-      });
-      url.addEventListener("input", () => {
-        link.url = url.value;
-      });
-      remove.addEventListener("click", () => {
-        settingsDraft.quickLinks = settingsDraft.quickLinks.filter((item) => item.id !== link.id);
-        renderSettings();
-      });
-      row.append(dragHandle, title, url, remove);
-      refs.quickLinkRows.append(row);
-    }
-  }
-  function createDragHandle() {
-    const handle = document.createElement("button");
-    handle.type = "button";
-    handle.className = "drag-handle";
-    handle.textContent = "\u2630";
-    handle.title = t("dragToReorder");
-    handle.setAttribute("aria-label", t("dragToReorder"));
-    return handle;
-  }
-  function attachReorderHandlers(row, handle, items, index, onMove) {
-    handle.draggable = true;
-    handle.addEventListener("dragstart", (event) => {
-      row.classList.add("dragging");
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", String(index));
-    });
-    handle.addEventListener("dragend", () => {
-      row.classList.remove("dragging");
-    });
-    row.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      row.classList.add("drag-over");
-    });
-    row.addEventListener("dragleave", () => {
-      row.classList.remove("drag-over");
-    });
-    row.addEventListener("drop", (event) => {
-      event.preventDefault();
-      row.classList.remove("drag-over");
-      const fromIndex = Number(event.dataTransfer.getData("text/plain"));
-      if (Number.isNaN(fromIndex)) {
-        return;
-      }
-      moveItem(items, fromIndex, index);
-      onMove();
-    });
-  }
-  function handleExportSettings() {
-    const result = validateSettingsDraft();
-    if (!result.ok) {
-      window.alert(`${t("exportSettingsInvalid")}
-${result.error}`);
-      return;
-    }
-    const blob = new Blob([`${JSON.stringify(result.state, null, 2)}
-`], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `homer-or-not-settings-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }
-  async function handleImportSettings(event) {
-    if (!settingsDraft) {
-      return;
-    }
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    try {
-      const raw = JSON.parse(await file.text());
-      settingsDraft = normalizeState(raw);
-      renderSettings();
-      window.alert(t("importSettingsLoaded"));
-    } catch {
-      window.alert(t("importSettingsInvalid"));
-    }
-  }
-  function moveItem(items, fromIndex, toIndex) {
-    if (toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) {
-      return;
-    }
-    const [item] = items.splice(fromIndex, 1);
-    items.splice(toIndex, 0, item);
-  }
-  function validateSettingsDraft() {
-    if (!settingsDraft) {
-      return { ok: false, error: t("settingsNotOpen") };
-    }
-    const cleanedEngines = settingsDraft.search.engines.map((engine) => ({
-      id: engine.id || makeId("engine"),
-      title: engine.title.trim(),
-      template: engine.template.trim()
-    })).filter((engine) => engine.title && engine.template);
-    if (!cleanedEngines.length) {
-      return { ok: false, error: t("needSearchEngine") };
-    }
-    if (cleanedEngines.some((engine) => !engine.template.includes("{q}"))) {
-      return { ok: false, error: t("searchTemplateMissingQuery") };
-    }
-    const cleanedLinks = settingsDraft.quickLinks.map((link) => ({
-      id: link.id || makeId("quick"),
-      title: typeof link.title === "string" ? link.title.trim() : "",
-      url: link.url.trim()
-    })).filter((link) => link.url);
-    if (cleanedLinks.some((link) => !isHttpUrl(link.url))) {
-      return { ok: false, error: t("quickLinkBadUrl") };
-    }
-    const nextHomer = readHomerDraft();
-    if (nextHomer.url && !deriveHomerEndpoints(nextHomer.url)) {
-      return { ok: false, error: t("homerUrlInvalid") };
-    }
-    return {
-      ok: true,
-      state: {
-        search: {
-          engines: cleanedEngines,
-          defaultEngineId: cleanedEngines.find((engine) => engine.id === settingsDraft.search.defaultEngineId)?.id || cleanedEngines[0].id
-        },
-        quickLinks: cleanedLinks,
-        homer: nextHomer,
-        visits: readVisitsDraft()
-      }
-    };
-  }
-  function readHomerDraft() {
-    return {
-      url: refs.homerUrlInput.value.trim()
-    };
-  }
-  function readVisitsDraft() {
-    return normalizeVisitSettings(
-      {
-        frequentHistoryPool: refs.frequentHistoryPoolInput.value,
-        frequentMinVisits: refs.frequentMinVisitsInput.value
-      },
-      FALLBACK_CONFIG.visits
-    );
-  }
-  function createInput(placeholder, value, type = "text") {
-    const input = document.createElement("input");
-    input.type = type;
-    input.placeholder = placeholder;
-    input.name = placeholder.toLowerCase().replace(/\s+/g, "_").replace(/[^a-zа-я0-9_{}]/gi, "");
-    input.setAttribute("aria-label", placeholder);
-    input.value = value || "";
-    input.title = placeholder;
-    return input;
-  }
-  function createSmallButton(text, title) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "row-button";
-    button.textContent = text;
-    button.title = title;
-    return button;
-  }
+  // src/state.js
   function normalizeBootConfig(raw) {
     const fallback = clone(FALLBACK_CONFIG);
     const source = raw && typeof raw === "object" ? raw : {};
@@ -1719,7 +785,7 @@ ${result.error}`);
       services: normalizeServiceGroups(source.services, "")
     };
   }
-  function createDefaultState() {
+  function createDefaultState(baseConfig) {
     return {
       search: clone(baseConfig.search),
       quickLinks: clone(baseConfig.quickLinks),
@@ -1727,8 +793,8 @@ ${result.error}`);
       visits: clone(baseConfig.visits)
     };
   }
-  function normalizeState(raw) {
-    const base = createDefaultState();
+  function normalizeState(raw, baseConfig) {
+    const base = createDefaultState(baseConfig);
     if (!raw || typeof raw !== "object") {
       return base;
     }
@@ -1851,51 +917,1021 @@ ${result.error}`);
       visitedAt: Number.isFinite(raw.visitedAt) ? raw.visitedAt : Number.isFinite(raw.lastVisitTime) ? raw.lastVisitTime : Date.now()
     };
   }
-  function getVisibleServices() {
-    if (!state.homer.url) {
+
+  // src/history.js
+  async function addVisitHistoryItem(app2, item) {
+    const normalized = normalizeVisitHistoryItem(item);
+    if (!normalized) {
+      return;
+    }
+    normalized.visitedAt = Date.now();
+    app2.visitHistory = [
+      normalized,
+      ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url))
+    ].slice(0, VISIT_HISTORY_LIMIT);
+    app2.renderVisitPanels();
+    if (hasBrowserHistoryApi()) {
+      return;
+    }
+    await storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
+  }
+  async function loadVisitHistory() {
+    if (!hasBrowserHistoryApi()) {
+      return normalizeVisitHistory(await storageGet(HISTORY_KEY));
+    }
+    return await new Promise((resolve) => {
+      const chromeApi = globalThis.chrome;
+      chromeApi.history.search(
+        {
+          text: "",
+          startTime: 0,
+          maxResults: VISIT_HISTORY_LIMIT * 3
+        },
+        (results) => {
+          if (chromeApi.runtime.lastError) {
+            resolve([]);
+            return;
+          }
+          resolve(normalizeVisitHistory((results || []).filter((item) => isHttpUrl(item.url))));
+        }
+      );
+    });
+  }
+  async function refreshVisitHistory(app2) {
+    const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits(app2)]);
+    if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
+      return;
+    }
+    app2.visitHistory = nextHistory;
+    app2.frequentVisits = nextFrequent;
+    app2.renderVisitPanels();
+  }
+  function hasBrowserHistoryApi() {
+    return typeof globalThis.chrome?.history?.search === "function";
+  }
+  async function loadFrequentVisits(app2) {
+    if (!hasBrowserHistoryApi()) {
       return [];
     }
-    if (homerCache?.services?.length) {
-      return homerCache.services;
+    const settings = normalizeVisitSettings(app2.state.visits, FALLBACK_CONFIG.visits);
+    return await new Promise((resolve) => {
+      const chromeApi = globalThis.chrome;
+      chromeApi.history.search(
+        {
+          text: "",
+          startTime: 0,
+          maxResults: settings.frequentHistoryPool
+        },
+        (results) => {
+          if (chromeApi.runtime.lastError) {
+            resolve([]);
+            return;
+          }
+          const frequent = (results || []).filter(
+            (item) => isHttpUrl(item.url) && Number.isFinite(item.visitCount) && item.visitCount >= settings.frequentMinVisits
+          ).sort((a, b) => {
+            const visitsDiff = b.visitCount - a.visitCount;
+            if (visitsDiff) {
+              return visitsDiff;
+            }
+            return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
+          });
+          resolve(normalizeVisitHistory(frequent).slice(0, VISIT_HISTORY_LIMIT));
+        }
+      );
+    });
+  }
+
+  // src/metadata.js
+  function getQuickLinkMeta(app2, url) {
+    const key = normalizeUrlKey(url);
+    return key ? app2.quickLinkMeta[key] || null : null;
+  }
+  function getSearchEngineMeta(app2, engine) {
+    const key = getSearchEngineMetaKey(engine);
+    return key ? app2.searchEngineMeta[key] || null : null;
+  }
+  function getSearchEngineMetaKey(engine) {
+    return normalizeUrlKey(getSearchEngineIconPageUrl(engine));
+  }
+  function getSearchEngineIconPageUrl(engine) {
+    const template = typeof engine?.template === "string" ? engine.template.trim() : "";
+    if (!template) {
+      return "";
+    }
+    try {
+      const url = new URL(template.replace(/\{q\}/g, ""));
+      return `${url.origin}/`;
+    } catch {
+      return "";
+    }
+  }
+  function getQuickLinkTitle(link, meta) {
+    const customTitle = typeof link.title === "string" ? link.title.trim() : "";
+    if (customTitle) {
+      return truncateTitle(customTitle);
+    }
+    if (meta?.title) {
+      return truncateTitle(meta.title);
+    }
+    return truncateTitle(toDomain(link.url) || link.url);
+  }
+  async function refreshQuickLinkMetadata(app2, { force }) {
+    const links = app2.state.quickLinks.filter((link) => isHttpUrl(link.url));
+    let changed = false;
+    const seen = /* @__PURE__ */ new Set();
+    for (const link of links) {
+      const key = normalizeUrlKey(link.url);
+      if (!key || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      const cached = app2.quickLinkMeta[key];
+      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
+        continue;
+      }
+      const meta = await fetchQuickLinkMetadata(link.url);
+      app2.quickLinkMeta[key] = {
+        fetchedAt: Date.now(),
+        title: meta.title || cached?.title || "",
+        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
+      };
+      changed = true;
+      app2.renderQuickLinks();
+    }
+    if (changed) {
+      pruneQuickLinkMeta(app2, seen);
+      await storageSet(QUICK_LINK_META_KEY, app2.quickLinkMeta, LOCAL_AREA);
+    }
+  }
+  async function refreshSearchEngineMetadata(app2, { force }) {
+    const engines = app2.state.search.engines;
+    let changed = false;
+    const seen = /* @__PURE__ */ new Set();
+    for (const engine of engines) {
+      const key = getSearchEngineMetaKey(engine);
+      const iconPageUrl = getSearchEngineIconPageUrl(engine);
+      if (!key || !iconPageUrl || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      const cached = app2.searchEngineMeta[key];
+      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
+        continue;
+      }
+      const meta = await fetchQuickLinkMetadata(iconPageUrl);
+      app2.searchEngineMeta[key] = {
+        fetchedAt: Date.now(),
+        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
+      };
+      changed = true;
+      app2.renderSearchButtons();
+    }
+    if (changed) {
+      pruneSearchEngineMeta(app2, seen);
+      await storageSet(SEARCH_ENGINE_META_KEY, app2.searchEngineMeta, LOCAL_AREA);
+    }
+  }
+  async function fetchQuickLinkMetadata(url) {
+    const pageUrl = url;
+    const chromeFaviconUrl = getChromeFaviconUrl(pageUrl, 32);
+    const iconDataUrl = chromeFaviconUrl ? await fetchIconDataUrl(chromeFaviconUrl) : "";
+    return {
+      title: "",
+      iconDataUrl: iconDataUrl || await fetchIconDataUrl(getDefaultFaviconUrl(pageUrl))
+    };
+  }
+  async function fetchIconDataUrl(iconUrl) {
+    try {
+      const response = await fetchWithTimeout(iconUrl, 6500, { cache: "force-cache" });
+      if (!response.ok) {
+        return "";
+      }
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/") || blob.size > 192 * 1024) {
+        return "";
+      }
+      return await blobToDataUrl(blob);
+    } catch {
+      return "";
+    }
+  }
+  function getDefaultFaviconUrl(url) {
+    try {
+      return new URL("/favicon.ico", url).href;
+    } catch {
+      return "";
+    }
+  }
+  function getChromeFaviconUrl(pageUrl, size) {
+    if (typeof globalThis.chrome?.runtime?.getURL !== "function" || !isHttpUrl(pageUrl)) {
+      return "";
+    }
+    const url = new URL(globalThis.chrome.runtime.getURL("/_favicon/"));
+    url.searchParams.set("pageUrl", pageUrl);
+    url.searchParams.set("size", String(size));
+    return url.href;
+  }
+  function pruneQuickLinkMeta(app2, activeKeys) {
+    for (const key of Object.keys(app2.quickLinkMeta)) {
+      if (!activeKeys.has(key)) {
+        delete app2.quickLinkMeta[key];
+      }
+    }
+  }
+  function pruneSearchEngineMeta(app2, activeKeys) {
+    for (const key of Object.keys(app2.searchEngineMeta)) {
+      if (!activeKeys.has(key)) {
+        delete app2.searchEngineMeta[key];
+      }
+    }
+  }
+
+  // src/render.js
+  function renderAll(app2) {
+    renderSearchButtons(app2);
+    renderQuickLinks(app2);
+    renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+    renderVisitPanels(app2);
+    setStatusFromCurrentData(app2);
+  }
+  function renderSearchButtons(app2) {
+    const { refs } = app2;
+    refs.searchButtons.replaceChildren();
+    const engines = app2.state.search.engines;
+    for (const engine of engines) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "search-button";
+      button.title = engine.title;
+      button.setAttribute("aria-label", button.title || t("searchAria"));
+      button.classList.toggle("active", engine.id === app2.state.search.defaultEngineId);
+      button.append(createSearchEngineIcon(app2, engine));
+      button.addEventListener("click", () => {
+        const query = refs.searchInput.value.trim();
+        if (query) {
+          app2.runSearch(engine, query);
+          return;
+        }
+        app2.state.search.defaultEngineId = engine.id;
+        void app2.persistState();
+        renderSearchButtons(app2);
+        refs.searchInput.focus();
+      });
+      refs.searchButtons.append(button);
+    }
+  }
+  function createSearchEngineIcon(app2, engine) {
+    const icon = document.createElement("span");
+    icon.className = "search-icon";
+    const meta = getSearchEngineMeta(app2, engine);
+    if (meta?.iconDataUrl) {
+      const image = document.createElement("img");
+      image.src = meta.iconDataUrl;
+      image.alt = "";
+      image.addEventListener("error", () => {
+        image.remove();
+        icon.textContent = makeInitial(engine.title || engine.id);
+      });
+      icon.append(image);
+      return icon;
+    }
+    icon.textContent = makeInitial(engine.title || engine.id);
+    return icon;
+  }
+  function renderQuickLinks(app2) {
+    app2.refs.quickLinks.replaceChildren();
+    for (const link of app2.state.quickLinks) {
+      app2.refs.quickLinks.append(createQuickLink(app2, link));
+    }
+  }
+  function createQuickLink(app2, link) {
+    const meta = getQuickLinkMeta(app2, link.url);
+    const title = getQuickLinkTitle(link, meta);
+    const iconDataUrl = meta?.iconDataUrl || "";
+    const anchor = document.createElement("a");
+    anchor.className = "quick-link";
+    anchor.href = link.url;
+    anchor.title = title;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title,
+        url: link.url,
+        source: "quick"
+      });
+    });
+    const icon = document.createElement("span");
+    icon.className = "quick-icon";
+    if (iconDataUrl) {
+      const image = document.createElement("img");
+      image.src = iconDataUrl;
+      image.alt = "";
+      image.addEventListener("error", () => {
+        image.remove();
+        icon.textContent = makeInitial(title);
+      });
+      icon.append(image);
+    } else {
+      icon.textContent = makeInitial(title);
+    }
+    const label = document.createElement("span");
+    label.className = "quick-label";
+    label.textContent = title;
+    anchor.append(icon, label);
+    return anchor;
+  }
+  function renderServices(app2, services, emptyMessage = t("servicesEmptyAfterSync")) {
+    app2.refs.servicesGrid.replaceChildren();
+    if (!services.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-message";
+      empty.textContent = emptyMessage;
+      app2.refs.servicesGrid.append(empty);
+      return;
+    }
+    for (const group of services) {
+      const article = document.createElement("article");
+      article.className = "service-group";
+      const heading = document.createElement("h2");
+      heading.className = "service-heading";
+      heading.append(createSectionIcon(group.icon, group.name), document.createTextNode(group.name || t("miscellaneous")));
+      const card = document.createElement("div");
+      card.className = "service-card";
+      for (const item of group.items) {
+        card.append(createServiceRow(app2, item));
+      }
+      article.append(heading, card);
+      app2.refs.servicesGrid.append(article);
+    }
+  }
+  function createSectionIcon(icon, name) {
+    const span = document.createElement("span");
+    span.className = "section-icon";
+    const normalized = normalizeSectionIcon(icon, name);
+    span.innerHTML = ICONS[normalized] || ICONS.network;
+    return span;
+  }
+  function createServiceRow(app2, item) {
+    const anchor = document.createElement("a");
+    anchor.className = "service-row";
+    anchor.href = item.url;
+    anchor.target = item.target || "_self";
+    if (anchor.target !== "_self") {
+      anchor.rel = "noreferrer";
+    }
+    anchor.title = item.name;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.name || item.url,
+        url: item.url,
+        source: "homer"
+      });
+    });
+    const logo = document.createElement("span");
+    logo.className = "service-logo";
+    if (item.logo) {
+      const image = document.createElement("img");
+      image.src = item.logo;
+      image.alt = "";
+      image.loading = "lazy";
+      if (item.fallbackLogo && item.fallbackLogo !== item.logo) {
+        image.dataset.fallbackLogo = item.fallbackLogo;
+      }
+      image.addEventListener("error", () => {
+        if (image.dataset.fallbackLogo && image.src !== image.dataset.fallbackLogo) {
+          image.src = image.dataset.fallbackLogo;
+          delete image.dataset.fallbackLogo;
+          return;
+        }
+        image.remove();
+        logo.textContent = makeInitial(item.name);
+      });
+      logo.append(image);
+    } else {
+      logo.textContent = makeInitial(item.name);
+    }
+    const text = document.createElement("span");
+    text.className = "service-title";
+    text.textContent = item.name || item.url;
+    anchor.append(logo, text);
+    return anchor;
+  }
+  function renderVisitPanels(app2) {
+    renderVisitList({
+      panel: app2.refs.frequentPanel,
+      list: app2.refs.frequentList,
+      items: app2.frequentVisits,
+      metaFormatter: formatFrequentMeta,
+      app: app2
+    });
+    renderVisitList({
+      panel: app2.refs.historyPanel,
+      list: app2.refs.historyList,
+      items: app2.visitHistory,
+      metaFormatter: formatHistoryMeta,
+      app: app2
+    });
+  }
+  function renderVisitList({ panel, list, items, metaFormatter, app: app2 }) {
+    list.replaceChildren();
+    const isEmpty = !items.length;
+    panel.classList.toggle("hidden", isEmpty);
+    if (isEmpty) {
+      return;
+    }
+    for (const item of items) {
+      const anchor = document.createElement("a");
+      anchor.className = "visit-row";
+      anchor.href = item.url;
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+      anchor.title = item.url;
+      anchor.addEventListener("click", () => {
+        void app2.addVisitHistoryItem(item);
+      });
+      const title = document.createElement("span");
+      title.className = "visit-title";
+      title.textContent = item.title || toDomain(item.url) || item.url;
+      const meta = document.createElement("span");
+      meta.className = "visit-meta";
+      meta.textContent = metaFormatter(item);
+      anchor.append(title, meta);
+      list.append(anchor);
+    }
+  }
+  function getVisibleServices(app2) {
+    if (!app2.state.homer.url) {
+      return [];
+    }
+    if (app2.homerCache?.services?.length) {
+      return app2.homerCache.services;
     }
     return [];
   }
-  function getEmptyServicesMessage() {
-    if (!state.homer.url) {
+  function getEmptyServicesMessage(app2) {
+    if (!app2.state.homer.url) {
       return t("homerUrlMissing");
     }
-    if (homerCache?.services?.length) {
+    if (app2.homerCache?.services?.length) {
       return "";
     }
     return t("servicesEmptyFirstSync");
   }
-  function setStatusFromCurrentData() {
-    if (!state.homer.url) {
-      setStatus("local", "no url", t("homerUrlMissing"));
+  function setStatusFromCurrentData(app2) {
+    if (!app2.state.homer.url) {
+      setStatus(app2, "local", "no url", t("homerUrlMissing"));
       return;
     }
-    if (homerCache?.services?.length) {
-      setStatus("cache", "cache", t("homerCache", formatDateTime(homerCache.fetchedAt)));
+    if (app2.homerCache?.services?.length) {
+      setStatus(app2, "cache", "cache", t("homerCache", formatDateTime(app2.homerCache.fetchedAt)));
       return;
     }
-    setStatus("local", homerCache?.services?.length ? "away" : "no homer", getEmptyServicesMessage());
+    setStatus(app2, "local", app2.homerCache?.services?.length ? "away" : "no homer", getEmptyServicesMessage(app2));
   }
-  function setStatus(kind, text, title) {
-    refs.statusButton.dataset.status = kind;
-    refs.statusText.textContent = text;
-    refs.statusButton.title = title;
+  function setStatus(app2, kind, text, title) {
+    app2.refs.statusButton.dataset.status = kind;
+    app2.refs.statusText.textContent = text;
+    app2.refs.statusButton.title = title;
   }
-  function getHomerWallpaperUrl() {
-    const theme = String(homerCache?.theme || "").trim();
+
+  // src/settings.js
+  function openSettings(app2) {
+    app2.settingsDraft = clone(app2.state);
+    renderSettings(app2);
+    app2.refs.settingsOverlay.classList.remove("hidden");
+    app2.refs.homerUrlInput.focus();
+  }
+  function closeSettings(app2) {
+    app2.refs.settingsOverlay.classList.add("hidden");
+    app2.settingsDraft = null;
+  }
+  function renderSettings(app2) {
+    if (!app2.settingsDraft) {
+      return;
+    }
+    renderEngineSettings(app2);
+    renderQuickLinkSettings(app2);
+    app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
+    app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
+    app2.refs.frequentMinVisitsInput.value = String(app2.settingsDraft.visits.frequentMinVisits);
+  }
+  function renderEngineSettings(app2) {
+    const { refs, settingsDraft } = app2;
+    refs.engineRows.replaceChildren();
+    for (const [index, engine] of settingsDraft.search.engines.entries()) {
+      const row = document.createElement("div");
+      row.className = "settings-row engine-row";
+      const dragHandle = createDragHandle();
+      attachReorderHandlers(row, dragHandle, settingsDraft.search.engines, index, () => renderSettings(app2));
+      const title = createInput(t("inputTitle"), engine.title);
+      const template = createInput(t("inputSearchTemplate"), engine.template);
+      const defaultWrap = document.createElement("label");
+      defaultWrap.className = "default-field";
+      const defaultRadio = document.createElement("input");
+      defaultRadio.type = "radio";
+      defaultRadio.name = "defaultSearchEngine";
+      defaultRadio.checked = engine.id === settingsDraft.search.defaultEngineId;
+      defaultWrap.append(defaultRadio, document.createTextNode("Enter"));
+      const remove = createSmallButton("\xD7", t("remove"));
+      title.addEventListener("input", () => {
+        engine.title = title.value;
+      });
+      template.addEventListener("input", () => {
+        engine.template = template.value;
+      });
+      defaultRadio.addEventListener("change", () => {
+        settingsDraft.search.defaultEngineId = engine.id;
+      });
+      remove.addEventListener("click", () => {
+        settingsDraft.search.engines = settingsDraft.search.engines.filter((item) => item.id !== engine.id);
+        if (settingsDraft.search.defaultEngineId === engine.id) {
+          settingsDraft.search.defaultEngineId = settingsDraft.search.engines[0]?.id || "";
+        }
+        renderSettings(app2);
+      });
+      row.append(dragHandle, title, template, defaultWrap, remove);
+      refs.engineRows.append(row);
+    }
+  }
+  function renderQuickLinkSettings(app2) {
+    const { refs, settingsDraft } = app2;
+    refs.quickLinkRows.replaceChildren();
+    for (const [index, link] of settingsDraft.quickLinks.entries()) {
+      const row = document.createElement("div");
+      row.className = "settings-row quick-row";
+      const dragHandle = createDragHandle();
+      attachReorderHandlers(row, dragHandle, settingsDraft.quickLinks, index, () => renderSettings(app2));
+      const title = createInput(t("inputQuickLinkTitle"), link.title);
+      const url = createInput("URL", link.url, "url");
+      const remove = createSmallButton("\xD7", t("remove"));
+      title.addEventListener("input", () => {
+        link.title = title.value;
+      });
+      url.addEventListener("input", () => {
+        link.url = url.value;
+      });
+      remove.addEventListener("click", () => {
+        settingsDraft.quickLinks = settingsDraft.quickLinks.filter((item) => item.id !== link.id);
+        renderSettings(app2);
+      });
+      row.append(dragHandle, title, url, remove);
+      refs.quickLinkRows.append(row);
+    }
+  }
+  function createDragHandle() {
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "drag-handle";
+    handle.textContent = "\u2630";
+    handle.title = t("dragToReorder");
+    handle.setAttribute("aria-label", t("dragToReorder"));
+    return handle;
+  }
+  function attachReorderHandlers(row, handle, items, index, onMove) {
+    handle.draggable = true;
+    handle.addEventListener("dragstart", (event) => {
+      row.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", String(index));
+    });
+    handle.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+    });
+    row.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      row.classList.add("drag-over");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drag-over");
+    });
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("drag-over");
+      const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+      if (Number.isNaN(fromIndex)) {
+        return;
+      }
+      moveItem(items, fromIndex, index);
+      onMove();
+    });
+  }
+  function handleExportSettings(app2) {
+    const result = validateSettingsDraft(app2);
+    if (!result.ok) {
+      window.alert(`${t("exportSettingsInvalid")}
+${result.error}`);
+      return;
+    }
+    const blob = new Blob([`${JSON.stringify(result.state, null, 2)}
+`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `homer-or-not-settings-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+  async function handleImportSettings(app2, event) {
+    if (!app2.settingsDraft) {
+      return;
+    }
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    try {
+      const raw = JSON.parse(await file.text());
+      app2.settingsDraft = normalizeState(raw, app2.baseConfig);
+      renderSettings(app2);
+      window.alert(t("importSettingsLoaded"));
+    } catch {
+      window.alert(t("importSettingsInvalid"));
+    }
+  }
+  function moveItem(items, fromIndex, toIndex) {
+    if (toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) {
+      return;
+    }
+    const [item] = items.splice(fromIndex, 1);
+    items.splice(toIndex, 0, item);
+  }
+  function validateSettingsDraft(app2) {
+    const { settingsDraft } = app2;
+    if (!settingsDraft) {
+      return { ok: false, error: t("settingsNotOpen") };
+    }
+    const cleanedEngines = settingsDraft.search.engines.map((engine) => ({
+      id: engine.id || makeId("engine"),
+      title: engine.title.trim(),
+      template: engine.template.trim()
+    })).filter((engine) => engine.title && engine.template);
+    if (!cleanedEngines.length) {
+      return { ok: false, error: t("needSearchEngine") };
+    }
+    if (cleanedEngines.some((engine) => !engine.template.includes("{q}"))) {
+      return { ok: false, error: t("searchTemplateMissingQuery") };
+    }
+    const cleanedLinks = settingsDraft.quickLinks.map((link) => ({
+      id: link.id || makeId("quick"),
+      title: typeof link.title === "string" ? link.title.trim() : "",
+      url: link.url.trim()
+    })).filter((link) => link.url);
+    if (cleanedLinks.some((link) => !isHttpUrl(link.url))) {
+      return { ok: false, error: t("quickLinkBadUrl") };
+    }
+    const nextHomer = readHomerDraft(app2);
+    if (nextHomer.url && !deriveHomerEndpoints(nextHomer.url)) {
+      return { ok: false, error: t("homerUrlInvalid") };
+    }
+    return {
+      ok: true,
+      state: {
+        search: {
+          engines: cleanedEngines,
+          defaultEngineId: cleanedEngines.find((engine) => engine.id === settingsDraft.search.defaultEngineId)?.id || cleanedEngines[0].id
+        },
+        quickLinks: cleanedLinks,
+        homer: nextHomer,
+        visits: readVisitsDraft(app2)
+      }
+    };
+  }
+  function readHomerDraft(app2) {
+    return {
+      url: app2.refs.homerUrlInput.value.trim()
+    };
+  }
+  function readVisitsDraft(app2) {
+    return normalizeVisitSettings(
+      {
+        frequentHistoryPool: app2.refs.frequentHistoryPoolInput.value,
+        frequentMinVisits: app2.refs.frequentMinVisitsInput.value
+      },
+      FALLBACK_CONFIG.visits
+    );
+  }
+  function createInput(placeholder, value, type = "text") {
+    const input = document.createElement("input");
+    input.type = type;
+    input.placeholder = placeholder;
+    input.name = placeholder.toLowerCase().replace(/\s+/g, "_").replace(/[^a-zа-я0-9_{}]/gi, "");
+    input.setAttribute("aria-label", placeholder);
+    input.value = value || "";
+    input.title = placeholder;
+    return input;
+  }
+  function createSmallButton(text, title) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "row-button";
+    button.textContent = text;
+    button.title = title;
+    return button;
+  }
+
+  // src/sync.js
+  async function syncHomer(app2, { force }) {
+    if (!app2.state.homer.url) {
+      setStatus(app2, "local", "no url", t("homerUrlMissing"));
+      renderServices(app2, [], t("homerUrlMissing"));
+      return;
+    }
+    const endpoints = deriveHomerEndpoints(app2.state.homer.url);
+    if (!endpoints) {
+      setStatus(app2, "error", "bad url", t("homerUrlInvalid"));
+      renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+      return;
+    }
+    if (!force && isCacheFresh(app2.homerCache, HOMER_SYNC_INTERVAL_MINUTES)) {
+      setStatus(app2, "cache", "cache", t("homerCache", formatDateTime(app2.homerCache.fetchedAt)));
+      renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+      return;
+    }
+    if (!force && isFailureFresh(app2.syncMeta, HOMER_SYNC_INTERVAL_MINUTES, endpoints.configUrl)) {
+      if (app2.homerCache?.services?.length) {
+        renderServices(app2, app2.homerCache.services);
+        setStatus(app2, "cache", "offline", t("homerRecentFailureCache", formatDateTime(app2.homerCache.fetchedAt)));
+        return;
+      }
+      renderServices(app2, [], t("homerNeverFetched"));
+      setStatus(app2, "local", "no homer", t("homerRecentFailureNoCache"));
+      return;
+    }
+    if (!force && await shouldSkipHomerSyncByNetwork(endpoints)) {
+      renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+      setStatus(app2, "cache", app2.homerCache?.services?.length ? "away" : "no homer", t("homerAway"));
+      return;
+    }
+    setStatus(app2, "sync", "sync", t("homerSyncing"));
+    try {
+      const configText = await fetchTextWithTimeout(withCacheBuster(endpoints.configUrl), HOMER_FETCH_TIMEOUT_MS);
+      const parsed = parseHomerConfig(configText, endpoints.configUrl);
+      const services = normalizeServiceGroups(parsed.services, endpoints.configUrl);
+      if (!services.length) {
+        throw new Error("Homer config has no services.");
+      }
+      app2.homerCache = {
+        fetchedAt: Date.now(),
+        sourceUrl: endpoints.configUrl,
+        theme: typeof parsed.theme === "string" ? parsed.theme : "",
+        services
+      };
+      await storageSet(CACHE_KEY, app2.homerCache, LOCAL_AREA);
+      app2.syncMeta = null;
+      await storageRemove(META_KEY, LOCAL_AREA);
+      app2.applyTheme();
+      renderServices(app2, services);
+      setStatus(app2, "live", "live", t("homerUpdated", formatDateTime(app2.homerCache.fetchedAt)));
+    } catch (error) {
+      app2.syncMeta = {
+        failedAt: Date.now(),
+        sourceUrl: endpoints.configUrl,
+        message: error?.message || String(error)
+      };
+      await storageSet(META_KEY, app2.syncMeta, LOCAL_AREA);
+      if (app2.homerCache?.services?.length) {
+        renderServices(app2, app2.homerCache.services);
+        setStatus(app2, "cache", "offline", t("homerOfflineCache", formatDateTime(app2.homerCache.fetchedAt)));
+        return;
+      }
+      renderServices(app2, [], t("homerNeverFetched"));
+      setStatus(app2, "local", "no homer", t("homerOfflineNoCache"));
+    }
+  }
+
+  // src/theme.js
+  function applyTheme(app2) {
+    const setWallpaper = () => {
+      const image = getHomerWallpaperUrl(app2);
+      if (image) {
+        document.documentElement.style.setProperty("--wallpaper-image", `url("${image}")`);
+        return;
+      }
+      document.documentElement.style.removeProperty("--wallpaper-image");
+    };
+    setWallpaper();
+    globalThis.matchMedia?.("(prefers-color-scheme: light)")?.addEventListener?.("change", setWallpaper);
+  }
+  function getHomerWallpaperUrl(app2) {
+    const theme = String(app2.homerCache?.theme || "").trim();
     if (!theme) {
       return "";
     }
-    const configUrl = homerCache?.sourceUrl || deriveHomerEndpoints(state.homer.url)?.configUrl || "";
+    const configUrl = app2.homerCache?.sourceUrl || deriveHomerEndpoints(app2.state.homer.url)?.configUrl || "";
     if (!configUrl) {
       return "";
     }
     const prefersLight = globalThis.matchMedia?.("(prefers-color-scheme: light)")?.matches;
     const fileName = prefersLight ? "wallpaper-light.webp" : "wallpaper.webp";
     return resolveAssetUrl(`assets/themes/${theme}/${fileName}`, configUrl);
+  }
+
+  // src/main.js
+  var app = {
+    refs: {},
+    baseConfig: normalizeBootConfig(globalThis.HOMER_OR_NOT_CONFIG || FALLBACK_CONFIG),
+    state: null,
+    homerCache: null,
+    syncMeta: null,
+    quickLinkMeta: {},
+    searchEngineMeta: {},
+    visitHistory: [],
+    frequentVisits: [],
+    settingsDraft: null
+  };
+  app.state = createDefaultState(app.baseConfig);
+  app.addVisitHistoryItem = (item) => addVisitHistoryItem(app, item);
+  app.applyTheme = () => applyTheme(app);
+  app.persistState = persistState;
+  app.renderQuickLinks = () => renderQuickLinks(app);
+  app.renderSearchButtons = () => renderSearchButtons(app);
+  app.renderVisitPanels = () => renderVisitPanels(app);
+  app.runSearch = runSearch;
+  document.addEventListener("DOMContentLoaded", () => {
+    void init();
+  });
+  async function init() {
+    bindRefs();
+    applyLocalization();
+    bindEvents();
+    app.state = await loadState();
+    app.homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
+    app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
+    app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
+    app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
+    app.visitHistory = await loadVisitHistory();
+    app.frequentVisits = await loadFrequentVisits(app);
+    applyTheme(app);
+    renderAll(app);
+    void refreshSearchEngineMetadata(app, { force: false });
+    void refreshQuickLinkMetadata(app, { force: false });
+    await syncHomer(app, { force: false });
+    app.refs.searchInput.focus();
+  }
+  function bindRefs() {
+    const { refs } = app;
+    refs.statusButton = byId("statusButton");
+    refs.statusDot = byId("statusDot");
+    refs.statusText = byId("statusText");
+    refs.syncButton = byId("syncButton");
+    refs.settingsButton = byId("settingsButton");
+    refs.searchForm = byId("searchForm");
+    refs.searchInput = byId("searchInput");
+    refs.searchButtons = byId("searchButtons");
+    refs.quickLinks = byId("quickLinks");
+    refs.servicesLayout = byId("servicesLayout");
+    refs.servicesGrid = byId("servicesGrid");
+    refs.frequentPanel = byId("frequentPanel");
+    refs.frequentList = byId("frequentList");
+    refs.historyPanel = byId("historyPanel");
+    refs.historyList = byId("historyList");
+    refs.settingsOverlay = byId("settingsOverlay");
+    refs.closeSettingsButton = byId("closeSettingsButton");
+    refs.engineRows = byId("engineRows");
+    refs.quickLinkRows = byId("quickLinkRows");
+    refs.addEngineButton = byId("addEngineButton");
+    refs.addQuickLinkButton = byId("addQuickLinkButton");
+    refs.homerUrlInput = byId("homerUrlInput");
+    refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
+    refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
+    refs.exportSettingsButton = byId("exportSettingsButton");
+    refs.importSettingsInput = byId("importSettingsInput");
+    refs.resetButton = byId("resetButton");
+    refs.saveButton = byId("saveButton");
+  }
+  function bindEvents() {
+    const { refs } = app;
+    refs.searchForm.addEventListener("submit", handleSearchSubmit);
+    refs.syncButton.addEventListener("click", () => {
+      void syncHomer(app, { force: true });
+    });
+    refs.statusButton.addEventListener("click", () => openSettings(app));
+    refs.settingsButton.addEventListener("click", () => openSettings(app));
+    refs.closeSettingsButton.addEventListener("click", () => closeSettings(app));
+    refs.settingsOverlay.addEventListener("click", (event) => {
+      if (event.target === refs.settingsOverlay) {
+        closeSettings(app);
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !refs.settingsOverlay.classList.contains("hidden")) {
+        closeSettings(app);
+      }
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        void refreshVisitHistory(app);
+      }
+    });
+    window.addEventListener("focus", () => {
+      void refreshVisitHistory(app);
+    });
+    refs.addEngineButton.addEventListener("click", () => {
+      if (!app.settingsDraft) {
+        return;
+      }
+      app.settingsDraft.search.engines.push({
+        id: makeId("engine"),
+        title: "",
+        template: "https://example.com/search?q={q}"
+      });
+      renderSettings(app);
+    });
+    refs.addQuickLinkButton.addEventListener("click", () => {
+      if (!app.settingsDraft) {
+        return;
+      }
+      app.settingsDraft.quickLinks.push({
+        id: makeId("quick"),
+        title: "",
+        url: ""
+      });
+      renderSettings(app);
+    });
+    refs.exportSettingsButton.addEventListener("click", () => handleExportSettings(app));
+    refs.importSettingsInput.addEventListener("change", (event) => {
+      void handleImportSettings(app, event);
+    });
+    refs.saveButton.addEventListener("click", saveSettings);
+    refs.resetButton.addEventListener("click", resetSettings);
+  }
+  async function loadState() {
+    const syncState = await storageGet(STATE_KEY, SYNC_AREA);
+    if (syncState) {
+      return normalizeState(syncState, app.baseConfig);
+    }
+    const legacyLocalState = await storageGet(STATE_KEY, LOCAL_AREA);
+    if (legacyLocalState) {
+      await storageSet(STATE_KEY, legacyLocalState, SYNC_AREA);
+      await storageRemove(STATE_KEY, LOCAL_AREA);
+      return normalizeState(legacyLocalState, app.baseConfig);
+    }
+    return normalizeState(null, app.baseConfig);
+  }
+  async function persistState() {
+    await storageSet(STATE_KEY, app.state, SYNC_AREA);
+  }
+  function handleSearchSubmit(event) {
+    event.preventDefault();
+    const rawQuery = app.refs.searchInput.value.trim();
+    if (!rawQuery) {
+      return;
+    }
+    const engine = getDefaultSearchEngine();
+    if (engine) {
+      void runSearch(engine, rawQuery);
+    }
+  }
+  function getDefaultSearchEngine() {
+    return app.state.search.engines.find((item) => item.id === app.state.search.defaultEngineId) || app.state.search.engines[0];
+  }
+  async function runSearch(engine, query) {
+    const target = engine.template.replace("{q}", encodeURIComponent(query));
+    await addVisitHistoryItem(app, {
+      title: `${engine.title}: ${query}`,
+      url: target,
+      source: "search"
+    });
+    window.location.assign(target);
+  }
+  async function saveSettings() {
+    const result = validateSettingsDraft(app);
+    if (!result.ok) {
+      window.alert(result.error);
+      return;
+    }
+    app.state = result.state;
+    await persistState();
+    closeSettings(app);
+    renderAll(app);
+    void refreshSearchEngineMetadata(app, { force: true });
+    void refreshQuickLinkMetadata(app, { force: true });
+    await syncHomer(app, { force: true });
+  }
+  async function resetSettings() {
+    const confirmed = window.confirm(t("resetConfirm"));
+    if (!confirmed) {
+      return;
+    }
+    app.state = createDefaultState(app.baseConfig);
+    app.homerCache = null;
+    app.quickLinkMeta = {};
+    app.searchEngineMeta = {};
+    app.visitHistory = [];
+    app.frequentVisits = [];
+    app.settingsDraft = clone(app.state);
+    app.syncMeta = null;
+    await Promise.all([
+      storageRemove(STATE_KEY, SYNC_AREA),
+      storageRemove([CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
+    ]);
+    renderAll(app);
+    renderSettings(app);
+    void refreshSearchEngineMetadata(app, { force: true });
+    await syncHomer(app, { force: true });
   }
 })();
