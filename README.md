@@ -1,8 +1,8 @@
 # Homer or Not
 
-Local-first Chrome/Chromium new tab page with configurable search, quick links, and cached Homer service data.
+Local-first Chrome/Chromium new tab page with configurable search, quick links, visited-site columns, and cached Homer service data.
 
-The goal is to keep the useful part of a personal Homer dashboard without depending on Homer for every new tab. Search and quick links work directly from the extension. Homer is used as a source for service tiles when it is reachable, and the last successful service list is kept locally for offline or away-from-home use.
+The goal is to have one convenient start page everywhere: at home, at work, on public networks, and while travelling. Search, quick links, and visited-site columns work directly from the extension, so the new tab stays useful even when the private network is unavailable. When the browser is on the local network, the same page also integrates with Homer and shows its service tiles. The last successful Homer service list is kept locally for offline or away-from-home use.
 
 ## What It Does
 
@@ -10,12 +10,11 @@ The goal is to keep the useful part of a personal Homer dashboard without depend
 - Shows a top search row with multiple configurable search engines.
 - Uses one selected search engine as the default for Enter.
 - Shows a configurable row of quick links with site icons and short labels.
+- Shows locally switchable frequent and recent visited-site columns.
 - Reads Homer `assets/config.yml` and renders its service groups as tiles.
 - Caches Homer service data in the current browser after the first successful sync.
 - Avoids hitting Homer on every new tab by throttling sync attempts.
 - Works as an unpacked extension, so it can be installed from a Git checkout without the Chrome Web Store.
-
-There are no recommendation, recent, or frequent-site widgets in this version. The page is intentionally focused on the launcher area and Homer services.
 
 ## Install
 
@@ -103,7 +102,7 @@ Default settings live in [newtab.config.js](./newtab.config.js):
 - `quickLinks` - the top quick-link row.
 - `homer.url` - Homer root, assets directory, or config URL.
 
-The settings button in the page can also edit search engines, quick links, and the Homer URL without changing files. `Reset` restores the values from `newtab.config.js`.
+The settings button in the page can also edit search engines, quick links, the Homer URL, and visit-column options without changing files. `Reset` restores the values from `newtab.config.js`.
 
 Quick-link labels are manual when `title` is set. If `title` is empty, the extension falls back to the domain. Quick-link and search-engine icons are fetched through Chrome's favicon endpoint and cached locally.
 
@@ -122,10 +121,10 @@ Homer sync runs when a new tab opens, but successful syncs and recent failures a
 ## Storage
 
 - User settings are stored in `chrome.storage.sync`.
-- Homer tiles and fetched icons are stored in `chrome.storage.local`.
+- Local overrides, Homer tiles, visit history, and fetched icons are stored in `chrome.storage.local`.
 - `manifest.json` includes a fixed extension `key`, so unpacked installs keep the same extension ID across machines.
 
-A new browser profile or work computer will receive synced settings, but it will not have Homer tiles until that browser successfully reaches Homer at least once.
+A new browser profile or work computer will receive synced settings, but it will not have Homer tiles until that browser successfully reaches Homer at least once. Local-only options include the selected search engine, locally disabled search engines or quick links, Homer disable mode, and visibility of the visited-site columns.
 
 ## Homer Assets
 

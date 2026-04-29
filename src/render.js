@@ -200,6 +200,7 @@ export function renderVisitPanels(app) {
     panel: app.refs.frequentPanel,
     list: app.refs.frequentList,
     items: app.frequentVisits,
+    isEnabled: app.localPatch?.visits?.showFrequent !== false,
     metaFormatter: formatFrequentMeta,
     showVisitCount: true,
     app,
@@ -208,14 +209,15 @@ export function renderVisitPanels(app) {
     panel: app.refs.historyPanel,
     list: app.refs.historyList,
     items: app.visitHistory,
+    isEnabled: app.localPatch?.visits?.showRecent !== false,
     metaFormatter: formatHistoryMeta,
     app,
   });
 }
 
-function renderVisitList({ panel, list, items, metaFormatter, showVisitCount = false, app }) {
+function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app }) {
   list.replaceChildren();
-  const isEmpty = !items.length;
+  const isEmpty = !isEnabled || !items.length;
   panel.classList.toggle("hidden", isEmpty);
   if (isEmpty) {
     return;

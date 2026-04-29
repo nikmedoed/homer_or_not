@@ -26,6 +26,8 @@ export function renderSettings(app) {
   renderQuickLinkSettings(app);
   app.refs.homerUrlInput.value = app.settingsDraft.homer.url;
   app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
+  app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
+  app.refs.showRecentVisitsInput.checked = app.localPatchDraft?.visits?.showRecent !== false;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
   app.refs.frequentMinVisitsInput.value = String(app.settingsDraft.visits.frequentMinVisits);
 }
@@ -267,6 +269,10 @@ export function validateSettingsDraft(app) {
         },
         homer: {
           disabled: app.refs.homerDisabledInput.checked,
+        },
+        visits: {
+          showFrequent: app.refs.showFrequentVisitsInput.checked,
+          showRecent: app.refs.showRecentVisitsInput.checked,
         },
       },
       {

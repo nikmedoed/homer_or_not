@@ -30,7 +30,6 @@
             placeholder="Что ищем?"
             data-i18n-attr="placeholder:searchPlaceholder"
             spellcheck="false"
-            autofocus
           />
           <div id="searchButtons" class="search-buttons" aria-label="Поисковые сервисы" data-i18n-attr="aria-label:searchServices"></div>
         </form>
@@ -103,6 +102,14 @@
             <label>
               <span data-i18n="minVisits">Минимум посещений для частых</span>
               <input id="frequentMinVisitsInput" type="number" min="2" max="1000" step="1" />
+            </label>
+            <label class="check-field">
+              <input id="showFrequentVisitsInput" type="checkbox" />
+              <span data-i18n="showFrequentVisits">Показывать часто посещаемые</span>
+            </label>
+            <label class="check-field">
+              <input id="showRecentVisitsInput" type="checkbox" />
+              <span data-i18n="showRecentVisits">Показывать последние посещённые</span>
             </label>
           </div>
         </section>

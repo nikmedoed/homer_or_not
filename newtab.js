@@ -36,6 +36,8 @@
       visits: "\u041F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u044F",
       historyPool: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C",
       minVisits: "\u041C\u0438\u043D\u0438\u043C\u0443\u043C \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u0439 \u0434\u043B\u044F \u0447\u0430\u0441\u0442\u044B\u0445",
+      showFrequentVisits: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0447\u0430\u0441\u0442\u043E \u043F\u043E\u0441\u0435\u0449\u0430\u0435\u043C\u044B\u0435",
+      showRecentVisits: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 \u043F\u043E\u0441\u0435\u0449\u0451\u043D\u043D\u044B\u0435",
       exportSettings: "\u0412\u044B\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
       exportSettingsInvalid: "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0438\u0441\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u043E\u0448\u0438\u0431\u043A\u0438 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445.",
       importSettings: "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
@@ -91,6 +93,8 @@
       visits: "Visits",
       historyPool: "History entries to scan",
       minVisits: "Minimum visits for frequent sites",
+      showFrequentVisits: "Show frequently visited",
+      showRecentVisits: "Show recently visited",
       exportSettings: "Export settings",
       exportSettingsInvalid: "Fix the settings errors first.",
       importSettings: "Import settings",
@@ -840,6 +844,10 @@
       },
       homer: {
         disabled: source.homer?.disabled === true
+      },
+      visits: {
+        showFrequent: source.visits?.showFrequent !== false,
+        showRecent: source.visits?.showRecent !== false
       }
     };
   }
@@ -1403,6 +1411,7 @@
       panel: app2.refs.frequentPanel,
       list: app2.refs.frequentList,
       items: app2.frequentVisits,
+      isEnabled: app2.localPatch?.visits?.showFrequent !== false,
       metaFormatter: formatFrequentMeta,
       showVisitCount: true,
       app: app2
@@ -1411,13 +1420,14 @@
       panel: app2.refs.historyPanel,
       list: app2.refs.historyList,
       items: app2.visitHistory,
+      isEnabled: app2.localPatch?.visits?.showRecent !== false,
       metaFormatter: formatHistoryMeta,
       app: app2
     });
   }
-  function renderVisitList({ panel, list, items, metaFormatter, showVisitCount = false, app: app2 }) {
+  function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app: app2 }) {
     list.replaceChildren();
-    const isEmpty = !items.length;
+    const isEmpty = !isEnabled || !items.length;
     panel.classList.toggle("hidden", isEmpty);
     if (isEmpty) {
       return;
@@ -1513,6 +1523,8 @@
     renderQuickLinkSettings(app2);
     app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
     app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
+    app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
+    app2.refs.showRecentVisitsInput.checked = app2.localPatchDraft?.visits?.showRecent !== false;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
     app2.refs.frequentMinVisitsInput.value = String(app2.settingsDraft.visits.frequentMinVisits);
   }
@@ -1729,6 +1741,10 @@ ${result.error}`);
           },
           homer: {
             disabled: app2.refs.homerDisabledInput.checked
+          },
+          visits: {
+            showFrequent: app2.refs.showFrequentVisitsInput.checked,
+            showRecent: app2.refs.showRecentVisitsInput.checked
           }
         },
         {
@@ -1945,7 +1961,6 @@ ${result.error}`);
     app.frequentVisits = await loadFrequentVisits(app);
     applyTheme(app);
     renderAll(app);
-    focusSearchInput(app);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
     await syncHomer(app, { force: false });
@@ -1977,6 +1992,8 @@ ${result.error}`);
     refs.homerDisabledInput = byId("homerDisabledInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
+    refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
+    refs.showRecentVisitsInput = byId("showRecentVisitsInput");
     refs.exportSettingsButton = byId("exportSettingsButton");
     refs.importSettingsInput = byId("importSettingsInput");
     refs.resetButton = byId("resetButton");
@@ -2094,13 +2111,6 @@ ${result.error}`);
   function getDefaultSearchEngine() {
     const engines = getVisibleSearchEngines(app);
     return engines.find((item) => item.id === app.state.search.defaultEngineId) || engines[0];
-  }
-  function focusSearchInput(app2) {
-    const active = document.activeElement;
-    if (active && active !== document.body && active !== app2.refs.searchInput) {
-      return;
-    }
-    app2.refs.searchInput.focus({ preventScroll: true });
   }
   async function runSearch(engine, query) {
     const target = engine.template.replace("{q}", encodeURIComponent(query));

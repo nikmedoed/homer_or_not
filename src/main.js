@@ -84,7 +84,6 @@ async function init() {
   app.frequentVisits = await loadFrequentVisits(app);
   applyTheme(app);
   renderAll(app);
-  focusSearchInput(app);
   void refreshSearchEngineMetadata(app, { force: false });
   void refreshQuickLinkMetadata(app, { force: false });
   await syncHomer(app, { force: false });
@@ -117,6 +116,8 @@ function bindRefs() {
   refs.homerDisabledInput = byId("homerDisabledInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
+  refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
+  refs.showRecentVisitsInput = byId("showRecentVisitsInput");
   refs.exportSettingsButton = byId("exportSettingsButton");
   refs.importSettingsInput = byId("importSettingsInput");
   refs.resetButton = byId("resetButton");
@@ -242,14 +243,6 @@ function handleSearchSubmit(event) {
 function getDefaultSearchEngine() {
   const engines = getVisibleSearchEngines(app);
   return engines.find((item) => item.id === app.state.search.defaultEngineId) || engines[0];
-}
-
-function focusSearchInput(app) {
-  const active = document.activeElement;
-  if (active && active !== document.body && active !== app.refs.searchInput) {
-    return;
-  }
-  app.refs.searchInput.focus({ preventScroll: true });
 }
 
 async function runSearch(engine, query) {

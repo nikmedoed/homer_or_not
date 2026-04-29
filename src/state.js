@@ -44,6 +44,10 @@ export function createDefaultLocalPatch() {
     homer: {
       disabled: false,
     },
+    visits: {
+      showFrequent: true,
+      showRecent: true,
+    },
   };
 }
 
@@ -101,6 +105,10 @@ export function normalizeLocalPatch(raw, state) {
     },
     homer: {
       disabled: source.homer?.disabled === true,
+    },
+    visits: {
+      showFrequent: source.visits?.showFrequent !== false,
+      showRecent: source.visits?.showRecent !== false,
     },
   };
 }
