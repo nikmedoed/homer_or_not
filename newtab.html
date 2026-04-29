@@ -36,12 +36,16 @@
         <nav id="quickLinks" class="quick-links" aria-label="Быстрые ссылки"></nav>
       </section>
 
-      <section class="services-area" aria-label="Homer и последние посещённые">
+      <section class="services-area" aria-label="Homer и посещённые сайты">
         <div id="servicesLayout" class="services-layout">
           <div id="servicesGrid" class="services-grid"></div>
-          <aside id="historyPanel" class="history-panel" aria-label="Последние посещённые">
-            <h2 class="history-heading">Последние посещённые</h2>
-            <div id="historyList" class="history-list"></div>
+          <aside id="frequentPanel" class="visit-panel frequent-panel" aria-label="Часто посещаемые">
+            <h2 class="visit-heading">Часто посещаемые</h2>
+            <div id="frequentList" class="visit-list"></div>
+          </aside>
+          <aside id="historyPanel" class="visit-panel history-panel" aria-label="Последние посещённые">
+            <h2 class="visit-heading">Последние посещённые</h2>
+            <div id="historyList" class="visit-list"></div>
           </aside>
         </div>
       </section>
@@ -78,6 +82,22 @@
             <label>
               URL
               <input id="homerUrlInput" type="url" placeholder="http://192.168.1.28/" />
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Посещения</h2>
+          </div>
+          <div class="field-grid">
+            <label>
+              Сколько записей истории смотреть
+              <input id="frequentHistoryPoolInput" type="number" min="50" max="50000" step="50" />
+            </label>
+            <label>
+              Минимум посещений для частых
+              <input id="frequentMinVisitsInput" type="number" min="2" max="1000" step="1" />
             </label>
           </div>
         </section>

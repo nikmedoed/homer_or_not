@@ -55,6 +55,10 @@ const FALLBACK_CONFIG = {
     ],
   },
   quickLinks: [],
+  visits: {
+    frequentHistoryPool: 5000,
+    frequentMinVisits: 3,
+  },
   services: [],
 };
 
@@ -67,6 +71,7 @@ let syncMeta = null;
 let quickLinkMeta = {};
 let searchEngineMeta = {};
 let visitHistory = [];
+let frequentVisits = [];
 let settingsDraft = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -82,6 +87,7 @@ async function init() {
   quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
   searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
   visitHistory = await loadVisitHistory();
+  frequentVisits = await loadFrequentVisits();
   applyTheme();
   renderAll();
   void refreshSearchEngineMetadata({ force: false });
@@ -102,6 +108,8 @@ function bindRefs() {
   refs.quickLinks = byId("quickLinks");
   refs.servicesLayout = byId("servicesLayout");
   refs.servicesGrid = byId("servicesGrid");
+  refs.frequentPanel = byId("frequentPanel");
+  refs.frequentList = byId("frequentList");
   refs.historyPanel = byId("historyPanel");
   refs.historyList = byId("historyList");
   refs.settingsOverlay = byId("settingsOverlay");
@@ -111,6 +119,8 @@ function bindRefs() {
   refs.addEngineButton = byId("addEngineButton");
   refs.addQuickLinkButton = byId("addQuickLinkButton");
   refs.homerUrlInput = byId("homerUrlInput");
+  refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
+  refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
   refs.resetButton = byId("resetButton");
   refs.saveButton = byId("saveButton");
 }
@@ -187,6 +197,7 @@ function bindEvents() {
     quickLinkMeta = {};
     searchEngineMeta = {};
     visitHistory = [];
+    frequentVisits = [];
     settingsDraft = clone(state);
     syncMeta = null;
     await Promise.all([
@@ -237,7 +248,7 @@ function renderAll() {
   renderSearchButtons();
   renderQuickLinks();
   renderServices(getVisibleServices(), getEmptyServicesMessage());
-  renderVisitHistory();
+  renderVisitPanels();
   setStatusFromCurrentData();
 }
 
@@ -660,18 +671,32 @@ async function runSearch(engine, query) {
   window.location.assign(target);
 }
 
-function renderVisitHistory() {
-  refs.historyList.replaceChildren();
-  const isEmpty = !visitHistory.length;
-  refs.servicesLayout.classList.toggle("history-empty", isEmpty);
-  refs.historyPanel.classList.toggle("hidden", isEmpty);
+function renderVisitPanels() {
+  renderVisitList({
+    panel: refs.frequentPanel,
+    list: refs.frequentList,
+    items: frequentVisits,
+    metaFormatter: formatFrequentMeta,
+  });
+  renderVisitList({
+    panel: refs.historyPanel,
+    list: refs.historyList,
+    items: visitHistory,
+    metaFormatter: formatHistoryMeta,
+  });
+}
+
+function renderVisitList({ panel, list, items, metaFormatter }) {
+  list.replaceChildren();
+  const isEmpty = !items.length;
+  panel.classList.toggle("hidden", isEmpty);
   if (isEmpty) {
     return;
   }
 
-  for (const item of visitHistory) {
+  for (const item of items) {
     const anchor = document.createElement("a");
-    anchor.className = "history-row";
+    anchor.className = "visit-row";
     anchor.href = item.url;
     anchor.target = "_blank";
     anchor.rel = "noreferrer";
@@ -681,15 +706,15 @@ function renderVisitHistory() {
     });
 
     const title = document.createElement("span");
-    title.className = "history-title";
+    title.className = "visit-title";
     title.textContent = item.title || toDomain(item.url) || item.url;
 
     const meta = document.createElement("span");
-    meta.className = "history-meta";
-    meta.textContent = formatHistoryMeta(item);
+    meta.className = "visit-meta";
+    meta.textContent = metaFormatter(item);
 
     anchor.append(title, meta);
-    refs.historyList.append(anchor);
+    list.append(anchor);
   }
 }
 
@@ -703,7 +728,7 @@ async function addVisitHistoryItem(item) {
     normalized,
     ...visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url)),
   ].slice(0, VISIT_HISTORY_LIMIT);
-  renderVisitHistory();
+  renderVisitPanels();
   if (hasBrowserHistoryApi()) {
     return;
   }
@@ -734,16 +759,55 @@ async function loadVisitHistory() {
 }
 
 async function refreshVisitHistory() {
-  const nextHistory = await loadVisitHistory();
-  if (!nextHistory.length && !visitHistory.length) {
+  const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits()]);
+  if (!nextHistory.length && !visitHistory.length && !nextFrequent.length && !frequentVisits.length) {
     return;
   }
   visitHistory = nextHistory;
-  renderVisitHistory();
+  frequentVisits = nextFrequent;
+  renderVisitPanels();
 }
 
 function hasBrowserHistoryApi() {
   return typeof globalThis.chrome?.history?.search === "function";
+}
+
+async function loadFrequentVisits() {
+  if (!hasBrowserHistoryApi()) {
+    return [];
+  }
+  const settings = normalizeVisitSettings(state.visits, FALLBACK_CONFIG.visits);
+  return await new Promise((resolve) => {
+    const chromeApi = globalThis.chrome;
+    chromeApi.history.search(
+      {
+        text: "",
+        startTime: 0,
+        maxResults: settings.frequentHistoryPool,
+      },
+      (results) => {
+        if (chromeApi.runtime.lastError) {
+          resolve([]);
+          return;
+        }
+        const frequent = (results || [])
+          .filter(
+            (item) =>
+              isHttpUrl(item.url) &&
+              Number.isFinite(item.visitCount) &&
+              item.visitCount >= settings.frequentMinVisits,
+          )
+          .sort((a, b) => {
+            const visitsDiff = b.visitCount - a.visitCount;
+            if (visitsDiff) {
+              return visitsDiff;
+            }
+            return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
+          });
+        resolve(normalizeVisitHistory(frequent).slice(0, VISIT_HISTORY_LIMIT));
+      },
+    );
+  });
 }
 
 async function syncHomer({ force }) {
@@ -839,6 +903,8 @@ function renderSettings() {
   renderEngineSettings();
   renderQuickLinkSettings();
   refs.homerUrlInput.value = settingsDraft.homer.url;
+  refs.frequentHistoryPoolInput.value = String(settingsDraft.visits.frequentHistoryPool);
+  refs.frequentMinVisitsInput.value = String(settingsDraft.visits.frequentMinVisits);
 }
 
 function renderEngineSettings() {
@@ -953,6 +1019,7 @@ function validateSettingsDraft() {
       },
       quickLinks: cleanedLinks,
       homer: nextHomer,
+      visits: readVisitsDraft(),
     },
   };
 }
@@ -961,6 +1028,16 @@ function readHomerDraft() {
   return {
     url: refs.homerUrlInput.value.trim(),
   };
+}
+
+function readVisitsDraft() {
+  return normalizeVisitSettings(
+    {
+      frequentHistoryPool: refs.frequentHistoryPoolInput.value,
+      frequentMinVisits: refs.frequentMinVisitsInput.value,
+    },
+    FALLBACK_CONFIG.visits,
+  );
 }
 
 function createInput(placeholder, value, type = "text") {
@@ -1001,6 +1078,7 @@ function normalizeBootConfig(raw) {
     },
     search: normalizeSearch(source.search, fallback.search),
     quickLinks: normalizeQuickLinks(source.quickLinks, fallback.quickLinks),
+    visits: normalizeVisitSettings(source.visits, fallback.visits),
     services: normalizeServiceGroups(source.services, ""),
   };
 }
@@ -1010,6 +1088,7 @@ function createDefaultState() {
     search: clone(baseConfig.search),
     quickLinks: clone(baseConfig.quickLinks),
     homer: clone(baseConfig.homer),
+    visits: clone(baseConfig.visits),
   };
 }
 
@@ -1022,6 +1101,7 @@ function normalizeState(raw) {
     search: normalizeSearch(raw.search, base.search),
     quickLinks: normalizeQuickLinks(raw.quickLinks, base.quickLinks),
     homer: normalizeHomerSettings(raw.homer, base.homer),
+    visits: normalizeVisitSettings(raw.visits, base.visits),
   };
 }
 
@@ -1071,6 +1151,14 @@ function normalizeHomerSettings(raw, fallback) {
   const base = fallback || FALLBACK_CONFIG.homer;
   return {
     url: typeof raw?.url === "string" ? raw.url : base.url || "",
+  };
+}
+
+function normalizeVisitSettings(raw, fallback) {
+  const base = fallback || FALLBACK_CONFIG.visits;
+  return {
+    frequentHistoryPool: clampInt(raw?.frequentHistoryPool, 50, 50000, base.frequentHistoryPool),
+    frequentMinVisits: clampInt(raw?.frequentMinVisits, 2, 1000, base.frequentMinVisits),
   };
 }
 
@@ -1173,6 +1261,7 @@ function normalizeVisitHistoryItem(raw) {
     title: title ? truncateHistoryTitle(title) : fallbackTitle,
     url: raw.url,
     source: typeof raw.source === "string" ? raw.source : "",
+    visitCount: Number.isFinite(raw.visitCount) ? raw.visitCount : 0,
     visitedAt: Number.isFinite(raw.visitedAt)
       ? raw.visitedAt
       : Number.isFinite(raw.lastVisitTime)
@@ -1764,6 +1853,15 @@ function formatHistoryMeta(item) {
     return `${domain} · ${time}`;
   }
   return domain || time || "";
+}
+
+function formatFrequentMeta(item) {
+  const domain = toDomain(item.url);
+  const visits = Number.isFinite(item.visitCount) && item.visitCount > 0 ? `${item.visitCount} посещ.` : "";
+  if (domain && visits) {
+    return `${domain} · ${visits}`;
+  }
+  return domain || visits || "";
 }
 
 function formatTime(timestamp) {

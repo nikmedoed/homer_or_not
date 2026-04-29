@@ -308,13 +308,13 @@ a {
   align-items: start;
 }
 
-.history-panel {
+.visit-panel {
   margin-top: 36px;
   min-width: 0;
   display: block;
 }
 
-.history-heading {
+.visit-heading {
   margin: 0 0 14px;
   color: #fff;
   font-size: 20px;
@@ -323,7 +323,7 @@ a {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.history-list {
+.visit-list {
   display: grid;
   gap: 1px;
   padding: 10px 12px;
@@ -334,7 +334,7 @@ a {
   overflow: visible;
 }
 
-.history-row {
+.visit-row {
   min-width: 0;
   display: grid;
   gap: 1px;
@@ -343,26 +343,26 @@ a {
   text-decoration: none;
 }
 
-.history-row:hover {
+.visit-row:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.history-title,
-.history-meta {
+.visit-title,
+.visit-meta {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.history-title {
+.visit-title {
   color: var(--text);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.18;
 }
 
-.history-meta {
+.visit-meta {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.12;
@@ -616,11 +616,10 @@ a {
 }
 
 @media (min-width: 2000px) {
-  .history-panel {
+  .visit-panel {
     position: fixed;
     top: var(--page-top-space);
     bottom: var(--page-bottom-space);
-    right: max(16px, calc((100vw - var(--page-max)) / 2 - 316px));
     width: 292px;
     height: auto;
     margin-top: 0;
@@ -633,13 +632,21 @@ a {
     overflow: hidden;
   }
 
-  .history-heading {
+  .frequent-panel {
+    left: max(16px, calc((100vw - var(--page-max)) / 2 - 316px));
+  }
+
+  .history-panel {
+    right: max(16px, calc((100vw - var(--page-max)) / 2 - 316px));
+  }
+
+  .visit-heading {
     margin: 0 0 14px;
     padding: 0 4px;
     font-size: 18px;
   }
 
-  .history-list {
+  .visit-list {
     flex: 1 1 auto;
     min-height: 0;
     padding: 0;
@@ -651,11 +658,11 @@ a {
     -ms-overflow-style: none;
   }
 
-  .history-list::-webkit-scrollbar {
+  .visit-list::-webkit-scrollbar {
     display: none;
   }
 
-  .history-row {
+  .visit-row {
     padding: 4px 6px;
   }
 }
@@ -665,7 +672,7 @@ a {
     width: min(100vw - 30px, var(--page-max));
   }
 
-  .history-list {
+  .visit-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -698,7 +705,7 @@ a {
   }
 
   .search-row,
-  .history-list,
+  .visit-list,
   .services-grid,
   .engine-row,
   .quick-row,

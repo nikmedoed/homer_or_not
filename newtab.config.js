@@ -48,6 +48,10 @@ window.HOMER_OR_NOT_CONFIG = {
       },
     ],
   },
+  visits: {
+    frequentHistoryPool: 5000,
+    frequentMinVisits: 3,
+  },
   quickLinks: [
     {
       id: "images",
