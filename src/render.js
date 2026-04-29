@@ -196,6 +196,7 @@ export function renderVisitPanels(app) {
     list: app.refs.frequentList,
     items: app.frequentVisits,
     metaFormatter: formatFrequentMeta,
+    showVisitCount: true,
     app,
   });
   renderVisitList({
@@ -207,7 +208,7 @@ export function renderVisitPanels(app) {
   });
 }
 
-function renderVisitList({ panel, list, items, metaFormatter, app }) {
+function renderVisitList({ panel, list, items, metaFormatter, showVisitCount = false, app }) {
   list.replaceChildren();
   const isEmpty = !items.length;
   panel.classList.toggle("hidden", isEmpty);
@@ -234,7 +235,15 @@ function renderVisitList({ panel, list, items, metaFormatter, app }) {
     meta.className = "visit-meta";
     meta.textContent = metaFormatter(item);
 
-    anchor.append(title, meta);
+    if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
+      const count = document.createElement("span");
+      count.className = "visit-count";
+      count.textContent = String(item.visitCount);
+      count.title = t("visitCount", item.visitCount);
+      anchor.append(title, count, meta);
+    } else {
+      anchor.append(title, meta);
+    }
     list.append(anchor);
   }
 }

@@ -118,6 +118,7 @@ export function normalizeQuickLinkMeta(raw) {
         typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/")
           ? value.iconDataUrl
           : "",
+      iconSize: Number.isFinite(value.iconSize) ? value.iconSize : 0,
     };
   }
   return out;
@@ -138,6 +139,7 @@ export function normalizeSearchEngineMeta(raw) {
         typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/")
           ? value.iconDataUrl
           : "",
+      iconSize: Number.isFinite(value.iconSize) ? value.iconSize : 0,
     };
   }
   return out;

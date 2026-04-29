@@ -267,12 +267,7 @@
     return domain || time || "";
   }
   function formatFrequentMeta(item) {
-    const domain = toDomain(item.url);
-    const visits = Number.isFinite(item.visitCount) && item.visitCount > 0 ? t("visitCount", item.visitCount) : "";
-    if (domain && visits) {
-      return `${domain} \xB7 ${visits}`;
-    }
-    return domain || visits || "";
+    return toDomain(item.url);
   }
   function formatTime(timestamp) {
     try {
@@ -862,7 +857,8 @@
       out[key] = {
         fetchedAt: Number.isFinite(value.fetchedAt) ? value.fetchedAt : 0,
         title: typeof value.title === "string" ? value.title : "",
-        iconDataUrl: typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/") ? value.iconDataUrl : ""
+        iconDataUrl: typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/") ? value.iconDataUrl : "",
+        iconSize: Number.isFinite(value.iconSize) ? value.iconSize : 0
       };
     }
     return out;
@@ -878,7 +874,8 @@
       }
       out[key] = {
         fetchedAt: Number.isFinite(value.fetchedAt) ? value.fetchedAt : 0,
-        iconDataUrl: typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/") ? value.iconDataUrl : ""
+        iconDataUrl: typeof value.iconDataUrl === "string" && value.iconDataUrl.startsWith("data:image/") ? value.iconDataUrl : "",
+        iconSize: Number.isFinite(value.iconSize) ? value.iconSize : 0
       };
     }
     return out;
@@ -1003,6 +1000,7 @@
   }
 
   // src/metadata.js
+  var FAVICON_SIZE = 64;
   function getQuickLinkMeta(app2, url) {
     const key = normalizeUrlKey(url);
     return key ? app2.quickLinkMeta[key] || null : null;
@@ -1047,14 +1045,15 @@
       }
       seen.add(key);
       const cached = app2.quickLinkMeta[key];
-      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
+      if (!force && isFreshIconMeta(cached)) {
         continue;
       }
       const meta = await fetchQuickLinkMetadata(link.url);
       app2.quickLinkMeta[key] = {
         fetchedAt: Date.now(),
         title: meta.title || cached?.title || "",
-        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
+        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || "",
+        iconSize: meta.iconDataUrl ? FAVICON_SIZE : cached?.iconSize || 0
       };
       changed = true;
       app2.renderQuickLinks();
@@ -1076,13 +1075,14 @@
       }
       seen.add(key);
       const cached = app2.searchEngineMeta[key];
-      if (!force && cached?.fetchedAt && Date.now() - cached.fetchedAt < QUICK_LINK_META_TTL_MS) {
+      if (!force && isFreshIconMeta(cached)) {
         continue;
       }
       const meta = await fetchQuickLinkMetadata(iconPageUrl);
       app2.searchEngineMeta[key] = {
         fetchedAt: Date.now(),
-        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || ""
+        iconDataUrl: meta.iconDataUrl || cached?.iconDataUrl || "",
+        iconSize: meta.iconDataUrl ? FAVICON_SIZE : cached?.iconSize || 0
       };
       changed = true;
       app2.renderSearchButtons();
@@ -1094,12 +1094,17 @@
   }
   async function fetchQuickLinkMetadata(url) {
     const pageUrl = url;
-    const chromeFaviconUrl = getChromeFaviconUrl(pageUrl, 32);
+    const chromeFaviconUrl = getChromeFaviconUrl(pageUrl, FAVICON_SIZE);
     const iconDataUrl = chromeFaviconUrl ? await fetchIconDataUrl(chromeFaviconUrl) : "";
     return {
       title: "",
       iconDataUrl: iconDataUrl || await fetchIconDataUrl(getDefaultFaviconUrl(pageUrl))
     };
+  }
+  function isFreshIconMeta(meta) {
+    return Boolean(
+      meta?.fetchedAt && Date.now() - meta.fetchedAt < QUICK_LINK_META_TTL_MS && meta.iconDataUrl && meta.iconSize >= FAVICON_SIZE
+    );
   }
   async function fetchIconDataUrl(iconUrl) {
     try {
@@ -1322,6 +1327,7 @@
       list: app2.refs.frequentList,
       items: app2.frequentVisits,
       metaFormatter: formatFrequentMeta,
+      showVisitCount: true,
       app: app2
     });
     renderVisitList({
@@ -1332,7 +1338,7 @@
       app: app2
     });
   }
-  function renderVisitList({ panel, list, items, metaFormatter, app: app2 }) {
+  function renderVisitList({ panel, list, items, metaFormatter, showVisitCount = false, app: app2 }) {
     list.replaceChildren();
     const isEmpty = !items.length;
     panel.classList.toggle("hidden", isEmpty);
@@ -1355,7 +1361,15 @@
       const meta = document.createElement("span");
       meta.className = "visit-meta";
       meta.textContent = metaFormatter(item);
-      anchor.append(title, meta);
+      if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
+        const count = document.createElement("span");
+        count.className = "visit-count";
+        count.textContent = String(item.visitCount);
+        count.title = t("visitCount", item.visitCount);
+        anchor.append(title, count, meta);
+      } else {
+        anchor.append(title, meta);
+      }
       list.append(anchor);
     }
   }
@@ -1767,10 +1781,10 @@ ${result.error}`);
     app.frequentVisits = await loadFrequentVisits(app);
     applyTheme(app);
     renderAll(app);
+    focusSearchInput(app);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
     await syncHomer(app, { force: false });
-    app.refs.searchInput.focus();
   }
   function bindRefs() {
     const { refs } = app;
@@ -1888,6 +1902,13 @@ ${result.error}`);
   }
   function getDefaultSearchEngine() {
     return app.state.search.engines.find((item) => item.id === app.state.search.defaultEngineId) || app.state.search.engines[0];
+  }
+  function focusSearchInput(app2) {
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== app2.refs.searchInput) {
+      return;
+    }
+    app2.refs.searchInput.focus({ preventScroll: true });
   }
   async function runSearch(engine, query) {
     const target = engine.template.replace("{q}", encodeURIComponent(query));

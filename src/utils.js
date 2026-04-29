@@ -1,5 +1,5 @@
 import { LOCAL_AREA } from "./constants.js";
-import { LOCALE, t } from "./i18n.js";
+import { LOCALE } from "./i18n.js";
 
 export function byId(id) {
   const node = document.getElementById(id);
@@ -62,12 +62,7 @@ export function formatHistoryMeta(item) {
 }
 
 export function formatFrequentMeta(item) {
-  const domain = toDomain(item.url);
-  const visits = Number.isFinite(item.visitCount) && item.visitCount > 0 ? t("visitCount", item.visitCount) : "";
-  if (domain && visits) {
-    return `${domain} · ${visits}`;
-  }
-  return domain || visits || "";
+  return toDomain(item.url);
 }
 
 export function formatTime(timestamp) {
