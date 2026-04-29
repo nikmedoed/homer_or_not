@@ -12,6 +12,102 @@ const HOMER_SYNC_INTERVAL_MINUTES = 5;
 const HOMER_FETCH_TIMEOUT_MS = 7000;
 const LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
 
+const LOCALE = getPreferredLocale();
+const I18N = {
+  ru: {
+    topActions: "Управление",
+    homerStatus: "Статус Homer",
+    syncHomer: "Обновить Homer",
+    settings: "Настройки",
+    launchPanel: "Поиск и быстрые ссылки",
+    searchPlaceholder: "Что ищем?",
+    searchServices: "Поисковые сервисы",
+    quickLinks: "Быстрые ссылки",
+    servicesArea: "Homer и посещённые сайты",
+    frequentVisits: "Часто посещаемые",
+    recentVisits: "Последние посещённые",
+    close: "Закрыть",
+    search: "Поиск",
+    add: "Добавить",
+    visits: "Посещения",
+    historyPool: "Сколько записей истории смотреть",
+    minVisits: "Минимум посещений для частых",
+    reset: "Сбросить",
+    save: "Сохранить",
+    searchAria: "Поиск",
+    resetConfirm: "Сбросить настройки стартовой к newtab.config.js?",
+    servicesEmptyAfterSync: "Плитки Homer появятся после успешной синхронизации.",
+    miscellaneous: "Разное",
+    homerUrlMissing: "URL Homer не задан.",
+    homerUrlInvalid: "Некорректный URL Homer.",
+    homerCache: (date) => `Кеш Homer: ${date}.`,
+    homerRecentFailureCache: (date) => `Homer недавно не ответил, используется кеш: ${date}.`,
+    homerNeverFetched: "Этот браузер еще ни разу не получил Homer.",
+    homerRecentFailureNoCache: "Homer недавно не ответил, кеша пока нет.",
+    homerAway: "Похоже, это не домашняя локальная сеть.",
+    homerSyncing: "Синхронизация Homer...",
+    homerUpdated: (date) => `Homer обновлен: ${date}.`,
+    homerOfflineCache: (date) => `Homer недоступен, используется кеш: ${date}.`,
+    homerOfflineNoCache: "Homer недоступен, кеша пока нет.",
+    inputTitle: "Название",
+    inputSearchTemplate: "URL с {q}",
+    remove: "Удалить",
+    inputQuickLinkTitle: "Подпись",
+    settingsNotOpen: "Настройки не открыты.",
+    needSearchEngine: "Нужен хотя бы один поисковик.",
+    searchTemplateMissingQuery: "В URL каждого поисковика должен быть {q}.",
+    quickLinkBadUrl: "В быстрых ссылках есть некорректный URL.",
+    servicesEmptyFirstSync: "Плитки Homer появятся после первой успешной синхронизации.",
+    visitCount: (count) => `${count} посещ.`,
+  },
+  en: {
+    topActions: "Controls",
+    homerStatus: "Homer status",
+    syncHomer: "Refresh Homer",
+    settings: "Settings",
+    launchPanel: "Search and quick links",
+    searchPlaceholder: "What are we looking for?",
+    searchServices: "Search services",
+    quickLinks: "Quick links",
+    servicesArea: "Homer and visited sites",
+    frequentVisits: "Frequently visited",
+    recentVisits: "Recently visited",
+    close: "Close",
+    search: "Search",
+    add: "Add",
+    visits: "Visits",
+    historyPool: "History entries to scan",
+    minVisits: "Minimum visits for frequent sites",
+    reset: "Reset",
+    save: "Save",
+    searchAria: "Search",
+    resetConfirm: "Reset new tab settings to newtab.config.js?",
+    servicesEmptyAfterSync: "Homer tiles will appear after a successful sync.",
+    miscellaneous: "Other",
+    homerUrlMissing: "Homer URL is not set.",
+    homerUrlInvalid: "Invalid Homer URL.",
+    homerCache: (date) => `Homer cache: ${date}.`,
+    homerRecentFailureCache: (date) => `Homer did not respond recently, using cache: ${date}.`,
+    homerNeverFetched: "This browser has not fetched Homer yet.",
+    homerRecentFailureNoCache: "Homer did not respond recently, and there is no cache yet.",
+    homerAway: "This does not look like the home local network.",
+    homerSyncing: "Syncing Homer...",
+    homerUpdated: (date) => `Homer updated: ${date}.`,
+    homerOfflineCache: (date) => `Homer is unavailable, using cache: ${date}.`,
+    homerOfflineNoCache: "Homer is unavailable, and there is no cache yet.",
+    inputTitle: "Name",
+    inputSearchTemplate: "URL with {q}",
+    remove: "Remove",
+    inputQuickLinkTitle: "Label",
+    settingsNotOpen: "Settings are not open.",
+    needSearchEngine: "At least one search engine is required.",
+    searchTemplateMissingQuery: "Every search engine URL must include {q}.",
+    quickLinkBadUrl: "One of the quick links has an invalid URL.",
+    servicesEmptyFirstSync: "Homer tiles will appear after the first successful sync.",
+    visitCount: (count) => `${count} visits`,
+  },
+};
+
 const ICONS = {
   network:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v5m-7 7v-3h14v3M5 20h4v-4H5v4Zm10 0h4v-4h-4v4Zm-5 0h4v-4h-4v4Z"/></svg>',
@@ -49,7 +145,7 @@ const FALLBACK_CONFIG = {
     engines: [
       {
         id: "yandex",
-        title: "Яндекс",
+        title: LOCALE === "ru" ? "Яндекс" : "Yandex",
         template: "https://yandex.ru/search/?text={q}",
       },
     ],
@@ -80,6 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function init() {
   bindRefs();
+  applyLocalization();
   bindEvents();
   state = await loadState();
   homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
@@ -188,7 +285,7 @@ function bindEvents() {
     await syncHomer({ force: true });
   });
   refs.resetButton.addEventListener("click", async () => {
-    const confirmed = window.confirm("Сбросить настройки стартовой к newtab.config.js?");
+    const confirmed = window.confirm(t("resetConfirm"));
     if (!confirmed) {
       return;
     }
@@ -252,6 +349,31 @@ function renderAll() {
   setStatusFromCurrentData();
 }
 
+function getPreferredLocale() {
+  const language = Array.isArray(navigator.languages) && navigator.languages.length ? navigator.languages[0] : navigator.language;
+  return String(language || "").toLowerCase().startsWith("ru") ? "ru" : "en";
+}
+
+function t(key, ...args) {
+  const value = I18N[LOCALE]?.[key] ?? I18N.ru[key] ?? key;
+  return typeof value === "function" ? value(...args) : value;
+}
+
+function applyLocalization() {
+  document.documentElement.lang = LOCALE;
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-attr]").forEach((element) => {
+    for (const pair of element.dataset.i18nAttr.split(",")) {
+      const [attribute, key] = pair.split(":").map((part) => part.trim());
+      if (attribute && key) {
+        element.setAttribute(attribute, t(key));
+      }
+    }
+  });
+}
+
 function renderSearchButtons() {
   refs.searchButtons.replaceChildren();
   const engines = state.search.engines;
@@ -260,7 +382,7 @@ function renderSearchButtons() {
     button.type = "button";
     button.className = "search-button";
     button.title = engine.title;
-    button.setAttribute("aria-label", button.title || "Поиск");
+    button.setAttribute("aria-label", button.title || t("searchAria"));
     button.classList.toggle("active", engine.id === state.search.defaultEngineId);
     button.append(createSearchEngineIcon(engine));
     button.addEventListener("click", () => {
@@ -561,7 +683,7 @@ function pruneSearchEngineMeta(activeKeys) {
   }
 }
 
-function renderServices(services, emptyMessage = "Плитки Homer появятся после успешной синхронизации.") {
+function renderServices(services, emptyMessage = t("servicesEmptyAfterSync")) {
   refs.servicesGrid.replaceChildren();
   if (!services.length) {
     const empty = document.createElement("p");
@@ -577,7 +699,7 @@ function renderServices(services, emptyMessage = "Плитки Homer появя�
 
     const heading = document.createElement("h2");
     heading.className = "service-heading";
-    heading.append(createSectionIcon(group.icon, group.name), document.createTextNode(group.name || "Разное"));
+    heading.append(createSectionIcon(group.icon, group.name), document.createTextNode(group.name || t("miscellaneous")));
 
     const card = document.createElement("div");
     card.className = "service-card";
@@ -812,20 +934,20 @@ async function loadFrequentVisits() {
 
 async function syncHomer({ force }) {
   if (!state.homer.url) {
-    setStatus("local", "no url", "URL Homer не задан.");
-    renderServices([], "URL Homer не задан.");
+    setStatus("local", "no url", t("homerUrlMissing"));
+    renderServices([], t("homerUrlMissing"));
     return;
   }
 
   const endpoints = deriveHomerEndpoints(state.homer.url);
   if (!endpoints) {
-    setStatus("error", "bad url", "Некорректный URL Homer.");
+    setStatus("error", "bad url", t("homerUrlInvalid"));
     renderServices(getVisibleServices(), getEmptyServicesMessage());
     return;
   }
 
   if (!force && isCacheFresh(homerCache, HOMER_SYNC_INTERVAL_MINUTES)) {
-    setStatus("cache", "cache", `Кеш Homer: ${formatDateTime(homerCache.fetchedAt)}.`);
+    setStatus("cache", "cache", t("homerCache", formatDateTime(homerCache.fetchedAt)));
     renderServices(getVisibleServices(), getEmptyServicesMessage());
     return;
   }
@@ -833,21 +955,21 @@ async function syncHomer({ force }) {
   if (!force && isFailureFresh(syncMeta, HOMER_SYNC_INTERVAL_MINUTES, endpoints.configUrl)) {
     if (homerCache?.services?.length) {
       renderServices(homerCache.services);
-      setStatus("cache", "offline", `Homer недавно не ответил, используется кеш: ${formatDateTime(homerCache.fetchedAt)}.`);
+      setStatus("cache", "offline", t("homerRecentFailureCache", formatDateTime(homerCache.fetchedAt)));
       return;
     }
-    renderServices([], "Этот браузер еще ни разу не получил Homer.");
-    setStatus("local", "no homer", "Homer недавно не ответил, кеша пока нет.");
+    renderServices([], t("homerNeverFetched"));
+    setStatus("local", "no homer", t("homerRecentFailureNoCache"));
     return;
   }
 
   if (!force && (await shouldSkipHomerSyncByNetwork(endpoints))) {
     renderServices(getVisibleServices(), getEmptyServicesMessage());
-    setStatus("cache", homerCache?.services?.length ? "away" : "no homer", "Похоже, это не домашняя локальная сеть.");
+    setStatus("cache", homerCache?.services?.length ? "away" : "no homer", t("homerAway"));
     return;
   }
 
-  setStatus("sync", "sync", "Синхронизация Homer...");
+  setStatus("sync", "sync", t("homerSyncing"));
   try {
     const configText = await fetchTextWithTimeout(withCacheBuster(endpoints.configUrl), HOMER_FETCH_TIMEOUT_MS);
     const parsed = parseHomerConfig(configText, endpoints.configUrl);
@@ -866,7 +988,7 @@ async function syncHomer({ force }) {
     await storageRemove(META_KEY, LOCAL_AREA);
     applyTheme();
     renderServices(services);
-    setStatus("live", "live", `Homer обновлен: ${formatDateTime(homerCache.fetchedAt)}.`);
+    setStatus("live", "live", t("homerUpdated", formatDateTime(homerCache.fetchedAt)));
   } catch (error) {
     syncMeta = {
       failedAt: Date.now(),
@@ -876,11 +998,11 @@ async function syncHomer({ force }) {
     await storageSet(META_KEY, syncMeta, LOCAL_AREA);
     if (homerCache?.services?.length) {
       renderServices(homerCache.services);
-      setStatus("cache", "offline", `Homer недоступен, используется кеш: ${formatDateTime(homerCache.fetchedAt)}.`);
+      setStatus("cache", "offline", t("homerOfflineCache", formatDateTime(homerCache.fetchedAt)));
       return;
     }
-    renderServices([], "Этот браузер еще ни разу не получил Homer.");
-    setStatus("local", "no homer", "Homer недоступен, кеша пока нет.");
+    renderServices([], t("homerNeverFetched"));
+    setStatus("local", "no homer", t("homerOfflineNoCache"));
   }
 }
 
@@ -913,8 +1035,8 @@ function renderEngineSettings() {
     const row = document.createElement("div");
     row.className = "settings-row engine-row";
 
-    const title = createInput("Название", engine.title);
-    const template = createInput("URL с {q}", engine.template);
+    const title = createInput(t("inputTitle"), engine.title);
+    const template = createInput(t("inputSearchTemplate"), engine.template);
     const defaultWrap = document.createElement("label");
     defaultWrap.className = "default-field";
     const defaultRadio = document.createElement("input");
@@ -922,7 +1044,7 @@ function renderEngineSettings() {
     defaultRadio.name = "defaultSearchEngine";
     defaultRadio.checked = engine.id === settingsDraft.search.defaultEngineId;
     defaultWrap.append(defaultRadio, document.createTextNode("Enter"));
-    const remove = createSmallButton("×", "Удалить");
+    const remove = createSmallButton("×", t("remove"));
 
     title.addEventListener("input", () => {
       engine.title = title.value;
@@ -952,9 +1074,9 @@ function renderQuickLinkSettings() {
     const row = document.createElement("div");
     row.className = "settings-row quick-row";
 
-    const title = createInput("Подпись", link.title);
+    const title = createInput(t("inputQuickLinkTitle"), link.title);
     const url = createInput("URL", link.url, "url");
-    const remove = createSmallButton("×", "Удалить");
+    const remove = createSmallButton("×", t("remove"));
 
     title.addEventListener("input", () => {
       link.title = title.value;
@@ -974,7 +1096,7 @@ function renderQuickLinkSettings() {
 
 function validateSettingsDraft() {
   if (!settingsDraft) {
-    return { ok: false, error: "Настройки не открыты." };
+    return { ok: false, error: t("settingsNotOpen") };
   }
 
   const cleanedEngines = settingsDraft.search.engines
@@ -986,10 +1108,10 @@ function validateSettingsDraft() {
     .filter((engine) => engine.title && engine.template);
 
   if (!cleanedEngines.length) {
-    return { ok: false, error: "Нужен хотя бы один поисковик." };
+    return { ok: false, error: t("needSearchEngine") };
   }
   if (cleanedEngines.some((engine) => !engine.template.includes("{q}"))) {
-    return { ok: false, error: "В URL каждого поисковика должен быть {q}." };
+    return { ok: false, error: t("searchTemplateMissingQuery") };
   }
   const cleanedLinks = settingsDraft.quickLinks
     .map((link) => ({
@@ -1000,12 +1122,12 @@ function validateSettingsDraft() {
     .filter((link) => link.url);
 
   if (cleanedLinks.some((link) => !isHttpUrl(link.url))) {
-    return { ok: false, error: "В быстрых ссылках есть некорректный URL." };
+    return { ok: false, error: t("quickLinkBadUrl") };
   }
 
   const nextHomer = readHomerDraft();
   if (nextHomer.url && !deriveHomerEndpoints(nextHomer.url)) {
-    return { ok: false, error: "Некорректный URL Homer." };
+    return { ok: false, error: t("homerUrlInvalid") };
   }
 
   return {
@@ -1280,7 +1402,7 @@ function normalizeServiceGroups(raw, configUrl) {
         ? group.items.map((item) => normalizeServiceItem(item, configUrl)).filter(Boolean)
         : [];
       return {
-        name: typeof group?.name === "string" && group.name.trim() ? group.name.trim() : "Разное",
+        name: typeof group?.name === "string" && group.name.trim() ? group.name.trim() : t("miscellaneous"),
         icon: typeof group?.icon === "string" ? group.icon : "",
         items,
       };
@@ -1324,21 +1446,21 @@ function canShowHomerCache() {
 
 function getEmptyServicesMessage() {
   if (!state.homer.url) {
-    return "URL Homer не задан.";
+    return t("homerUrlMissing");
   }
   if (homerCache?.services?.length) {
     return "";
   }
-  return "Плитки Homer появятся после первой успешной синхронизации.";
+  return t("servicesEmptyFirstSync");
 }
 
 function setStatusFromCurrentData() {
   if (!state.homer.url) {
-    setStatus("local", "no url", "URL Homer не задан.");
+    setStatus("local", "no url", t("homerUrlMissing"));
     return;
   }
   if (homerCache?.services?.length) {
-    setStatus("cache", "cache", `Кеш Homer: ${formatDateTime(homerCache.fetchedAt)}.`);
+    setStatus("cache", "cache", t("homerCache", formatDateTime(homerCache.fetchedAt)));
     return;
   }
   setStatus("local", homerCache?.services?.length ? "away" : "no homer", getEmptyServicesMessage());
@@ -1857,7 +1979,7 @@ function formatHistoryMeta(item) {
 
 function formatFrequentMeta(item) {
   const domain = toDomain(item.url);
-  const visits = Number.isFinite(item.visitCount) && item.visitCount > 0 ? `${item.visitCount} посещ.` : "";
+  const visits = Number.isFinite(item.visitCount) && item.visitCount > 0 ? t("visitCount", item.visitCount) : "";
   if (domain && visits) {
     return `${domain} · ${visits}`;
   }
@@ -1866,7 +1988,7 @@ function formatFrequentMeta(item) {
 
 function formatTime(timestamp) {
   try {
-    return new Intl.DateTimeFormat("ru-RU", {
+    return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date(timestamp));
@@ -1934,7 +2056,7 @@ function withCacheBuster(url) {
 
 function formatDateTime(timestamp) {
   try {
-    return new Intl.DateTimeFormat("ru-RU", {
+    return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",

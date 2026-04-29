@@ -11,16 +11,16 @@
   </head>
   <body>
     <main class="page-shell">
-      <div class="top-actions" aria-label="Управление">
-        <button id="statusButton" class="status-button" type="button" title="Статус Homer">
+      <div class="top-actions" aria-label="Управление" data-i18n-attr="aria-label:topActions">
+        <button id="statusButton" class="status-button" type="button" title="Статус Homer" data-i18n-attr="title:homerStatus">
           <span id="statusDot" class="status-dot"></span>
           <span id="statusText">local</span>
         </button>
-        <button id="syncButton" class="icon-button" type="button" title="Обновить Homer">↻</button>
-        <button id="settingsButton" class="icon-button" type="button" title="Настройки">⚙</button>
+        <button id="syncButton" class="icon-button" type="button" title="Обновить Homer" data-i18n-attr="title:syncHomer">↻</button>
+        <button id="settingsButton" class="icon-button" type="button" title="Настройки" data-i18n-attr="title:settings">⚙</button>
       </div>
 
-      <section class="launch-panel" aria-label="Поиск и быстрые ссылки">
+      <section class="launch-panel" aria-label="Поиск и быстрые ссылки" data-i18n-attr="aria-label:launchPanel">
         <form id="searchForm" class="search-row" autocomplete="off">
           <input
             id="searchInput"
@@ -28,23 +28,24 @@
             name="q"
             type="search"
             placeholder="Что ищем?"
+            data-i18n-attr="placeholder:searchPlaceholder"
             spellcheck="false"
             autofocus
           />
-          <div id="searchButtons" class="search-buttons" aria-label="Поисковые сервисы"></div>
+          <div id="searchButtons" class="search-buttons" aria-label="Поисковые сервисы" data-i18n-attr="aria-label:searchServices"></div>
         </form>
-        <nav id="quickLinks" class="quick-links" aria-label="Быстрые ссылки"></nav>
+        <nav id="quickLinks" class="quick-links" aria-label="Быстрые ссылки" data-i18n-attr="aria-label:quickLinks"></nav>
       </section>
 
-      <section class="services-area" aria-label="Homer и посещённые сайты">
+      <section class="services-area" aria-label="Homer и посещённые сайты" data-i18n-attr="aria-label:servicesArea">
         <div id="servicesLayout" class="services-layout">
           <div id="servicesGrid" class="services-grid"></div>
-          <aside id="frequentPanel" class="visit-panel frequent-panel" aria-label="Часто посещаемые">
-            <h2 class="visit-heading">Часто посещаемые</h2>
+          <aside id="frequentPanel" class="visit-panel frequent-panel" aria-label="Часто посещаемые" data-i18n-attr="aria-label:frequentVisits">
+            <h2 class="visit-heading" data-i18n="frequentVisits">Часто посещаемые</h2>
             <div id="frequentList" class="visit-list"></div>
           </aside>
-          <aside id="historyPanel" class="visit-panel history-panel" aria-label="Последние посещённые">
-            <h2 class="visit-heading">Последние посещённые</h2>
+          <aside id="historyPanel" class="visit-panel history-panel" aria-label="Последние посещённые" data-i18n-attr="aria-label:recentVisits">
+            <h2 class="visit-heading" data-i18n="recentVisits">Последние посещённые</h2>
             <div id="historyList" class="visit-list"></div>
           </aside>
         </div>
@@ -54,22 +55,22 @@
     <div id="settingsOverlay" class="settings-overlay hidden">
       <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
         <header class="settings-header">
-          <h1 id="settingsTitle">Настройки</h1>
-          <button id="closeSettingsButton" class="icon-button" type="button" title="Закрыть">×</button>
+          <h1 id="settingsTitle" data-i18n="settings">Настройки</h1>
+          <button id="closeSettingsButton" class="icon-button" type="button" title="Закрыть" data-i18n-attr="title:close">×</button>
         </header>
 
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Поиск</h2>
-            <button id="addEngineButton" class="secondary-button" type="button">Добавить</button>
+            <h2 data-i18n="search">Поиск</h2>
+            <button id="addEngineButton" class="secondary-button" type="button" data-i18n="add">Добавить</button>
           </div>
           <div id="engineRows" class="settings-rows"></div>
         </section>
 
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Быстрые ссылки</h2>
-            <button id="addQuickLinkButton" class="secondary-button" type="button">Добавить</button>
+            <h2 data-i18n="quickLinks">Быстрые ссылки</h2>
+            <button id="addQuickLinkButton" class="secondary-button" type="button" data-i18n="add">Добавить</button>
           </div>
           <div id="quickLinkRows" class="settings-rows"></div>
         </section>
@@ -88,23 +89,23 @@
 
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Посещения</h2>
+            <h2 data-i18n="visits">Посещения</h2>
           </div>
           <div class="field-grid">
             <label>
-              Сколько записей истории смотреть
+              <span data-i18n="historyPool">Сколько записей истории смотреть</span>
               <input id="frequentHistoryPoolInput" type="number" min="50" max="50000" step="50" />
             </label>
             <label>
-              Минимум посещений для частых
+              <span data-i18n="minVisits">Минимум посещений для частых</span>
               <input id="frequentMinVisitsInput" type="number" min="2" max="1000" step="1" />
             </label>
           </div>
         </section>
 
         <footer class="settings-footer">
-          <button id="resetButton" class="secondary-button danger-button" type="button">Сбросить</button>
-          <button id="saveButton" class="primary-button" type="button">Сохранить</button>
+          <button id="resetButton" class="secondary-button danger-button" type="button" data-i18n="reset">Сбросить</button>
+          <button id="saveButton" class="primary-button" type="button" data-i18n="save">Сохранить</button>
         </footer>
       </div>
     </div>
