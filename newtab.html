@@ -44,6 +44,22 @@
       <section class="services-area" aria-label="Homer и посещённые сайты" data-i18n-attr="aria-label:servicesArea">
         <div id="servicesLayout" class="services-layout">
           <div id="servicesGrid" class="services-grid"></div>
+          <section id="githubTrending" class="github-trending hidden" aria-label="GitHub Trending" data-i18n-attr="aria-label:githubTrending">
+            <header class="github-trending-header">
+              <h2 data-i18n="githubTrending">GitHub Trending</h2>
+              <div id="githubTrendingMeta" class="github-trending-meta"></div>
+              <button
+                id="githubTrendingRefreshButton"
+                class="icon-button github-trending-refresh"
+                type="button"
+                title="Обновить GitHub Trending"
+                data-i18n-attr="title:refreshGithubTrending"
+              >
+                ↻
+              </button>
+            </header>
+            <div id="githubTrendingList" class="github-trending-list"></div>
+          </section>
           <section id="weatherWidget" class="weather-widget hidden" aria-live="polite">
             <div class="weather-main">
               <div id="weatherIcon" class="weather-icon" aria-hidden="true">☁</div>
@@ -141,6 +157,27 @@
             <label class="check-field">
               <input id="weatherEnabledInput" type="checkbox" />
               <span data-i18n="weatherEnabled">Показывать погоду</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2 data-i18n="githubTrending">GitHub Trending</h2>
+          </div>
+          <div class="field-grid">
+            <label class="check-field">
+              <input id="githubTrendingEnabledInput" type="checkbox" />
+              <span data-i18n="githubTrendingEnabled">Показывать GitHub Trending</span>
+            </label>
+            <label>
+              <span data-i18n="githubTrendingExcludedTerms">Исключать слова</span>
+              <input
+                id="githubTrendingExcludeInput"
+                type="text"
+                placeholder="ai, llm, claude, agent"
+                data-i18n-attr="placeholder:githubTrendingExcludedTermsPlaceholder"
+              />
             </label>
           </div>
         </section>

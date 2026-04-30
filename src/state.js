@@ -19,6 +19,7 @@ export function normalizeBootConfig(raw) {
     search: normalizeSearch(source.search, fallback.search),
     quickLinks: normalizeQuickLinks(source.quickLinks, fallback.quickLinks),
     visits: normalizeVisitSettings(source.visits, fallback.visits),
+    githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
     services: normalizeServiceGroups(source.services, ""),
   };
 }
@@ -29,6 +30,7 @@ export function createDefaultState(baseConfig) {
     quickLinks: clone(baseConfig.quickLinks),
     homer: clone(baseConfig.homer),
     visits: clone(baseConfig.visits),
+    githubTrending: clone(baseConfig.githubTrending),
   };
 }
 
@@ -49,6 +51,9 @@ export function createDefaultLocalPatch() {
       disabled: false,
       locationName: "",
     },
+    githubTrending: {
+      disabled: false,
+    },
     visits: {
       showFrequent: true,
       showRecent: true,
@@ -66,6 +71,7 @@ export function normalizeState(raw, baseConfig) {
     quickLinks: normalizeQuickLinks(raw.quickLinks, base.quickLinks),
     homer: normalizeHomerSettings(raw.homer, base.homer),
     visits: normalizeVisitSettings(raw.visits, base.visits),
+    githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending),
   };
 }
 
@@ -83,6 +89,7 @@ export function createSyncedState(state) {
     quickLinks: clone(state.quickLinks),
     homer: clone(state.homer),
     visits: clone(state.visits),
+    githubTrending: clone(state.githubTrending),
   };
 }
 
@@ -115,6 +122,9 @@ export function normalizeLocalPatch(raw, state) {
     weather: {
       disabled: source.weather?.disabled === true,
       locationName: normalizeWeatherLocationName(source.weather?.locationName),
+    },
+    githubTrending: {
+      disabled: source.githubTrending?.disabled === true,
     },
     visits: {
       showFrequent: source.visits?.showFrequent !== false,
@@ -223,6 +233,34 @@ export function normalizeVisitSettings(raw, fallback) {
     frequentHistoryPool: clampInt(raw?.frequentHistoryPool, 50, 50000, base.frequentHistoryPool),
     frequentMinVisits: clampInt(raw?.frequentMinVisits, 2, 1000, base.frequentMinVisits),
   };
+}
+
+export function normalizeGitHubTrendingSettings(raw, fallback) {
+  const base = fallback || FALLBACK_CONFIG.githubTrending;
+  return {
+    excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms),
+  };
+}
+
+export function normalizeGitHubTrendingExcludedTerms(raw, fallback = []) {
+  const source = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[\s,;]+/) : fallback;
+  const seen = new Set();
+  const out = [];
+  for (const value of source || []) {
+    const term = String(value || "")
+      .trim()
+      .replace(/^-+/, "")
+      .toLowerCase();
+    if (!term || term.length > 40 || !/^[a-z0-9_.#+-]+$/i.test(term) || seen.has(term)) {
+      continue;
+    }
+    seen.add(term);
+    out.push(term);
+    if (out.length >= 20) {
+      break;
+    }
+  }
+  return out;
 }
 
 export function normalizeQuickLinkMeta(raw) {

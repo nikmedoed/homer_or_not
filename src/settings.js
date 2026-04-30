@@ -1,7 +1,13 @@
 import { FALLBACK_CONFIG } from "./default-config.js";
 import { deriveHomerEndpoints } from "./homer.js";
 import { t } from "./i18n.js";
-import { createSyncedState, normalizeLocalPatch, normalizeState, normalizeVisitSettings } from "./state.js";
+import {
+  createSyncedState,
+  normalizeGitHubTrendingSettings,
+  normalizeLocalPatch,
+  normalizeState,
+  normalizeVisitSettings,
+} from "./state.js";
 import { clone, isHttpUrl, makeId } from "./utils.js";
 
 export function openSettings(app) {
@@ -28,6 +34,8 @@ export function renderSettings(app) {
   app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
   app.refs.weatherEnabledInput.checked = app.localPatchDraft?.weather?.disabled !== true;
   app.refs.weatherLocationInput.value = app.localPatchDraft?.weather?.locationName || "";
+  app.refs.githubTrendingEnabledInput.checked = app.localPatchDraft?.githubTrending?.disabled !== true;
+  app.refs.githubTrendingExcludeInput.value = app.settingsDraft.githubTrending.excludedTerms.join(", ");
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
   app.refs.showRecentVisitsInput.checked = app.localPatchDraft?.visits?.showRecent !== false;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
@@ -259,6 +267,7 @@ export function validateSettingsDraft(app) {
       quickLinks: cleanedLinks,
       homer: nextHomer,
       visits: readVisitsDraft(app),
+      githubTrending: readGitHubTrendingDraft(app),
     },
     localPatch: normalizeLocalPatch(
       {
@@ -276,6 +285,9 @@ export function validateSettingsDraft(app) {
           disabled: !app.refs.weatherEnabledInput.checked,
           locationName: app.refs.weatherLocationInput.value,
         },
+        githubTrending: {
+          disabled: !app.refs.githubTrendingEnabledInput.checked,
+        },
         visits: {
           showFrequent: app.refs.showFrequentVisitsInput.checked,
           showRecent: app.refs.showRecentVisitsInput.checked,
@@ -289,6 +301,7 @@ export function validateSettingsDraft(app) {
         quickLinks: cleanedLinks,
         homer: nextHomer,
         visits: readVisitsDraft(app),
+        githubTrending: readGitHubTrendingDraft(app),
       },
     ),
   };
@@ -307,6 +320,15 @@ function readVisitsDraft(app) {
       frequentMinVisits: app.refs.frequentMinVisitsInput.value,
     },
     FALLBACK_CONFIG.visits,
+  );
+}
+
+function readGitHubTrendingDraft(app) {
+  return normalizeGitHubTrendingSettings(
+    {
+      excludedTerms: app.refs.githubTrendingExcludeInput.value,
+    },
+    FALLBACK_CONFIG.githubTrending,
   );
 }
 

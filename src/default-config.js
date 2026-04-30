@@ -20,5 +20,8 @@ export const FALLBACK_CONFIG = {
     frequentHistoryPool: 5000,
     frequentMinVisits: 3,
   },
+  githubTrending: {
+    excludedTerms: [],
+  },
   services: [],
 };

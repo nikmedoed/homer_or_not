@@ -1,5 +1,6 @@
 import {
   CACHE_KEY,
+  GITHUB_TRENDING_CACHE_KEY,
   HISTORY_KEY,
   LOCAL_AREA,
   LOCAL_PATCH_KEY,
@@ -11,12 +12,14 @@ import {
   WEATHER_CACHE_KEY,
 } from "./constants.js";
 import { FALLBACK_CONFIG } from "./default-config.js";
+import { normalizeGitHubTrendingCache, syncGitHubTrending } from "./github-trending.js";
 import { normalizeHomerCache, normalizeSyncMeta } from "./homer.js";
 import { applyLocalization, t } from "./i18n.js";
 import { addVisitHistoryItem, loadFrequentVisits, loadVisitHistory, refreshVisitHistory } from "./history.js";
 import { refreshQuickLinkMetadata, refreshSearchEngineMetadata } from "./metadata.js";
 import {
   renderAll,
+  renderGitHubTrending,
   renderQuickLinks,
   renderSearchButtons,
   renderVisitPanels,
@@ -68,6 +71,8 @@ const app = {
   searchEngineMeta: {},
   weatherCache: null,
   weatherStatus: null,
+  githubTrendingCache: null,
+  githubTrendingStatus: null,
   visitHistory: [],
   frequentVisits: [],
   settingsDraft: null,
@@ -83,6 +88,7 @@ app.renderQuickLinks = () => renderQuickLinks(app);
 app.renderSearchButtons = () => renderSearchButtons(app);
 app.renderVisitPanels = () => renderVisitPanels(app);
 app.renderWeatherWidget = () => renderWeatherWidget(app);
+app.renderGitHubTrending = () => renderGitHubTrending(app);
 app.runSearch = runSearch;
 app.setViewMode = setViewMode;
 
@@ -100,6 +106,7 @@ async function init() {
   app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
   app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
   app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
+  app.githubTrendingCache = normalizeGitHubTrendingCache(await storageGet(GITHUB_TRENDING_CACHE_KEY));
   app.visitHistory = await loadVisitHistory();
   app.frequentVisits = await loadFrequentVisits(app);
   applyTheme(app);
@@ -108,6 +115,7 @@ async function init() {
   void refreshSearchEngineMetadata(app, { force: false });
   void refreshQuickLinkMetadata(app, { force: false });
   void syncWeather(app, { force: false });
+  void syncGitHubTrending(app, { force: false });
   await syncHomer(app, { force: false });
 }
 
@@ -137,6 +145,10 @@ function bindRefs() {
   refs.weatherRain = byId("weatherRain");
   refs.weatherUpdated = byId("weatherUpdated");
   refs.weatherRefreshButton = byId("weatherRefreshButton");
+  refs.githubTrending = byId("githubTrending");
+  refs.githubTrendingList = byId("githubTrendingList");
+  refs.githubTrendingMeta = byId("githubTrendingMeta");
+  refs.githubTrendingRefreshButton = byId("githubTrendingRefreshButton");
   refs.frequentPanel = byId("frequentPanel");
   refs.frequentList = byId("frequentList");
   refs.historyPanel = byId("historyPanel");
@@ -151,6 +163,8 @@ function bindRefs() {
   refs.homerDisabledInput = byId("homerDisabledInput");
   refs.weatherEnabledInput = byId("weatherEnabledInput");
   refs.weatherLocationInput = byId("weatherLocationInput");
+  refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
+  refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
   refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -175,6 +189,9 @@ function bindEvents() {
   });
   refs.weatherRefreshButton.addEventListener("click", () => {
     void syncWeather(app, { force: true });
+  });
+  refs.githubTrendingRefreshButton.addEventListener("click", () => {
+    void syncGitHubTrending(app, { force: true });
   });
   refs.statusButton.addEventListener("click", () => openSettings(app));
   refs.settingsButton.addEventListener("click", () => openSettings(app));
@@ -390,6 +407,8 @@ async function resetSettings() {
   app.searchEngineMeta = {};
   app.weatherCache = null;
   app.weatherStatus = null;
+  app.githubTrendingCache = null;
+  app.githubTrendingStatus = null;
   app.visitHistory = [];
   app.frequentVisits = [];
   app.settingsDraft = clone(app.state);
@@ -398,7 +417,16 @@ async function resetSettings() {
   await Promise.all([
     storageRemove(STATE_KEY, SYNC_AREA),
     storageRemove(
-      [LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY, WEATHER_CACHE_KEY],
+      [
+        LOCAL_PATCH_KEY,
+        CACHE_KEY,
+        META_KEY,
+        QUICK_LINK_META_KEY,
+        SEARCH_ENGINE_META_KEY,
+        HISTORY_KEY,
+        WEATHER_CACHE_KEY,
+        GITHUB_TRENDING_CACHE_KEY,
+      ],
       LOCAL_AREA,
     ),
   ]);
@@ -407,5 +435,6 @@ async function resetSettings() {
   renderSettings(app);
   void refreshSearchEngineMetadata(app, { force: true });
   void syncWeather(app, { force: true });
+  void syncGitHubTrending(app, { force: true });
   await syncHomer(app, { force: true });
 }

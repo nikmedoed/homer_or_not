@@ -8,6 +8,7 @@
   var SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v2";
   var HISTORY_KEY = "homerOrNot.visitHistory.v1";
   var WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
+  var GITHUB_TRENDING_CACHE_KEY = "homerOrNot.githubTrendingCache.v1";
   var SYNC_AREA = "sync";
   var LOCAL_AREA = "local";
   var QUICK_LINK_META_TTL_MS = 1e3 * 60 * 60 * 24 * 7;
@@ -17,6 +18,8 @@
   var LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
   var WEATHER_SYNC_INTERVAL_MINUTES = 30;
   var WEATHER_FETCH_TIMEOUT_MS = 7e3;
+  var GITHUB_TRENDING_SYNC_INTERVAL_MINUTES = 360;
+  var GITHUB_TRENDING_FETCH_TIMEOUT_MS = 7e3;
 
   // src/i18n.js
   var LOCALE = getPreferredLocale();
@@ -88,6 +91,17 @@
       weatherWind: (wind) => `\u224B ${wind}`,
       weatherRain: (chance) => `\u041E\u0441 ${chance}`,
       weatherUpdated: (date) => `\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${date}`,
+      githubTrending: "GitHub Trending",
+      githubTrendingEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C GitHub Trending",
+      githubTrendingExcludedTerms: "\u0418\u0441\u043A\u043B\u044E\u0447\u0430\u0442\u044C \u0441\u043B\u043E\u0432\u0430",
+      githubTrendingExcludedTermsPlaceholder: "ai, llm, claude, agent",
+      refreshGithubTrending: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C GitHub Trending",
+      githubTrendingLoading: "\u0418\u0449\u0443 \u0441\u0432\u0435\u0436\u0438\u0435 \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0438\u0438...",
+      githubTrendingUnavailable: "GitHub Trending \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.",
+      githubTrendingSource: "\u043D\u043E\u0432\u044B\u0435 dev-tool \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0438\u0438",
+      githubTrendingUpdated: (elapsed) => `\u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${elapsed}`,
+      githubTrendingStale: (elapsed) => `\u043A\u0435\u0448 ${elapsed}`,
+      githubTrendingNoDescription: "\u0411\u0435\u0437 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F",
       localEnabled: "\u0412\u043A\u043B",
       inputTitle: "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435",
       inputSearchTemplate: "URL \u0441 {q}",
@@ -170,6 +184,17 @@
       weatherWind: (wind) => `\u224B ${wind}`,
       weatherRain: (chance) => `Rain ${chance}`,
       weatherUpdated: (date) => `Updated ${date}`,
+      githubTrending: "GitHub Trending",
+      githubTrendingEnabled: "Show GitHub Trending",
+      githubTrendingExcludedTerms: "Exclude words",
+      githubTrendingExcludedTermsPlaceholder: "ai, llm, claude, agent",
+      refreshGithubTrending: "Refresh GitHub Trending",
+      githubTrendingLoading: "Looking for fresh repositories...",
+      githubTrendingUnavailable: "GitHub Trending is unavailable right now.",
+      githubTrendingSource: "new dev-tool repositories",
+      githubTrendingUpdated: (elapsed) => `updated ${elapsed}`,
+      githubTrendingStale: (elapsed) => `cache ${elapsed}`,
+      githubTrendingNoDescription: "No description",
       localEnabled: "On",
       inputTitle: "Name",
       inputSearchTemplate: "URL with {q}",
@@ -229,6 +254,9 @@
     visits: {
       frequentHistoryPool: 5e3,
       frequentMinVisits: 3
+    },
+    githubTrending: {
+      excludedTerms: []
     },
     services: []
   };
@@ -848,6 +876,7 @@
       search: normalizeSearch(source.search, fallback.search),
       quickLinks: normalizeQuickLinks(source.quickLinks, fallback.quickLinks),
       visits: normalizeVisitSettings(source.visits, fallback.visits),
+      githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
       services: normalizeServiceGroups(source.services, "")
     };
   }
@@ -856,7 +885,8 @@
       search: clone(baseConfig.search),
       quickLinks: clone(baseConfig.quickLinks),
       homer: clone(baseConfig.homer),
-      visits: clone(baseConfig.visits)
+      visits: clone(baseConfig.visits),
+      githubTrending: clone(baseConfig.githubTrending)
     };
   }
   function normalizeState(raw, baseConfig) {
@@ -868,7 +898,8 @@
       search: normalizeSearch(raw.search, base.search),
       quickLinks: normalizeQuickLinks(raw.quickLinks, base.quickLinks),
       homer: normalizeHomerSettings(raw.homer, base.homer),
-      visits: normalizeVisitSettings(raw.visits, base.visits)
+      visits: normalizeVisitSettings(raw.visits, base.visits),
+      githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending)
     };
   }
   function normalizeSyncedState(raw, baseConfig) {
@@ -883,7 +914,8 @@
       },
       quickLinks: clone(state.quickLinks),
       homer: clone(state.homer),
-      visits: clone(state.visits)
+      visits: clone(state.visits),
+      githubTrending: clone(state.githubTrending)
     };
   }
   function normalizeLocalPatch(raw, state) {
@@ -909,6 +941,9 @@
       weather: {
         disabled: source.weather?.disabled === true,
         locationName: normalizeWeatherLocationName(source.weather?.locationName)
+      },
+      githubTrending: {
+        disabled: source.githubTrending?.disabled === true
       },
       visits: {
         showFrequent: source.visits?.showFrequent !== false,
@@ -999,6 +1034,29 @@
       frequentHistoryPool: clampInt(raw?.frequentHistoryPool, 50, 5e4, base.frequentHistoryPool),
       frequentMinVisits: clampInt(raw?.frequentMinVisits, 2, 1e3, base.frequentMinVisits)
     };
+  }
+  function normalizeGitHubTrendingSettings(raw, fallback) {
+    const base = fallback || FALLBACK_CONFIG.githubTrending;
+    return {
+      excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms)
+    };
+  }
+  function normalizeGitHubTrendingExcludedTerms(raw, fallback = []) {
+    const source = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[\s,;]+/) : fallback;
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const value of source || []) {
+      const term = String(value || "").trim().replace(/^-+/, "").toLowerCase();
+      if (!term || term.length > 40 || !/^[a-z0-9_.#+-]+$/i.test(term) || seen.has(term)) {
+        continue;
+      }
+      seen.add(term);
+      out.push(term);
+      if (out.length >= 20) {
+        break;
+      }
+    }
+    return out;
   }
   function normalizeQuickLinkMeta(raw) {
     if (!raw || typeof raw !== "object") {
@@ -1898,6 +1956,7 @@
     renderQuickLinks(app2);
     renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
     renderWeatherWidget(app2);
+    renderGitHubTrending(app2);
     renderVisitPanels(app2);
     setStatusFromCurrentData(app2);
   }
@@ -2133,6 +2192,86 @@
     refs.weatherUpdated.title = "";
     refs.weatherRefreshButton.disabled = status?.kind === "loading";
   }
+  function renderGitHubTrending(app2) {
+    const { refs } = app2;
+    if (!refs.githubTrending) {
+      return;
+    }
+    if (app2.localPatch?.githubTrending?.disabled) {
+      refs.githubTrending.classList.add("hidden");
+      return;
+    }
+    const status = app2.githubTrendingStatus;
+    const summary = getGitHubTrendingSummary(app2.githubTrendingCache);
+    const hasItems = summary.items.length > 0;
+    refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
+    refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
+    refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
+    refs.githubTrendingList.replaceChildren();
+    if (!hasItems) {
+      const empty = document.createElement("p");
+      empty.className = "github-trending-message";
+      empty.textContent = status?.message || t("githubTrendingUnavailable");
+      refs.githubTrendingList.append(empty);
+      refs.githubTrendingMeta.textContent = t("githubTrendingSource");
+      return;
+    }
+    for (const item of summary.items) {
+      refs.githubTrendingList.append(createGitHubTrendingRow(app2, item));
+    }
+    if (status?.kind === "error") {
+      refs.githubTrendingMeta.textContent = t("githubTrendingStale", summary.updatedAt);
+      refs.githubTrendingMeta.title = [status.message, summary.updatedAtTitle].filter(Boolean).join(" \xB7 ");
+      return;
+    }
+    refs.githubTrendingMeta.textContent = summary.updatedAt ? t("githubTrendingUpdated", summary.updatedAt) : t("githubTrendingSource");
+    refs.githubTrendingMeta.title = summary.updatedAtTitle;
+  }
+  function createGitHubTrendingRow(app2, item) {
+    const anchor = document.createElement("a");
+    anchor.className = "github-trending-row";
+    anchor.href = item.url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.title = item.description || item.fullName;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.fullName,
+        url: item.url,
+        source: "github"
+      });
+    });
+    const avatar = document.createElement("span");
+    avatar.className = "github-trending-avatar";
+    if (item.ownerAvatarUrl) {
+      const image = document.createElement("img");
+      image.src = item.ownerAvatarUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      image.addEventListener("error", () => {
+        image.remove();
+        avatar.textContent = makeInitial(item.name);
+      });
+      avatar.append(image);
+    } else {
+      avatar.textContent = makeInitial(item.name);
+    }
+    const body = document.createElement("span");
+    body.className = "github-trending-body";
+    const title = document.createElement("span");
+    title.className = "github-trending-name";
+    title.textContent = item.fullName;
+    const description = document.createElement("span");
+    description.className = "github-trending-description";
+    description.textContent = item.description || t("githubTrendingNoDescription");
+    const meta = document.createElement("span");
+    meta.className = "github-trending-repo-meta";
+    const stars = formatStars(item.stars);
+    meta.textContent = [stars ? `\u2605 ${stars}` : "", item.language, formatRepositoryAge(item)].filter(Boolean).join(" \xB7 ");
+    body.append(title, description, meta);
+    anchor.append(avatar, body);
+    return anchor;
+  }
   function createWeatherTempLine(summary) {
     const fragment = document.createDocumentFragment();
     const current = document.createElement("span");
@@ -2274,6 +2413,196 @@
     app2.refs.statusButton.title = title;
   }
 
+  // src/github-trending.js
+  var SEARCH_URL = "https://api.github.com/search/repositories";
+  var MAX_ITEMS = 12;
+  var SEARCH_PAGE_SIZE = 100;
+  var MIN_STARS = 50;
+  var CREATED_WITHIN_DAYS = 90;
+  function normalizeGitHubTrendingCache(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const fetchedAt = Number.isFinite(raw.fetchedAt) ? raw.fetchedAt : 0;
+    const items = Array.isArray(raw.items) ? raw.items.map(normalizeTrendingItem).filter(Boolean).slice(0, MAX_ITEMS) : [];
+    if (!fetchedAt || !items.length) {
+      return null;
+    }
+    return {
+      fetchedAt,
+      queryKey: typeof raw.queryKey === "string" ? raw.queryKey : "",
+      items
+    };
+  }
+  async function syncGitHubTrending(app2, { force = false } = {}) {
+    if (app2.localPatch?.githubTrending?.disabled) {
+      app2.githubTrendingStatus = null;
+      renderGitHubTrending(app2);
+      return;
+    }
+    if (!force && isCacheFresh(app2.githubTrendingCache, GITHUB_TRENDING_SYNC_INTERVAL_MINUTES) && app2.githubTrendingCache.queryKey === getTrendingQueryKey(app2)) {
+      app2.githubTrendingStatus = null;
+      renderGitHubTrending(app2);
+      return;
+    }
+    app2.githubTrendingStatus = {
+      kind: "loading",
+      message: app2.githubTrendingCache ? "" : t("githubTrendingLoading")
+    };
+    renderGitHubTrending(app2);
+    try {
+      const query = getTrendingQuery();
+      const queryKey = getTrendingQueryKey(app2);
+      const data = await fetchTrendingRepositories(query);
+      app2.githubTrendingCache = normalizeGitHubTrendingCache({
+        fetchedAt: Date.now(),
+        queryKey,
+        items: filterExcludedRepositories(Array.isArray(data?.items) ? data.items : [], getExcludedTerms(app2)).slice(
+          0,
+          MAX_ITEMS
+        )
+      });
+      if (!app2.githubTrendingCache) {
+        throw new Error(t("githubTrendingUnavailable"));
+      }
+      app2.githubTrendingStatus = null;
+      await storageSet(GITHUB_TRENDING_CACHE_KEY, app2.githubTrendingCache, LOCAL_AREA);
+    } catch (error) {
+      app2.githubTrendingStatus = {
+        kind: "error",
+        message: error?.message || t("githubTrendingUnavailable")
+      };
+    }
+    renderGitHubTrending(app2);
+  }
+  function getGitHubTrendingSummary(cache) {
+    const updatedAt = cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: false }) : "";
+    return {
+      updatedAt,
+      updatedAtTitle: cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: true }) : "",
+      items: Array.isArray(cache?.items) ? cache.items : []
+    };
+  }
+  function normalizeTrendingItem(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const name = typeof raw.name === "string" ? raw.name.trim() : "";
+    const fullName = typeof raw.full_name === "string" ? raw.full_name.trim() : "";
+    const url = typeof raw.html_url === "string" ? raw.html_url.trim() : "";
+    if (!name || !fullName || !url) {
+      return null;
+    }
+    return {
+      name,
+      fullName,
+      url,
+      description: normalizeDescription(raw.description),
+      language: typeof raw.language === "string" ? raw.language.trim() : "",
+      stars: Number.isFinite(raw.stargazers_count) ? raw.stargazers_count : 0,
+      createdAt: typeof raw.created_at === "string" ? raw.created_at : "",
+      pushedAt: typeof raw.pushed_at === "string" ? raw.pushed_at : "",
+      ownerAvatarUrl: typeof raw.owner?.avatar_url === "string" ? raw.owner.avatar_url : ""
+    };
+  }
+  function normalizeDescription(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+  function getTrendingQuery() {
+    const createdAfter = new Date(Date.now() - CREATED_WITHIN_DAYS * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+    return [`created:>=${createdAfter}`, `stars:>=${MIN_STARS}`, "archived:false", "fork:false", "topic:developer-tools"].join(
+      " "
+    );
+  }
+  function getTrendingQueryKey(app2) {
+    return [getTrendingQuery(), ...getExcludedTerms(app2).map((term) => `-${term}`)].join(" ");
+  }
+  function getExcludedTerms(app2) {
+    return Array.isArray(app2.state?.githubTrending?.excludedTerms) ? app2.state.githubTrending.excludedTerms : [];
+  }
+  function filterExcludedRepositories(items, excludedTerms) {
+    if (!excludedTerms.length) {
+      return items;
+    }
+    return items.filter((item) => !matchesExcludedTerm(item, excludedTerms));
+  }
+  function matchesExcludedTerm(item, excludedTerms) {
+    const haystack = [item?.full_name, item?.name, item?.description, ...Array.isArray(item?.topics) ? item.topics : []].filter(Boolean).join(" ").toLowerCase();
+    return excludedTerms.some((term) => matchesTerm(haystack, term));
+  }
+  function matchesTerm(haystack, term) {
+    const normalized = String(term || "").toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    if (/^[a-z0-9]+$/.test(normalized)) {
+      return new RegExp(`(^|[^a-z0-9])${escapeRegExp(normalized)}([^a-z0-9]|$)`, "i").test(haystack);
+    }
+    return haystack.includes(normalized);
+  }
+  function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  async function fetchTrendingRepositories(query) {
+    const url = new URL(SEARCH_URL);
+    url.searchParams.set("q", query);
+    url.searchParams.set("sort", "stars");
+    url.searchParams.set("order", "desc");
+    url.searchParams.set("per_page", String(SEARCH_PAGE_SIZE));
+    url.searchParams.set("page", "1");
+    return await fetchJsonWithTimeout(url.href, GITHUB_TRENDING_FETCH_TIMEOUT_MS);
+  }
+  function formatStars(value) {
+    const stars = Number(value);
+    if (!Number.isFinite(stars) || stars <= 0) {
+      return "";
+    }
+    if (stars >= 1e3) {
+      const compact = stars / 1e3;
+      return `${compact >= 10 ? Math.round(compact) : compact.toFixed(1)}k`;
+    }
+    return String(Math.round(stars));
+  }
+  function formatRepositoryAge(item) {
+    const timestamp = Date.parse(item?.createdAt || "");
+    if (!Number.isFinite(timestamp)) {
+      return "";
+    }
+    const days = Math.max(0, Math.floor((Date.now() - timestamp) / (24 * 60 * 60 * 1e3)));
+    if (LOCALE === "ru") {
+      if (days < 1) {
+        return "\u0441\u0435\u0433\u043E\u0434\u043D\u044F";
+      }
+      if (days === 1) {
+        return "1 \u0434\u0435\u043D\u044C";
+      }
+      return `${days} \u0434\u043D.`;
+    }
+    if (days < 1) {
+      return "today";
+    }
+    return days === 1 ? "1 day" : `${days} days`;
+  }
+  function formatUpdatedAt(timestamp, { includeDate }) {
+    const date = new Date(timestamp);
+    if (!Number.isFinite(date.getTime())) {
+      return "";
+    }
+    const today = /* @__PURE__ */ new Date();
+    const isToday = date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    const locale = LOCALE === "ru" ? "ru-RU" : "en-GB";
+    const options = {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    };
+    if (includeDate || !isToday) {
+      options.day = "2-digit";
+      options.month = "2-digit";
+    }
+    return new Intl.DateTimeFormat(locale, options).format(date);
+  }
+
   // src/settings.js
   function openSettings(app2) {
     app2.settingsDraft = clone(app2.state);
@@ -2297,6 +2626,8 @@
     app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
     app2.refs.weatherEnabledInput.checked = app2.localPatchDraft?.weather?.disabled !== true;
     app2.refs.weatherLocationInput.value = app2.localPatchDraft?.weather?.locationName || "";
+    app2.refs.githubTrendingEnabledInput.checked = app2.localPatchDraft?.githubTrending?.disabled !== true;
+    app2.refs.githubTrendingExcludeInput.value = app2.settingsDraft.githubTrending.excludedTerms.join(", ");
     app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
     app2.refs.showRecentVisitsInput.checked = app2.localPatchDraft?.visits?.showRecent !== false;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
@@ -2504,7 +2835,8 @@ ${result.error}`);
         },
         quickLinks: cleanedLinks,
         homer: nextHomer,
-        visits: readVisitsDraft(app2)
+        visits: readVisitsDraft(app2),
+        githubTrending: readGitHubTrendingDraft(app2)
       },
       localPatch: normalizeLocalPatch(
         {
@@ -2520,6 +2852,9 @@ ${result.error}`);
             disabled: !app2.refs.weatherEnabledInput.checked,
             locationName: app2.refs.weatherLocationInput.value
           },
+          githubTrending: {
+            disabled: !app2.refs.githubTrendingEnabledInput.checked
+          },
           visits: {
             showFrequent: app2.refs.showFrequentVisitsInput.checked,
             showRecent: app2.refs.showRecentVisitsInput.checked
@@ -2532,7 +2867,8 @@ ${result.error}`);
           },
           quickLinks: cleanedLinks,
           homer: nextHomer,
-          visits: readVisitsDraft(app2)
+          visits: readVisitsDraft(app2),
+          githubTrending: readGitHubTrendingDraft(app2)
         }
       )
     };
@@ -2549,6 +2885,14 @@ ${result.error}`);
         frequentMinVisits: app2.refs.frequentMinVisitsInput.value
       },
       FALLBACK_CONFIG.visits
+    );
+  }
+  function readGitHubTrendingDraft(app2) {
+    return normalizeGitHubTrendingSettings(
+      {
+        excludedTerms: app2.refs.githubTrendingExcludeInput.value
+      },
+      FALLBACK_CONFIG.githubTrending
     );
   }
   function createInput(placeholder, value, type = "text") {
@@ -2712,6 +3056,8 @@ ${result.error}`);
     searchEngineMeta: {},
     weatherCache: null,
     weatherStatus: null,
+    githubTrendingCache: null,
+    githubTrendingStatus: null,
     visitHistory: [],
     frequentVisits: [],
     settingsDraft: null
@@ -2726,6 +3072,7 @@ ${result.error}`);
   app.renderSearchButtons = () => renderSearchButtons(app);
   app.renderVisitPanels = () => renderVisitPanels(app);
   app.renderWeatherWidget = () => renderWeatherWidget(app);
+  app.renderGitHubTrending = () => renderGitHubTrending(app);
   app.runSearch = runSearch;
   app.setViewMode = setViewMode;
   document.addEventListener("DOMContentLoaded", () => {
@@ -2741,6 +3088,7 @@ ${result.error}`);
     app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
     app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
     app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
+    app.githubTrendingCache = normalizeGitHubTrendingCache(await storageGet(GITHUB_TRENDING_CACHE_KEY));
     app.visitHistory = await loadVisitHistory();
     app.frequentVisits = await loadFrequentVisits(app);
     applyTheme(app);
@@ -2749,6 +3097,7 @@ ${result.error}`);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
     void syncWeather(app, { force: false });
+    void syncGitHubTrending(app, { force: false });
     await syncHomer(app, { force: false });
   }
   function bindRefs() {
@@ -2777,6 +3126,10 @@ ${result.error}`);
     refs.weatherRain = byId("weatherRain");
     refs.weatherUpdated = byId("weatherUpdated");
     refs.weatherRefreshButton = byId("weatherRefreshButton");
+    refs.githubTrending = byId("githubTrending");
+    refs.githubTrendingList = byId("githubTrendingList");
+    refs.githubTrendingMeta = byId("githubTrendingMeta");
+    refs.githubTrendingRefreshButton = byId("githubTrendingRefreshButton");
     refs.frequentPanel = byId("frequentPanel");
     refs.frequentList = byId("frequentList");
     refs.historyPanel = byId("historyPanel");
@@ -2791,6 +3144,8 @@ ${result.error}`);
     refs.homerDisabledInput = byId("homerDisabledInput");
     refs.weatherEnabledInput = byId("weatherEnabledInput");
     refs.weatherLocationInput = byId("weatherLocationInput");
+    refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
+    refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
     refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -2814,6 +3169,9 @@ ${result.error}`);
     });
     refs.weatherRefreshButton.addEventListener("click", () => {
       void syncWeather(app, { force: true });
+    });
+    refs.githubTrendingRefreshButton.addEventListener("click", () => {
+      void syncGitHubTrending(app, { force: true });
     });
     refs.statusButton.addEventListener("click", () => openSettings(app));
     refs.settingsButton.addEventListener("click", () => openSettings(app));
@@ -3012,6 +3370,8 @@ ${result.error}`);
     app.searchEngineMeta = {};
     app.weatherCache = null;
     app.weatherStatus = null;
+    app.githubTrendingCache = null;
+    app.githubTrendingStatus = null;
     app.visitHistory = [];
     app.frequentVisits = [];
     app.settingsDraft = clone(app.state);
@@ -3020,7 +3380,16 @@ ${result.error}`);
     await Promise.all([
       storageRemove(STATE_KEY, SYNC_AREA),
       storageRemove(
-        [LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY, WEATHER_CACHE_KEY],
+        [
+          LOCAL_PATCH_KEY,
+          CACHE_KEY,
+          META_KEY,
+          QUICK_LINK_META_KEY,
+          SEARCH_ENGINE_META_KEY,
+          HISTORY_KEY,
+          WEATHER_CACHE_KEY,
+          GITHUB_TRENDING_CACHE_KEY
+        ],
         LOCAL_AREA
       )
     ]);
@@ -3029,6 +3398,7 @@ ${result.error}`);
     renderSettings(app);
     void refreshSearchEngineMetadata(app, { force: true });
     void syncWeather(app, { force: true });
+    void syncGitHubTrending(app, { force: true });
     await syncHomer(app, { force: true });
   }
 })();
