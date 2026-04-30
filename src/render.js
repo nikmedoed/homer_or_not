@@ -134,15 +134,16 @@ export function renderServices(app, services, emptyMessage = "") {
   for (const group of services) {
     const article = document.createElement("article");
     article.className = "service-group";
+    addClassTokens(article, group.className);
 
     const heading = document.createElement("h2");
     heading.className = "service-heading";
-    heading.append(createSectionIcon(group.icon, group.name), document.createTextNode(group.name || t("miscellaneous")));
+    heading.append(createSectionIcon(group), document.createTextNode(group.name || t("miscellaneous")));
 
     const card = document.createElement("div");
     card.className = "service-card";
     for (const item of group.items) {
-      card.append(createServiceRow(app, item));
+      card.append(createServiceRow(app, item, group));
     }
 
     article.append(heading, card);
@@ -150,17 +151,32 @@ export function renderServices(app, services, emptyMessage = "") {
   }
 }
 
-function createSectionIcon(icon, name) {
+function createSectionIcon(group) {
   const span = document.createElement("span");
   span.className = "section-icon";
-  const normalized = normalizeSectionIcon(icon, name);
+  if (group.logo) {
+    const image = document.createElement("img");
+    image.src = group.logo;
+    image.alt = "";
+    image.loading = "lazy";
+    image.addEventListener("error", () => {
+      image.remove();
+      const normalized = normalizeSectionIcon(group.icon, group.name);
+      span.innerHTML = ICONS[normalized] || ICONS.network;
+    });
+    span.append(image);
+    return span;
+  }
+  const normalized = normalizeSectionIcon(group.icon, group.name);
   span.innerHTML = ICONS[normalized] || ICONS.network;
   return span;
 }
 
-function createServiceRow(app, item) {
+function createServiceRow(app, item, group) {
   const anchor = document.createElement("a");
   anchor.className = "service-row";
+  addClassTokens(anchor, group.className);
+  addClassTokens(anchor, item.className);
   anchor.href = item.url;
   anchor.target = item.target || "_self";
   if (anchor.target !== "_self") {
@@ -174,6 +190,13 @@ function createServiceRow(app, item) {
       source: "homer",
     });
   });
+
+  const content = document.createElement("span");
+  content.className = "service-content";
+
+  const media = document.createElement("span");
+  media.className = "service-media";
+  media.classList.toggle("no-subtitle", !item.subtitle);
 
   const logo = document.createElement("span");
   logo.className = "service-logo";
@@ -199,12 +222,43 @@ function createServiceRow(app, item) {
     logo.textContent = makeInitial(item.name);
   }
 
+  const body = document.createElement("span");
+  body.className = "service-body";
+
   const text = document.createElement("span");
   text.className = "service-title";
   text.textContent = item.name || item.url;
 
-  anchor.append(logo, text);
+  body.append(text);
+  if (item.subtitle) {
+    const subtitle = document.createElement("span");
+    subtitle.className = "service-subtitle";
+    subtitle.textContent = item.subtitle;
+    body.append(subtitle);
+  }
+  media.append(logo, body);
+  content.append(media);
+
+  if (item.tag) {
+    const tag = document.createElement("span");
+    tag.className = "service-tag";
+    addClassTokens(tag, item.tagstyle);
+    const tagText = document.createElement("strong");
+    tagText.className = "service-tag-text";
+    tagText.textContent = `#${item.tag}`;
+    tag.append(tagText);
+    content.append(tag);
+  }
+
+  anchor.append(content);
   return anchor;
+}
+
+function addClassTokens(element, value) {
+  if (!value) {
+    return;
+  }
+  element.classList.add(...String(value).split(/\s+/).filter(Boolean));
 }
 
 export function renderVisitPanels(app) {

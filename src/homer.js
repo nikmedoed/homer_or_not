@@ -44,6 +44,8 @@ export function normalizeServiceGroups(raw, configUrl) {
       return {
         name: typeof group?.name === "string" && group.name.trim() ? group.name.trim() : t("miscellaneous"),
         icon: typeof group?.icon === "string" ? group.icon : "",
+        logo: resolveAssetUrl(String(group?.logo ?? "").trim(), configUrl),
+        className: normalizeClassName(group?.class ?? group?.className),
         items,
       };
     })
@@ -59,7 +61,7 @@ export function normalizeServiceItem(raw, configUrl) {
   if (!name || !url || !isHttpUrl(url)) {
     return null;
   }
-  const logoRaw = String(raw.logo ?? raw.icon ?? "").trim();
+  const logoRaw = String(raw.logo ?? "").trim();
   const remoteLogo = resolveAssetUrl(logoRaw, configUrl);
   return {
     name,
@@ -67,6 +69,11 @@ export function normalizeServiceItem(raw, configUrl) {
     target: typeof raw.target === "string" ? raw.target : "_self",
     logo: remoteLogo,
     fallbackLogo: "",
+    subtitle: normalizeText(raw.subtitle, 180),
+    tag: normalizeText(raw.tag, 64),
+    tagstyle: normalizeClassName(raw.tagstyle),
+    background: normalizeCssColor(raw.background),
+    className: normalizeClassName(raw.class ?? raw.className),
   };
 }
 
@@ -209,6 +216,29 @@ function stripYamlComment(raw) {
     }
   }
   return raw;
+}
+
+function normalizeText(value, maxLength) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, maxLength) : "";
+}
+
+function normalizeClassName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter((part) => /^[A-Za-z0-9_-]+$/.test(part))
+    .join(" ");
+}
+
+function normalizeCssColor(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const color = value.trim();
+  return color && color.length <= 80 && !/[;{}]/.test(color) ? color : "";
 }
 
 export async function shouldSkipHomerSyncByNetwork(endpoints) {
