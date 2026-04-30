@@ -39,6 +39,7 @@ export function renderSettings(app) {
   app.refs.topWeatherPlacementInput.value = app.settingsDraft.weather.topWidgetPlacement;
   app.refs.githubTrendingEnabledInput.checked = app.localPatchDraft?.githubTrending?.disabled !== true;
   app.refs.githubTrendingExcludeInput.value = app.settingsDraft.githubTrending.excludedTerms.join(", ");
+  app.refs.githubTrendingSyncIntervalInput.value = String(app.settingsDraft.githubTrending.syncIntervalMinutes);
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
   app.refs.showRecentVisitsInput.checked = app.localPatchDraft?.visits?.showRecent !== false;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
@@ -342,6 +343,7 @@ function readGitHubTrendingDraft(app) {
   return normalizeGitHubTrendingSettings(
     {
       excludedTerms: app.refs.githubTrendingExcludeInput.value,
+      syncIntervalMinutes: app.refs.githubTrendingSyncIntervalInput.value,
     },
     FALLBACK_CONFIG.githubTrending,
   );

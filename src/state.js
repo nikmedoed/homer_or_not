@@ -256,6 +256,7 @@ export function normalizeGitHubTrendingSettings(raw, fallback) {
   const base = fallback || FALLBACK_CONFIG.githubTrending;
   return {
     excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms),
+    syncIntervalMinutes: clampInt(raw?.syncIntervalMinutes, 15, 1440, base.syncIntervalMinutes),
   };
 }
 

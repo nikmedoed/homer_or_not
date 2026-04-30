@@ -25,6 +25,7 @@ export const FALLBACK_CONFIG = {
   },
   githubTrending: {
     excludedTerms: [],
+    syncIntervalMinutes: 60,
   },
   services: [],
 };

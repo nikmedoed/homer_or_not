@@ -179,6 +179,7 @@ function bindRefs() {
   refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
   refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
   refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
+  refs.githubTrendingSyncIntervalInput = byId("githubTrendingSyncIntervalInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
   refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -408,6 +409,7 @@ async function saveSettings() {
   void refreshSearchEngineMetadata(app, { force: true });
   void refreshQuickLinkMetadata(app, { force: true });
   void syncWeather(app, { force: true });
+  void syncGitHubTrending(app, { force: false });
   await syncHomer(app, { force: true });
 }
 

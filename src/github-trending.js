@@ -1,7 +1,6 @@
 import {
   GITHUB_TRENDING_CACHE_KEY,
   GITHUB_TRENDING_FETCH_TIMEOUT_MS,
-  GITHUB_TRENDING_SYNC_INTERVAL_MINUTES,
   LOCAL_AREA,
 } from "./constants.js";
 import { LOCALE, t } from "./i18n.js";
@@ -39,7 +38,7 @@ export async function syncGitHubTrending(app, { force = false } = {}) {
 
   if (
     !force &&
-    isCacheFresh(app.githubTrendingCache, GITHUB_TRENDING_SYNC_INTERVAL_MINUTES) &&
+    isCacheFresh(app.githubTrendingCache, getSyncIntervalMinutes(app)) &&
     app.githubTrendingCache.queryKey === getTrendingQueryKey(app)
   ) {
     app.githubTrendingStatus = null;
@@ -93,21 +92,37 @@ function normalizeTrendingItem(raw) {
     return null;
   }
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
-  const fullName = typeof raw.full_name === "string" ? raw.full_name.trim() : "";
-  const url = typeof raw.html_url === "string" ? raw.html_url.trim() : "";
+  const fullName =
+    typeof raw.fullName === "string"
+      ? raw.fullName.trim()
+      : typeof raw.full_name === "string"
+        ? raw.full_name.trim()
+        : "";
+  const url =
+    typeof raw.url === "string" ? raw.url.trim() : typeof raw.html_url === "string" ? raw.html_url.trim() : "";
   if (!name || !fullName || !url) {
     return null;
   }
+  const stars = Number.isFinite(raw.stars)
+    ? raw.stars
+    : Number.isFinite(raw.stargazers_count)
+      ? raw.stargazers_count
+      : 0;
   return {
     name,
     fullName,
     url,
     description: normalizeDescription(raw.description),
     language: typeof raw.language === "string" ? raw.language.trim() : "",
-    stars: Number.isFinite(raw.stargazers_count) ? raw.stargazers_count : 0,
-    createdAt: typeof raw.created_at === "string" ? raw.created_at : "",
-    pushedAt: typeof raw.pushed_at === "string" ? raw.pushed_at : "",
-    ownerAvatarUrl: typeof raw.owner?.avatar_url === "string" ? raw.owner.avatar_url : "",
+    stars,
+    createdAt: typeof raw.createdAt === "string" ? raw.createdAt : typeof raw.created_at === "string" ? raw.created_at : "",
+    pushedAt: typeof raw.pushedAt === "string" ? raw.pushedAt : typeof raw.pushed_at === "string" ? raw.pushed_at : "",
+    ownerAvatarUrl:
+      typeof raw.ownerAvatarUrl === "string"
+        ? raw.ownerAvatarUrl
+        : typeof raw.owner?.avatar_url === "string"
+          ? raw.owner.avatar_url
+          : "",
   };
 }
 
@@ -130,6 +145,11 @@ function getTrendingQueryKey(app) {
 
 function getExcludedTerms(app) {
   return Array.isArray(app.state?.githubTrending?.excludedTerms) ? app.state.githubTrending.excludedTerms : [];
+}
+
+function getSyncIntervalMinutes(app) {
+  const interval = Number(app.state?.githubTrending?.syncIntervalMinutes);
+  return Number.isFinite(interval) && interval > 0 ? interval : 60;
 }
 
 function filterExcludedRepositories(items, excludedTerms) {

@@ -18,7 +18,6 @@
   var LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
   var WEATHER_SYNC_INTERVAL_MINUTES = 30;
   var WEATHER_FETCH_TIMEOUT_MS = 7e3;
-  var GITHUB_TRENDING_SYNC_INTERVAL_MINUTES = 360;
   var GITHUB_TRENDING_FETCH_TIMEOUT_MS = 7e3;
 
   // src/i18n.js
@@ -98,6 +97,7 @@
       weatherUpdated: (date) => `\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${date}`,
       githubTrending: "GitHub Trending",
       githubTrendingEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C GitHub Trending",
+      githubTrendingSyncInterval: "\u041E\u0431\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043A\u0435\u0448, \u043C\u0438\u043D\u0443\u0442",
       githubTrendingExcludedTerms: "\u0418\u0441\u043A\u043B\u044E\u0447\u0430\u0442\u044C \u0441\u043B\u043E\u0432\u0430",
       githubTrendingExcludedTermsPlaceholder: "ai, llm, claude, agent",
       refreshGithubTrending: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C GitHub Trending",
@@ -196,6 +196,7 @@
       weatherUpdated: (date) => `Updated ${date}`,
       githubTrending: "GitHub Trending",
       githubTrendingEnabled: "Show GitHub Trending",
+      githubTrendingSyncInterval: "Refresh cache, minutes",
       githubTrendingExcludedTerms: "Exclude words",
       githubTrendingExcludedTermsPlaceholder: "ai, llm, claude, agent",
       refreshGithubTrending: "Refresh GitHub Trending",
@@ -269,7 +270,8 @@
       topWidgetPlacement: "center"
     },
     githubTrending: {
-      excludedTerms: []
+      excludedTerms: [],
+      syncIntervalMinutes: 60
     },
     services: []
   };
@@ -1088,7 +1090,8 @@
   function normalizeGitHubTrendingSettings(raw, fallback) {
     const base = fallback || FALLBACK_CONFIG.githubTrending;
     return {
-      excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms)
+      excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms),
+      syncIntervalMinutes: clampInt(raw?.syncIntervalMinutes, 15, 1440, base.syncIntervalMinutes)
     };
   }
   function normalizeGitHubTrendingExcludedTerms(raw, fallback = []) {
@@ -2580,7 +2583,7 @@
       renderGitHubTrending(app2);
       return;
     }
-    if (!force && isCacheFresh(app2.githubTrendingCache, GITHUB_TRENDING_SYNC_INTERVAL_MINUTES) && app2.githubTrendingCache.queryKey === getTrendingQueryKey(app2)) {
+    if (!force && isCacheFresh(app2.githubTrendingCache, getSyncIntervalMinutes(app2)) && app2.githubTrendingCache.queryKey === getTrendingQueryKey(app2)) {
       app2.githubTrendingStatus = null;
       renderGitHubTrending(app2);
       return;
@@ -2628,21 +2631,22 @@
       return null;
     }
     const name = typeof raw.name === "string" ? raw.name.trim() : "";
-    const fullName = typeof raw.full_name === "string" ? raw.full_name.trim() : "";
-    const url = typeof raw.html_url === "string" ? raw.html_url.trim() : "";
+    const fullName = typeof raw.fullName === "string" ? raw.fullName.trim() : typeof raw.full_name === "string" ? raw.full_name.trim() : "";
+    const url = typeof raw.url === "string" ? raw.url.trim() : typeof raw.html_url === "string" ? raw.html_url.trim() : "";
     if (!name || !fullName || !url) {
       return null;
     }
+    const stars = Number.isFinite(raw.stars) ? raw.stars : Number.isFinite(raw.stargazers_count) ? raw.stargazers_count : 0;
     return {
       name,
       fullName,
       url,
       description: normalizeDescription(raw.description),
       language: typeof raw.language === "string" ? raw.language.trim() : "",
-      stars: Number.isFinite(raw.stargazers_count) ? raw.stargazers_count : 0,
-      createdAt: typeof raw.created_at === "string" ? raw.created_at : "",
-      pushedAt: typeof raw.pushed_at === "string" ? raw.pushed_at : "",
-      ownerAvatarUrl: typeof raw.owner?.avatar_url === "string" ? raw.owner.avatar_url : ""
+      stars,
+      createdAt: typeof raw.createdAt === "string" ? raw.createdAt : typeof raw.created_at === "string" ? raw.created_at : "",
+      pushedAt: typeof raw.pushedAt === "string" ? raw.pushedAt : typeof raw.pushed_at === "string" ? raw.pushed_at : "",
+      ownerAvatarUrl: typeof raw.ownerAvatarUrl === "string" ? raw.ownerAvatarUrl : typeof raw.owner?.avatar_url === "string" ? raw.owner.avatar_url : ""
     };
   }
   function normalizeDescription(value) {
@@ -2659,6 +2663,10 @@
   }
   function getExcludedTerms(app2) {
     return Array.isArray(app2.state?.githubTrending?.excludedTerms) ? app2.state.githubTrending.excludedTerms : [];
+  }
+  function getSyncIntervalMinutes(app2) {
+    const interval = Number(app2.state?.githubTrending?.syncIntervalMinutes);
+    return Number.isFinite(interval) && interval > 0 ? interval : 60;
   }
   function filterExcludedRepositories(items, excludedTerms) {
     if (!excludedTerms.length) {
@@ -2770,6 +2778,7 @@
     app2.refs.topWeatherPlacementInput.value = app2.settingsDraft.weather.topWidgetPlacement;
     app2.refs.githubTrendingEnabledInput.checked = app2.localPatchDraft?.githubTrending?.disabled !== true;
     app2.refs.githubTrendingExcludeInput.value = app2.settingsDraft.githubTrending.excludedTerms.join(", ");
+    app2.refs.githubTrendingSyncIntervalInput.value = String(app2.settingsDraft.githubTrending.syncIntervalMinutes);
     app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
     app2.refs.showRecentVisitsInput.checked = app2.localPatchDraft?.visits?.showRecent !== false;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
@@ -3043,7 +3052,8 @@ ${result.error}`);
   function readGitHubTrendingDraft(app2) {
     return normalizeGitHubTrendingSettings(
       {
-        excludedTerms: app2.refs.githubTrendingExcludeInput.value
+        excludedTerms: app2.refs.githubTrendingExcludeInput.value,
+        syncIntervalMinutes: app2.refs.githubTrendingSyncIntervalInput.value
       },
       FALLBACK_CONFIG.githubTrending
     );
@@ -3313,6 +3323,7 @@ ${result.error}`);
     refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
     refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
     refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
+    refs.githubTrendingSyncIntervalInput = byId("githubTrendingSyncIntervalInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
     refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -3525,6 +3536,7 @@ ${result.error}`);
     void refreshSearchEngineMetadata(app, { force: true });
     void refreshQuickLinkMetadata(app, { force: true });
     void syncWeather(app, { force: true });
+    void syncGitHubTrending(app, { force: false });
     await syncHomer(app, { force: true });
   }
   async function resetSettings() {
