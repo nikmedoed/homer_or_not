@@ -3,11 +3,13 @@ import { t } from "./i18n.js";
 import { getQuickLinkMeta, getQuickLinkTitle, getSearchEngineMeta } from "./metadata.js";
 import { getVisibleQuickLinks, getVisibleSearchEngines } from "./state.js";
 import { formatFrequentMeta, formatHistoryMeta, formatDateTime, makeInitial, toDomain } from "./utils.js";
+import { getWeatherSummary } from "./weather.js";
 
 export function renderAll(app) {
   renderSearchButtons(app);
   renderQuickLinks(app);
   renderServices(app, getVisibleServices(app), getEmptyServicesMessage(app));
+  renderWeatherWidget(app);
   renderVisitPanels(app);
   setStatusFromCurrentData(app);
 }
@@ -213,6 +215,73 @@ export function renderVisitPanels(app) {
     metaFormatter: formatHistoryMeta,
     app,
   });
+}
+
+export function renderWeatherWidget(app) {
+  const { refs } = app;
+  if (!refs.weatherWidget) {
+    return;
+  }
+  const disabled = app.localPatch?.weather?.disabled === true;
+  refs.weatherWidget.classList.toggle("hidden", disabled);
+  if (disabled) {
+    return;
+  }
+
+  const status = app.weatherStatus;
+  const cache = app.weatherCache;
+  refs.weatherWidget.dataset.state = status?.kind || (cache ? "ready" : "empty");
+
+  if (cache) {
+    const summary = getWeatherSummary(cache);
+    refs.weatherIcon.textContent = summary.icon;
+    refs.weatherTemp.textContent = "";
+    refs.weatherPlace.textContent = "";
+    refs.weatherPlace.title = summary.placeTitle || summary.place;
+    refs.weatherWidget.title = summary.placeTitle || "";
+    refs.weatherCondition.replaceChildren(createWeatherTempLine(summary));
+    refs.weatherFeels.textContent = summary.description;
+    refs.weatherRange.textContent = "";
+    refs.weatherHumidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
+    refs.weatherWind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
+    refs.weatherRain.textContent = summary.precipitationProbability
+      ? t("weatherRain", summary.precipitationProbability)
+      : "";
+    refs.weatherUpdated.textContent = summary.updatedAt;
+    refs.weatherUpdated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
+    refs.weatherRefreshButton.disabled = status?.kind === "loading";
+    return;
+  }
+
+  refs.weatherIcon.textContent = status?.kind === "loading" ? "…" : "☁";
+  refs.weatherTemp.textContent = "";
+  refs.weatherPlace.textContent = t("weatherTitle");
+  refs.weatherPlace.title = "";
+  refs.weatherWidget.title = "";
+  refs.weatherCondition.textContent = status?.message || t("weatherNeedsLocation");
+  refs.weatherFeels.textContent = "";
+  refs.weatherRange.textContent = "";
+  refs.weatherHumidity.textContent = "";
+  refs.weatherWind.textContent = "";
+  refs.weatherRain.textContent = "";
+  refs.weatherUpdated.textContent = t("weatherOpenSettingsHint");
+  refs.weatherUpdated.title = "";
+  refs.weatherRefreshButton.disabled = status?.kind === "loading";
+}
+
+function createWeatherTempLine(summary) {
+  const fragment = document.createDocumentFragment();
+  const current = document.createElement("span");
+  current.className = "weather-current-temp";
+  current.textContent = summary.temperature;
+  fragment.append(current);
+  if (summary.minTemperature && summary.maxTemperature) {
+    const range = document.createElement("span");
+    range.className = "weather-temp-range";
+    range.textContent = t("weatherRange", summary.minTemperature, summary.maxTemperature);
+    fragment.append(range);
+  }
+  return fragment;
 }
 
 function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app }) {

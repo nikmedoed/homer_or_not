@@ -154,6 +154,14 @@ export async function fetchTextWithTimeout(url, timeoutMs) {
   return await response.text();
 }
 
+export async function fetchJsonWithTimeout(url, timeoutMs) {
+  const response = await fetchWithTimeout(url, timeoutMs, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return await response.json();
+}
+
 export async function fetchWithTimeout(url, timeoutMs, options = {}) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => {

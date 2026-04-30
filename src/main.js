@@ -8,6 +8,7 @@ import {
   SEARCH_ENGINE_META_KEY,
   STATE_KEY,
   SYNC_AREA,
+  WEATHER_CACHE_KEY,
 } from "./constants.js";
 import { FALLBACK_CONFIG } from "./default-config.js";
 import { normalizeHomerCache, normalizeSyncMeta } from "./homer.js";
@@ -19,6 +20,7 @@ import {
   renderQuickLinks,
   renderSearchButtons,
   renderVisitPanels,
+  renderWeatherWidget,
 } from "./render.js";
 import {
   closeSettings,
@@ -43,6 +45,7 @@ import {
 import { syncHomer } from "./sync.js";
 import { applyTheme } from "./theme.js";
 import { byId, clone, makeId, storageGet, storageRemove, storageSet } from "./utils.js";
+import { normalizeWeatherCache, syncWeather } from "./weather.js";
 
 const app = {
   refs: {},
@@ -53,6 +56,8 @@ const app = {
   syncMeta: null,
   quickLinkMeta: {},
   searchEngineMeta: {},
+  weatherCache: null,
+  weatherStatus: null,
   visitHistory: [],
   frequentVisits: [],
   settingsDraft: null,
@@ -66,6 +71,7 @@ app.persistLocalPatch = persistLocalPatch;
 app.renderQuickLinks = () => renderQuickLinks(app);
 app.renderSearchButtons = () => renderSearchButtons(app);
 app.renderVisitPanels = () => renderVisitPanels(app);
+app.renderWeatherWidget = () => renderWeatherWidget(app);
 app.runSearch = runSearch;
 app.setViewMode = setViewMode;
 
@@ -82,6 +88,7 @@ async function init() {
   app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
   app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
   app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
+  app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
   app.visitHistory = await loadVisitHistory();
   app.frequentVisits = await loadFrequentVisits(app);
   applyTheme(app);
@@ -89,6 +96,7 @@ async function init() {
   renderAll(app);
   void refreshSearchEngineMetadata(app, { force: false });
   void refreshQuickLinkMetadata(app, { force: false });
+  void syncWeather(app, { force: false });
   await syncHomer(app, { force: false });
 }
 
@@ -106,6 +114,18 @@ function bindRefs() {
   refs.quickLinks = byId("quickLinks");
   refs.servicesLayout = byId("servicesLayout");
   refs.servicesGrid = byId("servicesGrid");
+  refs.weatherWidget = byId("weatherWidget");
+  refs.weatherIcon = byId("weatherIcon");
+  refs.weatherTemp = byId("weatherTemp");
+  refs.weatherPlace = byId("weatherPlace");
+  refs.weatherCondition = byId("weatherCondition");
+  refs.weatherFeels = byId("weatherFeels");
+  refs.weatherRange = byId("weatherRange");
+  refs.weatherHumidity = byId("weatherHumidity");
+  refs.weatherWind = byId("weatherWind");
+  refs.weatherRain = byId("weatherRain");
+  refs.weatherUpdated = byId("weatherUpdated");
+  refs.weatherRefreshButton = byId("weatherRefreshButton");
   refs.frequentPanel = byId("frequentPanel");
   refs.frequentList = byId("frequentList");
   refs.historyPanel = byId("historyPanel");
@@ -118,6 +138,8 @@ function bindRefs() {
   refs.addQuickLinkButton = byId("addQuickLinkButton");
   refs.homerUrlInput = byId("homerUrlInput");
   refs.homerDisabledInput = byId("homerDisabledInput");
+  refs.weatherEnabledInput = byId("weatherEnabledInput");
+  refs.weatherLocationInput = byId("weatherLocationInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
   refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -140,6 +162,9 @@ function bindEvents() {
   refs.syncButton.addEventListener("click", () => {
     void syncHomer(app, { force: true });
   });
+  refs.weatherRefreshButton.addEventListener("click", () => {
+    void syncWeather(app, { force: true });
+  });
   refs.statusButton.addEventListener("click", () => openSettings(app));
   refs.settingsButton.addEventListener("click", () => openSettings(app));
   refs.closeSettingsButton.addEventListener("click", () => closeSettings(app));
@@ -156,10 +181,12 @@ function bindEvents() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       void refreshVisitHistory(app);
+      void syncWeather(app, { force: false });
     }
   });
   window.addEventListener("focus", () => {
     void refreshVisitHistory(app);
+    void syncWeather(app, { force: false });
   });
   refs.addEngineButton.addEventListener("click", () => {
     if (!app.settingsDraft) {
@@ -298,6 +325,7 @@ async function saveSettings() {
   renderAll(app);
   void refreshSearchEngineMetadata(app, { force: true });
   void refreshQuickLinkMetadata(app, { force: true });
+  void syncWeather(app, { force: true });
   await syncHomer(app, { force: true });
 }
 
@@ -312,17 +340,24 @@ async function resetSettings() {
   app.homerCache = null;
   app.quickLinkMeta = {};
   app.searchEngineMeta = {};
+  app.weatherCache = null;
+  app.weatherStatus = null;
   app.visitHistory = [];
   app.frequentVisits = [];
   app.settingsDraft = clone(app.state);
+  app.localPatchDraft = clone(app.localPatch);
   app.syncMeta = null;
   await Promise.all([
     storageRemove(STATE_KEY, SYNC_AREA),
-    storageRemove([LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA),
+    storageRemove(
+      [LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY, WEATHER_CACHE_KEY],
+      LOCAL_AREA,
+    ),
   ]);
   renderViewMode(app);
   renderAll(app);
   renderSettings(app);
   void refreshSearchEngineMetadata(app, { force: true });
+  void syncWeather(app, { force: true });
   await syncHomer(app, { force: true });
 }

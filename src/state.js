@@ -45,6 +45,10 @@ export function createDefaultLocalPatch() {
     homer: {
       disabled: false,
     },
+    weather: {
+      disabled: false,
+      locationName: "",
+    },
     visits: {
       showFrequent: true,
       showRecent: true,
@@ -108,6 +112,10 @@ export function normalizeLocalPatch(raw, state) {
     homer: {
       disabled: source.homer?.disabled === true,
     },
+    weather: {
+      disabled: source.weather?.disabled === true,
+      locationName: normalizeWeatherLocationName(source.weather?.locationName),
+    },
     visits: {
       showFrequent: source.visits?.showFrequent !== false,
       showRecent: source.visits?.showRecent !== false,
@@ -151,6 +159,13 @@ function normalizeIdList(raw, allowedIds) {
     out.push(id);
   }
   return out;
+}
+
+function normalizeWeatherLocationName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
 export function normalizeSearch(raw, fallback) {

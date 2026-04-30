@@ -26,6 +26,8 @@ export function renderSettings(app) {
   renderQuickLinkSettings(app);
   app.refs.homerUrlInput.value = app.settingsDraft.homer.url;
   app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
+  app.refs.weatherEnabledInput.checked = app.localPatchDraft?.weather?.disabled !== true;
+  app.refs.weatherLocationInput.value = app.localPatchDraft?.weather?.locationName || "";
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
   app.refs.showRecentVisitsInput.checked = app.localPatchDraft?.visits?.showRecent !== false;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
@@ -269,6 +271,10 @@ export function validateSettingsDraft(app) {
         },
         homer: {
           disabled: app.refs.homerDisabledInput.checked,
+        },
+        weather: {
+          disabled: !app.refs.weatherEnabledInput.checked,
+          locationName: app.refs.weatherLocationInput.value,
         },
         visits: {
           showFrequent: app.refs.showFrequentVisitsInput.checked,

@@ -5,6 +5,7 @@ export const META_KEY = "homerOrNot.homerMeta.v2";
 export const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";
 export const SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v1";
 export const HISTORY_KEY = "homerOrNot.visitHistory.v1";
+export const WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
 
 export const SYNC_AREA = "sync";
 export const LOCAL_AREA = "local";
@@ -14,3 +15,5 @@ export const VISIT_HISTORY_LIMIT = 50;
 export const HOMER_SYNC_INTERVAL_MINUTES = 5;
 export const HOMER_FETCH_TIMEOUT_MS = 7000;
 export const LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
+export const WEATHER_SYNC_INTERVAL_MINUTES = 30;
+export const WEATHER_FETCH_TIMEOUT_MS = 7000;

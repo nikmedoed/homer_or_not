@@ -7,6 +7,7 @@
   var QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";
   var SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v1";
   var HISTORY_KEY = "homerOrNot.visitHistory.v1";
+  var WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
   var SYNC_AREA = "sync";
   var LOCAL_AREA = "local";
   var QUICK_LINK_META_TTL_MS = 1e3 * 60 * 60 * 24 * 7;
@@ -14,6 +15,8 @@
   var HOMER_SYNC_INTERVAL_MINUTES = 5;
   var HOMER_FETCH_TIMEOUT_MS = 7e3;
   var LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
+  var WEATHER_SYNC_INTERVAL_MINUTES = 30;
+  var WEATHER_FETCH_TIMEOUT_MS = 7e3;
 
   // src/i18n.js
   var LOCALE = getPreferredLocale();
@@ -64,6 +67,27 @@
       homerOfflineNoCache: "Homer \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u043A\u0435\u0448\u0430 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.",
       homerDisabled: "Homer \u043E\u0442\u043A\u043B\u044E\u0447\u0435\u043D \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E.",
       disableHomerLocally: "\u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C Homer \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E",
+      weather: "\u041F\u043E\u0433\u043E\u0434\u0430",
+      weatherTitle: "\u041F\u043E\u0433\u043E\u0434\u0430",
+      weatherEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043F\u043E\u0433\u043E\u0434\u0443",
+      weatherLocation: "\u0413\u043E\u0440\u043E\u0434 \u0438\u043B\u0438 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B \u0434\u043B\u044F \u044D\u0442\u043E\u0439 \u043C\u0430\u0448\u0438\u043D\u044B",
+      weatherLocationPlaceholder: "\u041F\u0443\u0441\u0442\u043E: \u0431\u0440\u0430\u0442\u044C \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044E \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430",
+      refreshWeather: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u043E\u0433\u043E\u0434\u0443",
+      currentLocation: "\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
+      weatherLoadingGeo: "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u044E \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435...",
+      weatherLoadingManual: "\u0418\u0449\u0443 \u043F\u043E\u0433\u043E\u0434\u0443...",
+      weatherNeedsLocation: "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u0435 \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044E \u0438\u043B\u0438 \u0437\u0430\u0434\u0430\u0439\u0442\u0435 \u0433\u043E\u0440\u043E\u0434 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445.",
+      weatherOpenSettingsHint: "Open-Meteo, \u0431\u0435\u0437 API-\u043A\u043B\u044E\u0447\u0430",
+      weatherUnavailable: "\u041F\u043E\u0433\u043E\u0434\u0430 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.",
+      weatherLocationNotFound: "\u041B\u043E\u043A\u0430\u0446\u0438\u044F \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.",
+      weatherGeolocationUnsupported: "\u0413\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044F \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F.",
+      weatherGeolocationFailed: "\u0413\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430. \u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u0433\u043E\u0440\u043E\u0434 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445.",
+      weatherFeelsLike: (temp) => `\u041E\u0449\u0443\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A ${temp}`,
+      weatherRange: (min, max) => `${min} / ${max}`,
+      weatherHumidity: (humidity) => `\u2652 ${humidity}`,
+      weatherWind: (wind) => `\u224B ${wind}`,
+      weatherRain: (chance) => `\u041E\u0441 ${chance}`,
+      weatherUpdated: (date) => `\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${date}`,
       localEnabled: "\u0412\u043A\u043B",
       inputTitle: "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435",
       inputSearchTemplate: "URL \u0441 {q}",
@@ -122,6 +146,27 @@
       homerOfflineNoCache: "Homer is unavailable, and there is no cache yet.",
       homerDisabled: "Homer is disabled locally.",
       disableHomerLocally: "Disable Homer locally",
+      weather: "Weather",
+      weatherTitle: "Weather",
+      weatherEnabled: "Show weather",
+      weatherLocation: "City or coordinates for this machine",
+      weatherLocationPlaceholder: "Blank: use browser geolocation",
+      refreshWeather: "Refresh weather",
+      currentLocation: "Current location",
+      weatherLoadingGeo: "Detecting location...",
+      weatherLoadingManual: "Loading weather...",
+      weatherNeedsLocation: "Allow geolocation or set a city in settings.",
+      weatherOpenSettingsHint: "Open-Meteo, no API key",
+      weatherUnavailable: "Weather is unavailable right now.",
+      weatherLocationNotFound: "Location was not found.",
+      weatherGeolocationUnsupported: "Geolocation is not supported.",
+      weatherGeolocationFailed: "Geolocation is unavailable. Set a city in settings.",
+      weatherFeelsLike: (temp) => `Feels like ${temp}`,
+      weatherRange: (min, max) => `${min} / ${max}`,
+      weatherHumidity: (humidity) => `\u2652 ${humidity}`,
+      weatherWind: (wind) => `\u224B ${wind}`,
+      weatherRain: (chance) => `Rain ${chance}`,
+      weatherUpdated: (date) => `Updated ${date}`,
       localEnabled: "On",
       inputTitle: "Name",
       inputSearchTemplate: "URL with {q}",
@@ -361,6 +406,13 @@
       throw new Error(`HTTP ${response.status}`);
     }
     return await response.text();
+  }
+  async function fetchJsonWithTimeout(url, timeoutMs) {
+    const response = await fetchWithTimeout(url, timeoutMs, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
   }
   async function fetchWithTimeout(url, timeoutMs, options = {}) {
     const controller = new AbortController();
@@ -848,6 +900,10 @@
       homer: {
         disabled: source.homer?.disabled === true
       },
+      weather: {
+        disabled: source.weather?.disabled === true,
+        locationName: normalizeWeatherLocationName(source.weather?.locationName)
+      },
       visits: {
         showFrequent: source.visits?.showFrequent !== false,
         showRecent: source.visits?.showRecent !== false
@@ -886,6 +942,12 @@
       out.push(id);
     }
     return out;
+  }
+  function normalizeWeatherLocationName(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.replace(/\s+/g, " ").trim().slice(0, 120);
   }
   function normalizeSearch(raw, fallback) {
     const fallbackSearch = fallback || FALLBACK_CONFIG.search;
@@ -1239,11 +1301,402 @@
     }
   }
 
+  // src/weather.js
+  var FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+  var GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
+  function normalizeWeatherCache(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const current = raw.current && typeof raw.current === "object" ? raw.current : {};
+    const daily = raw.daily && typeof raw.daily === "object" ? raw.daily : {};
+    const fetchedAt = Number.isFinite(raw.fetchedAt) ? raw.fetchedAt : 0;
+    const latitude = Number.isFinite(raw.latitude) ? raw.latitude : null;
+    const longitude = Number.isFinite(raw.longitude) ? raw.longitude : null;
+    if (!fetchedAt || latitude === null || longitude === null || !Number.isFinite(current.temperature)) {
+      return null;
+    }
+    return {
+      fetchedAt,
+      source: raw.source === "manual" ? "manual" : "geolocation",
+      locationQuery: typeof raw.locationQuery === "string" ? raw.locationQuery : "",
+      place: typeof raw.place === "string" ? raw.place : "",
+      country: typeof raw.country === "string" ? raw.country : "",
+      timezone: typeof raw.timezone === "string" ? raw.timezone : "",
+      latitude,
+      longitude,
+      accuracy: Number.isFinite(raw.accuracy) ? raw.accuracy : null,
+      current: {
+        temperature: current.temperature,
+        apparentTemperature: Number.isFinite(current.apparentTemperature) ? current.apparentTemperature : null,
+        humidity: Number.isFinite(current.humidity) ? current.humidity : null,
+        weatherCode: Number.isFinite(current.weatherCode) ? current.weatherCode : 0,
+        windSpeed: Number.isFinite(current.windSpeed) ? current.windSpeed : null,
+        windDirection: Number.isFinite(current.windDirection) ? current.windDirection : null,
+        precipitation: Number.isFinite(current.precipitation) ? current.precipitation : null,
+        isDay: current.isDay === 1 || current.isDay === true ? 1 : 0,
+        time: typeof current.time === "string" ? current.time : ""
+      },
+      daily: {
+        temperatureMax: Number.isFinite(daily.temperatureMax) ? daily.temperatureMax : null,
+        temperatureMin: Number.isFinite(daily.temperatureMin) ? daily.temperatureMin : null,
+        precipitationProbability: Number.isFinite(daily.precipitationProbability) ? daily.precipitationProbability : null
+      }
+    };
+  }
+  async function syncWeather(app2, { force = false } = {}) {
+    if (app2.localPatch?.weather?.disabled) {
+      app2.weatherStatus = null;
+      renderWeatherWidget(app2);
+      return;
+    }
+    if (!force && isWeatherCacheUsable(app2)) {
+      app2.weatherStatus = null;
+      renderWeatherWidget(app2);
+      return;
+    }
+    if (!isWeatherCacheForCurrentSettings(app2)) {
+      app2.weatherCache = null;
+    }
+    app2.weatherStatus = {
+      kind: "loading",
+      message: hasManualLocation(app2) ? t("weatherLoadingManual") : t("weatherLoadingGeo")
+    };
+    renderWeatherWidget(app2);
+    try {
+      const location = hasManualLocation(app2) ? await resolveManualLocation(app2.localPatch.weather.locationName) : await getBrowserLocation();
+      const forecast = await fetchForecast(location);
+      app2.weatherCache = normalizeWeatherCache({
+        fetchedAt: Date.now(),
+        source: location.source,
+        locationQuery: location.locationQuery || "",
+        place: location.place,
+        country: location.country,
+        timezone: forecast.timezone || "",
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        current: {
+          temperature: forecast.current.temperature_2m,
+          apparentTemperature: forecast.current.apparent_temperature,
+          humidity: forecast.current.relative_humidity_2m,
+          weatherCode: forecast.current.weather_code,
+          windSpeed: forecast.current.wind_speed_10m,
+          windDirection: forecast.current.wind_direction_10m,
+          precipitation: forecast.current.precipitation,
+          isDay: forecast.current.is_day,
+          time: forecast.current.time
+        },
+        daily: {
+          temperatureMax: forecast.daily.temperature_2m_max?.[0],
+          temperatureMin: forecast.daily.temperature_2m_min?.[0],
+          precipitationProbability: forecast.daily.precipitation_probability_max?.[0]
+        }
+      });
+      await storageSet(WEATHER_CACHE_KEY, app2.weatherCache, LOCAL_AREA);
+      app2.weatherStatus = null;
+    } catch (error) {
+      app2.weatherStatus = {
+        kind: "error",
+        message: error?.message || t("weatherUnavailable")
+      };
+    }
+    renderWeatherWidget(app2);
+  }
+  function getWeatherSummary(cache) {
+    const code = cache?.current?.weatherCode ?? 0;
+    const condition = getWeatherCondition(code, cache?.current?.isDay !== 0);
+    const place = cache?.source === "geolocation" ? formatGeoPlace(cache) : [cache?.place, cache?.country].filter(Boolean).join(", ");
+    return {
+      place: place || t("currentLocation"),
+      placeTitle: formatGeoTitle(cache),
+      icon: condition.icon,
+      description: condition.description,
+      temperature: formatTemperature(cache?.current?.temperature),
+      apparentTemperature: formatTemperature(cache?.current?.apparentTemperature),
+      minTemperature: formatTemperature(cache?.daily?.temperatureMin),
+      maxTemperature: formatTemperature(cache?.daily?.temperatureMax),
+      humidity: formatPercent(cache?.current?.humidity),
+      precipitationProbability: formatPercent(cache?.daily?.precipitationProbability),
+      wind: formatWind(cache?.current?.windSpeed, cache?.current?.windDirection),
+      updatedAt: cache?.fetchedAt ? formatUpdatedLabel(cache, formatElapsed(cache.fetchedAt)) : "",
+      updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : ""
+    };
+  }
+  function isWeatherCacheUsable(app2) {
+    if (!isCacheFresh(app2.weatherCache, WEATHER_SYNC_INTERVAL_MINUTES)) {
+      return false;
+    }
+    return isWeatherCacheForCurrentSettings(app2);
+  }
+  function isWeatherCacheForCurrentSettings(app2) {
+    if (!app2.weatherCache) {
+      return false;
+    }
+    const locationName = normalizeLocationName(app2.localPatch?.weather?.locationName);
+    if (locationName) {
+      return app2.weatherCache.source === "manual" && app2.weatherCache.locationQuery === locationName;
+    }
+    return app2.weatherCache.source === "geolocation";
+  }
+  function hasManualLocation(app2) {
+    return Boolean(normalizeLocationName(app2.localPatch?.weather?.locationName));
+  }
+  async function resolveManualLocation(rawLocationName) {
+    const locationQuery = normalizeLocationName(rawLocationName);
+    const coordinates = parseCoordinates(locationQuery);
+    if (coordinates) {
+      return {
+        ...coordinates,
+        source: "manual",
+        locationQuery,
+        place: locationQuery,
+        country: ""
+      };
+    }
+    const url = new URL(GEOCODING_URL);
+    url.searchParams.set("name", locationQuery);
+    url.searchParams.set("count", "1");
+    url.searchParams.set("language", LOCALE === "ru" ? "ru" : "en");
+    url.searchParams.set("format", "json");
+    const data = await fetchJsonWithTimeout(url.href, WEATHER_FETCH_TIMEOUT_MS);
+    const match = Array.isArray(data?.results) ? data.results[0] : null;
+    if (!match || !Number.isFinite(match.latitude) || !Number.isFinite(match.longitude)) {
+      throw new Error(t("weatherLocationNotFound"));
+    }
+    return {
+      source: "manual",
+      locationQuery,
+      latitude: match.latitude,
+      longitude: match.longitude,
+      place: makePlaceName(match),
+      country: match.country || ""
+    };
+  }
+  function getBrowserLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error(t("weatherGeolocationUnsupported")));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            source: "geolocation",
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            place: t("currentLocation"),
+            country: ""
+          });
+        },
+        () => reject(new Error(t("weatherGeolocationFailed"))),
+        {
+          enableHighAccuracy: false,
+          maximumAge: WEATHER_SYNC_INTERVAL_MINUTES * 60 * 1e3,
+          timeout: WEATHER_FETCH_TIMEOUT_MS
+        }
+      );
+    });
+  }
+  async function fetchForecast(location) {
+    const url = new URL(FORECAST_URL);
+    url.searchParams.set("latitude", String(location.latitude));
+    url.searchParams.set("longitude", String(location.longitude));
+    url.searchParams.set(
+      "current",
+      [
+        "temperature_2m",
+        "relative_humidity_2m",
+        "apparent_temperature",
+        "is_day",
+        "precipitation",
+        "weather_code",
+        "wind_speed_10m",
+        "wind_direction_10m"
+      ].join(",")
+    );
+    url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max");
+    url.searchParams.set("forecast_days", "1");
+    url.searchParams.set("timezone", "auto");
+    const data = await fetchJsonWithTimeout(url.href, WEATHER_FETCH_TIMEOUT_MS);
+    if (!data?.current || !Number.isFinite(data.current.temperature_2m)) {
+      throw new Error(t("weatherUnavailable"));
+    }
+    return data;
+  }
+  function parseCoordinates(value) {
+    const match = value.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+    if (!match) {
+      return null;
+    }
+    const latitude = Number(match[1].replace(",", "."));
+    const longitude = Number(match[2].replace(",", "."));
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      return null;
+    }
+    return { latitude, longitude };
+  }
+  function normalizeLocationName(value) {
+    return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 120) : "";
+  }
+  function makePlaceName(location) {
+    const parts = [];
+    for (const value of [location.name, location.admin1]) {
+      if (value && !parts.includes(value)) {
+        parts.push(value);
+      }
+    }
+    return parts.join(", ");
+  }
+  function formatGeoPlace(cache) {
+    const coords = formatCoordinates(cache?.latitude, cache?.longitude, 2);
+    const accuracy = formatAccuracy(cache?.accuracy);
+    if (coords && accuracy) {
+      return `${coords} \xB1${accuracy}`;
+    }
+    return coords;
+  }
+  function formatGeoTitle(cache) {
+    const coords = formatCoordinates(cache?.latitude, cache?.longitude, 5);
+    const accuracy = formatAccuracy(cache?.accuracy);
+    if (coords && accuracy) {
+      return `${t("currentLocation")}: ${coords}, ${accuracy}`;
+    }
+    return coords || "";
+  }
+  function formatCoordinates(latitude, longitude, digits) {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return "";
+    }
+    return `${latitude.toFixed(digits)}, ${longitude.toFixed(digits)}`;
+  }
+  function formatAccuracy(value) {
+    if (!Number.isFinite(value)) {
+      return "";
+    }
+    if (value >= 1e3) {
+      return `${(value / 1e3).toFixed(value >= 1e4 ? 0 : 1)} km`;
+    }
+    return `${Math.round(value)} m`;
+  }
+  function formatElapsed(timestamp) {
+    const elapsedMs = Math.max(0, Date.now() - timestamp);
+    const elapsedMinutes = Math.floor(elapsedMs / 6e4);
+    if (elapsedMinutes < 1) {
+      return LOCALE === "ru" ? "\u0441\u0435\u0439\u0447\u0430\u0441" : "now";
+    }
+    if (elapsedMinutes < 60) {
+      return LOCALE === "ru" ? `${elapsedMinutes} \u043C\u0438\u043D` : `${elapsedMinutes}m`;
+    }
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) {
+      return LOCALE === "ru" ? `${elapsedHours} \u0447` : `${elapsedHours}h`;
+    }
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    return LOCALE === "ru" ? `${elapsedDays} \u0434` : `${elapsedDays}d`;
+  }
+  function formatUpdatedLabel(cache, elapsed) {
+    const label = cache?.source === "geolocation" ? LOCALE === "ru" ? "\u0442\u0443\u0442" : "here" : compactPlaceName(cache?.place);
+    return [label, elapsed].filter(Boolean).join(" \xB7 ");
+  }
+  function compactPlaceName(value) {
+    return String(value || "").split(",")[0].trim();
+  }
+  function formatTemperature(value) {
+    return Number.isFinite(value) ? `${Math.round(value)}\xB0` : "";
+  }
+  function formatPercent(value) {
+    return Number.isFinite(value) ? `${Math.round(value)}%` : "";
+  }
+  function formatWind(speed, direction) {
+    if (!Number.isFinite(speed)) {
+      return "";
+    }
+    const rounded = Math.round(speed);
+    const unit = LOCALE === "ru" ? "\u043A\u043C/\u0447" : "km/h";
+    const point = getWindPoint(direction);
+    return point ? `${rounded} ${unit} ${point}` : `${rounded} ${unit}`;
+  }
+  function getWindPoint(degrees) {
+    if (!Number.isFinite(degrees)) {
+      return "";
+    }
+    const points = LOCALE === "ru" ? ["\u0441\u0435\u0432\u0435\u0440", "\u0441-\u0432", "\u0432\u043E\u0441\u0442\u043E\u043A", "\u044E-\u0432", "\u044E\u0433", "\u044E-\u0437", "\u0437\u0430\u043F\u0430\u0434", "\u0441-\u0437"] : ["north", "NE", "east", "SE", "south", "SW", "west", "NW"];
+    return points[Math.round(degrees / 45) % 8];
+  }
+  function getWeatherCondition(code, isDay) {
+    const descriptions = {
+      ru: {
+        clear: "\u042F\u0441\u043D\u043E",
+        mainlyClear: "\u041F\u0440\u0435\u0438\u043C\u0443\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u043E \u044F\u0441\u043D\u043E",
+        partlyCloudy: "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0430\u044F \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0441\u0442\u044C",
+        overcast: "\u041F\u0430\u0441\u043C\u0443\u0440\u043D\u043E",
+        fog: "\u0422\u0443\u043C\u0430\u043D",
+        drizzle: "\u041C\u043E\u0440\u043E\u0441\u044C",
+        rain: "\u0414\u043E\u0436\u0434\u044C",
+        freezingRain: "\u041B\u0435\u0434\u044F\u043D\u043E\u0439 \u0434\u043E\u0436\u0434\u044C",
+        snow: "\u0421\u043D\u0435\u0433",
+        shower: "\u041B\u0438\u0432\u0435\u043D\u044C",
+        thunderstorm: "\u0413\u0440\u043E\u0437\u0430",
+        unknown: "\u041F\u043E\u0433\u043E\u0434\u0430"
+      },
+      en: {
+        clear: "Clear",
+        mainlyClear: "Mainly clear",
+        partlyCloudy: "Partly cloudy",
+        overcast: "Overcast",
+        fog: "Fog",
+        drizzle: "Drizzle",
+        rain: "Rain",
+        freezingRain: "Freezing rain",
+        snow: "Snow",
+        shower: "Showers",
+        thunderstorm: "Thunderstorm",
+        unknown: "Weather"
+      }
+    };
+    const text = descriptions[LOCALE === "ru" ? "ru" : "en"];
+    const byCode = {
+      0: ["\u2600", text.clear],
+      1: [isDay ? "\u2600" : "\u263E", text.mainlyClear],
+      2: ["\u25D0", text.partlyCloudy],
+      3: ["\u2601", text.overcast],
+      45: ["\u224B", text.fog],
+      48: ["\u224B", text.fog],
+      51: ["\u2602", text.drizzle],
+      53: ["\u2602", text.drizzle],
+      55: ["\u2602", text.drizzle],
+      56: ["\u2602", text.freezingRain],
+      57: ["\u2602", text.freezingRain],
+      61: ["\u2602", text.rain],
+      63: ["\u2602", text.rain],
+      65: ["\u2602", text.rain],
+      66: ["\u2602", text.freezingRain],
+      67: ["\u2602", text.freezingRain],
+      71: ["\u2744", text.snow],
+      73: ["\u2744", text.snow],
+      75: ["\u2744", text.snow],
+      77: ["\u2744", text.snow],
+      80: ["\u2602", text.shower],
+      81: ["\u2602", text.shower],
+      82: ["\u2602", text.shower],
+      85: ["\u2744", text.snow],
+      86: ["\u2744", text.snow],
+      95: ["\u26A1", text.thunderstorm],
+      96: ["\u26A1", text.thunderstorm],
+      99: ["\u26A1", text.thunderstorm]
+    };
+    const [icon, description] = byCode[code] || ["\u2601", text.unknown];
+    return { icon, description };
+  }
+
   // src/render.js
   function renderAll(app2) {
     renderSearchButtons(app2);
     renderQuickLinks(app2);
     renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+    renderWeatherWidget(app2);
     renderVisitPanels(app2);
     setStatusFromCurrentData(app2);
   }
@@ -1431,6 +1884,66 @@
       app: app2
     });
   }
+  function renderWeatherWidget(app2) {
+    const { refs } = app2;
+    if (!refs.weatherWidget) {
+      return;
+    }
+    const disabled = app2.localPatch?.weather?.disabled === true;
+    refs.weatherWidget.classList.toggle("hidden", disabled);
+    if (disabled) {
+      return;
+    }
+    const status = app2.weatherStatus;
+    const cache = app2.weatherCache;
+    refs.weatherWidget.dataset.state = status?.kind || (cache ? "ready" : "empty");
+    if (cache) {
+      const summary = getWeatherSummary(cache);
+      refs.weatherIcon.textContent = summary.icon;
+      refs.weatherTemp.textContent = "";
+      refs.weatherPlace.textContent = "";
+      refs.weatherPlace.title = summary.placeTitle || summary.place;
+      refs.weatherWidget.title = summary.placeTitle || "";
+      refs.weatherCondition.replaceChildren(createWeatherTempLine(summary));
+      refs.weatherFeels.textContent = summary.description;
+      refs.weatherRange.textContent = "";
+      refs.weatherHumidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
+      refs.weatherWind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
+      refs.weatherRain.textContent = summary.precipitationProbability ? t("weatherRain", summary.precipitationProbability) : "";
+      refs.weatherUpdated.textContent = summary.updatedAt;
+      refs.weatherUpdated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
+      refs.weatherRefreshButton.disabled = status?.kind === "loading";
+      return;
+    }
+    refs.weatherIcon.textContent = status?.kind === "loading" ? "\u2026" : "\u2601";
+    refs.weatherTemp.textContent = "";
+    refs.weatherPlace.textContent = t("weatherTitle");
+    refs.weatherPlace.title = "";
+    refs.weatherWidget.title = "";
+    refs.weatherCondition.textContent = status?.message || t("weatherNeedsLocation");
+    refs.weatherFeels.textContent = "";
+    refs.weatherRange.textContent = "";
+    refs.weatherHumidity.textContent = "";
+    refs.weatherWind.textContent = "";
+    refs.weatherRain.textContent = "";
+    refs.weatherUpdated.textContent = t("weatherOpenSettingsHint");
+    refs.weatherUpdated.title = "";
+    refs.weatherRefreshButton.disabled = status?.kind === "loading";
+  }
+  function createWeatherTempLine(summary) {
+    const fragment = document.createDocumentFragment();
+    const current = document.createElement("span");
+    current.className = "weather-current-temp";
+    current.textContent = summary.temperature;
+    fragment.append(current);
+    if (summary.minTemperature && summary.maxTemperature) {
+      const range = document.createElement("span");
+      range.className = "weather-temp-range";
+      range.textContent = t("weatherRange", summary.minTemperature, summary.maxTemperature);
+      fragment.append(range);
+    }
+    return fragment;
+  }
   function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app: app2 }) {
     list.replaceChildren();
     const isEmpty = !isEnabled || !items.length;
@@ -1520,6 +2033,8 @@
     renderQuickLinkSettings(app2);
     app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
     app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
+    app2.refs.weatherEnabledInput.checked = app2.localPatchDraft?.weather?.disabled !== true;
+    app2.refs.weatherLocationInput.value = app2.localPatchDraft?.weather?.locationName || "";
     app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
     app2.refs.showRecentVisitsInput.checked = app2.localPatchDraft?.visits?.showRecent !== false;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
@@ -1739,6 +2254,10 @@ ${result.error}`);
           homer: {
             disabled: app2.refs.homerDisabledInput.checked
           },
+          weather: {
+            disabled: !app2.refs.weatherEnabledInput.checked,
+            locationName: app2.refs.weatherLocationInput.value
+          },
           visits: {
             showFrequent: app2.refs.showFrequentVisitsInput.checked,
             showRecent: app2.refs.showRecentVisitsInput.checked
@@ -1929,6 +2448,8 @@ ${result.error}`);
     syncMeta: null,
     quickLinkMeta: {},
     searchEngineMeta: {},
+    weatherCache: null,
+    weatherStatus: null,
     visitHistory: [],
     frequentVisits: [],
     settingsDraft: null
@@ -1941,6 +2462,7 @@ ${result.error}`);
   app.renderQuickLinks = () => renderQuickLinks(app);
   app.renderSearchButtons = () => renderSearchButtons(app);
   app.renderVisitPanels = () => renderVisitPanels(app);
+  app.renderWeatherWidget = () => renderWeatherWidget(app);
   app.runSearch = runSearch;
   app.setViewMode = setViewMode;
   document.addEventListener("DOMContentLoaded", () => {
@@ -1955,6 +2477,7 @@ ${result.error}`);
     app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
     app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
     app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
+    app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
     app.visitHistory = await loadVisitHistory();
     app.frequentVisits = await loadFrequentVisits(app);
     applyTheme(app);
@@ -1962,6 +2485,7 @@ ${result.error}`);
     renderAll(app);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
+    void syncWeather(app, { force: false });
     await syncHomer(app, { force: false });
   }
   function bindRefs() {
@@ -1978,6 +2502,18 @@ ${result.error}`);
     refs.quickLinks = byId("quickLinks");
     refs.servicesLayout = byId("servicesLayout");
     refs.servicesGrid = byId("servicesGrid");
+    refs.weatherWidget = byId("weatherWidget");
+    refs.weatherIcon = byId("weatherIcon");
+    refs.weatherTemp = byId("weatherTemp");
+    refs.weatherPlace = byId("weatherPlace");
+    refs.weatherCondition = byId("weatherCondition");
+    refs.weatherFeels = byId("weatherFeels");
+    refs.weatherRange = byId("weatherRange");
+    refs.weatherHumidity = byId("weatherHumidity");
+    refs.weatherWind = byId("weatherWind");
+    refs.weatherRain = byId("weatherRain");
+    refs.weatherUpdated = byId("weatherUpdated");
+    refs.weatherRefreshButton = byId("weatherRefreshButton");
     refs.frequentPanel = byId("frequentPanel");
     refs.frequentList = byId("frequentList");
     refs.historyPanel = byId("historyPanel");
@@ -1990,6 +2526,8 @@ ${result.error}`);
     refs.addQuickLinkButton = byId("addQuickLinkButton");
     refs.homerUrlInput = byId("homerUrlInput");
     refs.homerDisabledInput = byId("homerDisabledInput");
+    refs.weatherEnabledInput = byId("weatherEnabledInput");
+    refs.weatherLocationInput = byId("weatherLocationInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
     refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -2011,6 +2549,9 @@ ${result.error}`);
     refs.syncButton.addEventListener("click", () => {
       void syncHomer(app, { force: true });
     });
+    refs.weatherRefreshButton.addEventListener("click", () => {
+      void syncWeather(app, { force: true });
+    });
     refs.statusButton.addEventListener("click", () => openSettings(app));
     refs.settingsButton.addEventListener("click", () => openSettings(app));
     refs.closeSettingsButton.addEventListener("click", () => closeSettings(app));
@@ -2027,10 +2568,12 @@ ${result.error}`);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         void refreshVisitHistory(app);
+        void syncWeather(app, { force: false });
       }
     });
     window.addEventListener("focus", () => {
       void refreshVisitHistory(app);
+      void syncWeather(app, { force: false });
     });
     refs.addEngineButton.addEventListener("click", () => {
       if (!app.settingsDraft) {
@@ -2158,6 +2701,7 @@ ${result.error}`);
     renderAll(app);
     void refreshSearchEngineMetadata(app, { force: true });
     void refreshQuickLinkMetadata(app, { force: true });
+    void syncWeather(app, { force: true });
     await syncHomer(app, { force: true });
   }
   async function resetSettings() {
@@ -2171,18 +2715,25 @@ ${result.error}`);
     app.homerCache = null;
     app.quickLinkMeta = {};
     app.searchEngineMeta = {};
+    app.weatherCache = null;
+    app.weatherStatus = null;
     app.visitHistory = [];
     app.frequentVisits = [];
     app.settingsDraft = clone(app.state);
+    app.localPatchDraft = clone(app.localPatch);
     app.syncMeta = null;
     await Promise.all([
       storageRemove(STATE_KEY, SYNC_AREA),
-      storageRemove([LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY], LOCAL_AREA)
+      storageRemove(
+        [LOCAL_PATCH_KEY, CACHE_KEY, META_KEY, QUICK_LINK_META_KEY, SEARCH_ENGINE_META_KEY, HISTORY_KEY, WEATHER_CACHE_KEY],
+        LOCAL_AREA
+      )
     ]);
     renderViewMode(app);
     renderAll(app);
     renderSettings(app);
     void refreshSearchEngineMetadata(app, { force: true });
+    void syncWeather(app, { force: true });
     await syncHomer(app, { force: true });
   }
 })();

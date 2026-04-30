@@ -44,6 +44,35 @@
       <section class="services-area" aria-label="Homer и посещённые сайты" data-i18n-attr="aria-label:servicesArea">
         <div id="servicesLayout" class="services-layout">
           <div id="servicesGrid" class="services-grid"></div>
+          <section id="weatherWidget" class="weather-widget hidden" aria-live="polite">
+            <div class="weather-main">
+              <div id="weatherIcon" class="weather-icon" aria-hidden="true">☁</div>
+              <div class="weather-primary">
+                <div class="weather-title-row">
+                  <strong id="weatherTemp" class="weather-temp"></strong>
+                  <span id="weatherPlace" class="weather-place" data-i18n="weatherTitle">Погода</span>
+                </div>
+                <div id="weatherCondition" class="weather-condition"></div>
+                <div class="weather-meta">
+                  <span id="weatherFeels"></span>
+                  <span id="weatherRange"></span>
+                  <span id="weatherHumidity"></span>
+                  <span id="weatherWind"></span>
+                  <span id="weatherRain"></span>
+                </div>
+              </div>
+              <button
+                id="weatherRefreshButton"
+                class="icon-button weather-refresh"
+                type="button"
+                title="Обновить погоду"
+                data-i18n-attr="title:refreshWeather"
+              >
+                ↻
+              </button>
+            </div>
+            <div id="weatherUpdated" class="weather-updated"></div>
+          </section>
           <aside id="frequentPanel" class="visit-panel frequent-panel" aria-label="Часто посещаемые" data-i18n-attr="aria-label:frequentVisits">
             <h2 class="visit-heading" data-i18n="frequentVisits">Часто посещаемые</h2>
             <div id="frequentList" class="visit-list"></div>
@@ -91,6 +120,27 @@
             <label class="check-field">
               <input id="homerDisabledInput" type="checkbox" />
               <span data-i18n="disableHomerLocally">Отключить Homer локально</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2 data-i18n="weather">Погода</h2>
+          </div>
+          <div class="field-grid">
+            <label>
+              <span data-i18n="weatherLocation">Город или координаты для этой машины</span>
+              <input
+                id="weatherLocationInput"
+                type="text"
+                placeholder="Пусто: брать геолокацию браузера"
+                data-i18n-attr="placeholder:weatherLocationPlaceholder"
+              />
+            </label>
+            <label class="check-field">
+              <input id="weatherEnabledInput" type="checkbox" />
+              <span data-i18n="weatherEnabled">Показывать погоду</span>
             </label>
           </div>
         </section>
