@@ -19,6 +19,7 @@ export function normalizeBootConfig(raw) {
     search: normalizeSearch(source.search, fallback.search),
     quickLinks: normalizeQuickLinks(source.quickLinks, fallback.quickLinks),
     visits: normalizeVisitSettings(source.visits, fallback.visits),
+    weather: normalizeWeatherSettings(source.weather, fallback.weather),
     githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
     services: normalizeServiceGroups(source.services, ""),
   };
@@ -30,6 +31,7 @@ export function createDefaultState(baseConfig) {
     quickLinks: clone(baseConfig.quickLinks),
     homer: clone(baseConfig.homer),
     visits: clone(baseConfig.visits),
+    weather: clone(baseConfig.weather),
     githubTrending: clone(baseConfig.githubTrending),
   };
 }
@@ -48,7 +50,8 @@ export function createDefaultLocalPatch() {
       disabled: false,
     },
     weather: {
-      disabled: false,
+      topDisabled: false,
+      cardDisabled: false,
       locationName: "",
     },
     githubTrending: {
@@ -71,6 +74,7 @@ export function normalizeState(raw, baseConfig) {
     quickLinks: normalizeQuickLinks(raw.quickLinks, base.quickLinks),
     homer: normalizeHomerSettings(raw.homer, base.homer),
     visits: normalizeVisitSettings(raw.visits, base.visits),
+    weather: normalizeWeatherSettings(raw.weather, base.weather),
     githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending),
   };
 }
@@ -89,6 +93,7 @@ export function createSyncedState(state) {
     quickLinks: clone(state.quickLinks),
     homer: clone(state.homer),
     visits: clone(state.visits),
+    weather: clone(state.weather),
     githubTrending: clone(state.githubTrending),
   };
 }
@@ -120,7 +125,8 @@ export function normalizeLocalPatch(raw, state) {
       disabled: source.homer?.disabled === true,
     },
     weather: {
-      disabled: source.weather?.disabled === true,
+      topDisabled: source.weather?.disabled === true || source.weather?.topDisabled === true,
+      cardDisabled: source.weather?.disabled === true || source.weather?.cardDisabled === true,
       locationName: normalizeWeatherLocationName(source.weather?.locationName),
     },
     githubTrending: {
@@ -233,6 +239,17 @@ export function normalizeVisitSettings(raw, fallback) {
     frequentHistoryPool: clampInt(raw?.frequentHistoryPool, 50, 50000, base.frequentHistoryPool),
     frequentMinVisits: clampInt(raw?.frequentMinVisits, 2, 1000, base.frequentMinVisits),
   };
+}
+
+export function normalizeWeatherSettings(raw, fallback) {
+  const base = fallback || FALLBACK_CONFIG.weather;
+  return {
+    topWidgetPlacement: normalizeTopWeatherPlacement(raw?.topWidgetPlacement, base.topWidgetPlacement),
+  };
+}
+
+export function normalizeTopWeatherPlacement(value, fallback = "actions") {
+  return ["actions", "center"].includes(value) ? value : fallback;
 }
 
 export function normalizeGitHubTrendingSettings(raw, fallback) {

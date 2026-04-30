@@ -48,7 +48,7 @@ export function normalizeWeatherCache(raw) {
 }
 
 export async function syncWeather(app, { force = false } = {}) {
-  if (app.localPatch?.weather?.disabled) {
+  if (app.localPatch?.weather?.topDisabled && app.localPatch?.weather?.cardDisabled) {
     app.weatherStatus = null;
     renderWeatherWidget(app);
     return;
@@ -128,7 +128,7 @@ export function getWeatherSummary(cache) {
     humidity: formatPercent(cache?.current?.humidity),
     precipitationProbability: formatPercent(cache?.daily?.precipitationProbability),
     wind: formatWind(cache?.current?.windSpeed, cache?.current?.windDirection),
-    updatedAt: cache?.fetchedAt ? formatUpdatedLabel(cache, formatElapsed(cache.fetchedAt)) : "",
+    updatedAt: cache?.fetchedAt ? formatUpdatedLabel(cache, formatClockTime(cache.fetchedAt)) : "",
     updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : "",
   };
 }
@@ -309,26 +309,17 @@ function formatAccuracy(value) {
   return `${Math.round(value)} m`;
 }
 
-function formatElapsed(timestamp) {
-  const elapsedMs = Math.max(0, Date.now() - timestamp);
-  const elapsedMinutes = Math.floor(elapsedMs / 60000);
-  if (elapsedMinutes < 1) {
-    return LOCALE === "ru" ? "сейчас" : "now";
-  }
-  if (elapsedMinutes < 60) {
-    return LOCALE === "ru" ? `${elapsedMinutes} мин` : `${elapsedMinutes}m`;
-  }
-  const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) {
-    return LOCALE === "ru" ? `${elapsedHours} ч` : `${elapsedHours}h`;
-  }
-  const elapsedDays = Math.floor(elapsedHours / 24);
-  return LOCALE === "ru" ? `${elapsedDays} д` : `${elapsedDays}d`;
+function formatClockTime(timestamp) {
+  return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+  }).format(new Date(timestamp));
 }
 
-function formatUpdatedLabel(cache, elapsed) {
+function formatUpdatedLabel(cache, updatedTime) {
   const label = cache?.source === "geolocation" ? (LOCALE === "ru" ? "тут" : "here") : compactPlaceName(cache?.place);
-  return [label, elapsed].filter(Boolean).join(" · ");
+  return [label, updatedTime].filter(Boolean).join(" · ");
 }
 
 function compactPlaceName(value) {

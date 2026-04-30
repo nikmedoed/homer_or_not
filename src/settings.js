@@ -6,6 +6,7 @@ import {
   normalizeGitHubTrendingSettings,
   normalizeLocalPatch,
   normalizeState,
+  normalizeWeatherSettings,
   normalizeVisitSettings,
 } from "./state.js";
 import { clone, isHttpUrl, makeId } from "./utils.js";
@@ -32,8 +33,10 @@ export function renderSettings(app) {
   renderQuickLinkSettings(app);
   app.refs.homerUrlInput.value = app.settingsDraft.homer.url;
   app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
-  app.refs.weatherEnabledInput.checked = app.localPatchDraft?.weather?.disabled !== true;
+  app.refs.topWeatherEnabledInput.checked = app.localPatchDraft?.weather?.topDisabled !== true;
+  app.refs.weatherCardEnabledInput.checked = app.localPatchDraft?.weather?.cardDisabled !== true;
   app.refs.weatherLocationInput.value = app.localPatchDraft?.weather?.locationName || "";
+  app.refs.topWeatherPlacementInput.value = app.settingsDraft.weather.topWidgetPlacement;
   app.refs.githubTrendingEnabledInput.checked = app.localPatchDraft?.githubTrending?.disabled !== true;
   app.refs.githubTrendingExcludeInput.value = app.settingsDraft.githubTrending.excludedTerms.join(", ");
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
@@ -267,6 +270,7 @@ export function validateSettingsDraft(app) {
       quickLinks: cleanedLinks,
       homer: nextHomer,
       visits: readVisitsDraft(app),
+      weather: readWeatherDraft(app),
       githubTrending: readGitHubTrendingDraft(app),
     },
     localPatch: normalizeLocalPatch(
@@ -282,7 +286,8 @@ export function validateSettingsDraft(app) {
           disabled: app.refs.homerDisabledInput.checked,
         },
         weather: {
-          disabled: !app.refs.weatherEnabledInput.checked,
+          topDisabled: !app.refs.topWeatherEnabledInput.checked,
+          cardDisabled: !app.refs.weatherCardEnabledInput.checked,
           locationName: app.refs.weatherLocationInput.value,
         },
         githubTrending: {
@@ -301,6 +306,7 @@ export function validateSettingsDraft(app) {
         quickLinks: cleanedLinks,
         homer: nextHomer,
         visits: readVisitsDraft(app),
+        weather: readWeatherDraft(app),
         githubTrending: readGitHubTrendingDraft(app),
       },
     ),
@@ -320,6 +326,15 @@ function readVisitsDraft(app) {
       frequentMinVisits: app.refs.frequentMinVisitsInput.value,
     },
     FALLBACK_CONFIG.visits,
+  );
+}
+
+function readWeatherDraft(app) {
+  return normalizeWeatherSettings(
+    {
+      topWidgetPlacement: app.refs.topWeatherPlacementInput.value,
+    },
+    FALLBACK_CONFIG.weather,
   );
 }
 

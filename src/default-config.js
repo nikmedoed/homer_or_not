@@ -20,6 +20,9 @@ export const FALLBACK_CONFIG = {
     frequentHistoryPool: 5000,
     frequentMinVisits: 3,
   },
+  weather: {
+    topWidgetPlacement: "center",
+  },
   githubTrending: {
     excludedTerms: [],
   },

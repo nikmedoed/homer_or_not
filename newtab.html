@@ -12,6 +12,33 @@
   <body>
     <main class="page-shell">
       <div class="top-actions" aria-label="Управление" data-i18n-attr="aria-label:topActions">
+        <div id="topWeatherWidget" class="top-weather-widget hidden" aria-live="polite">
+          <span id="topWeatherIcon" class="top-weather-icon" aria-hidden="true">☁</span>
+          <span class="top-weather-primary">
+            <span class="top-weather-title-row">
+              <strong id="topWeatherTemp" class="top-weather-temp"></strong>
+              <span id="topWeatherPlace" class="top-weather-place" data-i18n="weatherTitle">Погода</span>
+            </span>
+            <span id="topWeatherCondition" class="top-weather-condition"></span>
+            <span class="top-weather-meta">
+              <span id="topWeatherFeels"></span>
+              <span id="topWeatherRange"></span>
+              <span id="topWeatherHumidity"></span>
+              <span id="topWeatherWind"></span>
+              <span id="topWeatherRain"></span>
+              <span id="topWeatherUpdated" class="top-weather-updated"></span>
+            </span>
+          </span>
+          <button
+            id="topWeatherRefreshButton"
+            class="icon-button top-weather-refresh"
+            type="button"
+            title="Обновить погоду"
+            data-i18n-attr="title:refreshWeather"
+          >
+            ↻
+          </button>
+        </div>
         <button id="statusButton" class="status-button" type="button" title="Статус Homer" data-i18n-attr="title:homerStatus">
           <span id="statusDot" class="status-dot"></span>
           <span id="statusText">local</span>
@@ -155,8 +182,19 @@
               />
             </label>
             <label class="check-field">
-              <input id="weatherEnabledInput" type="checkbox" />
-              <span data-i18n="weatherEnabled">Показывать погоду</span>
+              <input id="topWeatherEnabledInput" type="checkbox" />
+              <span data-i18n="topWeatherEnabled">Показывать верхнюю погоду</span>
+            </label>
+            <label class="check-field">
+              <input id="weatherCardEnabledInput" type="checkbox" />
+              <span data-i18n="weatherCardEnabled">Показывать карточку погоды</span>
+            </label>
+            <label>
+              <span data-i18n="topWeatherPlacement">Верхняя погода</span>
+              <select id="topWeatherPlacementInput">
+                <option value="actions" data-i18n="topWeatherPlacementActions">Как сейчас</option>
+                <option value="center" data-i18n="topWeatherPlacementCenter">По центру экрана</option>
+              </select>
             </label>
           </div>
         </section>

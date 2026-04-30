@@ -231,54 +231,108 @@ export function renderVisitPanels(app) {
 
 export function renderWeatherWidget(app) {
   const { refs } = app;
-  if (!refs.weatherWidget) {
+  document.body.dataset.topWeatherPlacement = app.state.weather?.topWidgetPlacement || "actions";
+  renderWeatherBlock(app, {
+    widget: refs.weatherWidget,
+    icon: refs.weatherIcon,
+    temp: refs.weatherTemp,
+    place: refs.weatherPlace,
+    condition: refs.weatherCondition,
+    feels: refs.weatherFeels,
+    range: refs.weatherRange,
+    humidity: refs.weatherHumidity,
+    wind: refs.weatherWind,
+    rain: refs.weatherRain,
+    updated: refs.weatherUpdated,
+    refreshButton: refs.weatherRefreshButton,
+    disabled: app.localPatch?.weather?.cardDisabled === true,
+  });
+  renderWeatherBlock(app, {
+    widget: refs.topWeatherWidget,
+    icon: refs.topWeatherIcon,
+    temp: refs.topWeatherTemp,
+    place: refs.topWeatherPlace,
+    condition: refs.topWeatherCondition,
+    feels: refs.topWeatherFeels,
+    range: refs.topWeatherRange,
+    humidity: refs.topWeatherHumidity,
+    wind: refs.topWeatherWind,
+    rain: refs.topWeatherRain,
+    updated: refs.topWeatherUpdated,
+    refreshButton: refs.topWeatherRefreshButton,
+    disabled: app.localPatch?.weather?.topDisabled === true,
+    splitUpdated: true,
+  });
+}
+
+function renderWeatherBlock(app, refs) {
+  if (!refs.widget) {
     return;
   }
-  const disabled = app.localPatch?.weather?.disabled === true;
-  refs.weatherWidget.classList.toggle("hidden", disabled);
+  const disabled = refs.disabled === true;
+  refs.widget.classList.toggle("hidden", disabled);
   if (disabled) {
     return;
   }
 
   const status = app.weatherStatus;
   const cache = app.weatherCache;
-  refs.weatherWidget.dataset.state = status?.kind || (cache ? "ready" : "empty");
+  refs.widget.dataset.state = status?.kind || (cache ? "ready" : "empty");
 
   if (cache) {
     const summary = getWeatherSummary(cache);
-    refs.weatherIcon.textContent = summary.icon;
-    refs.weatherTemp.textContent = "";
-    refs.weatherPlace.textContent = "";
-    refs.weatherPlace.title = summary.placeTitle || summary.place;
-    refs.weatherWidget.title = summary.placeTitle || "";
-    refs.weatherCondition.replaceChildren(createWeatherTempLine(summary));
-    refs.weatherFeels.textContent = summary.description;
-    refs.weatherRange.textContent = "";
-    refs.weatherHumidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
-    refs.weatherWind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
-    refs.weatherRain.textContent = summary.precipitationProbability
-      ? t("weatherRain", summary.precipitationProbability)
-      : "";
-    refs.weatherUpdated.textContent = summary.updatedAt;
-    refs.weatherUpdated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
-    refs.weatherRefreshButton.disabled = status?.kind === "loading";
+    refs.icon.textContent = summary.icon;
+    refs.temp.textContent = "";
+    refs.place.textContent = "";
+    refs.place.title = summary.placeTitle || summary.place;
+    refs.widget.title = summary.placeTitle || "";
+    refs.condition.replaceChildren(createWeatherTempLine(summary));
+    refs.feels.textContent = summary.description;
+    refs.range.textContent = "";
+    refs.humidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
+    refs.wind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
+    refs.rain.textContent = summary.precipitationProbability ? t("weatherRain", summary.precipitationProbability) : "";
+    setWeatherUpdated(refs, summary.updatedAt);
+    refs.updated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
+    refs.refreshButton.disabled = status?.kind === "loading";
     return;
   }
 
-  refs.weatherIcon.textContent = status?.kind === "loading" ? "…" : "☁";
-  refs.weatherTemp.textContent = "";
-  refs.weatherPlace.textContent = t("weatherTitle");
-  refs.weatherPlace.title = "";
-  refs.weatherWidget.title = "";
-  refs.weatherCondition.textContent = status?.message || t("weatherNeedsLocation");
-  refs.weatherFeels.textContent = "";
-  refs.weatherRange.textContent = "";
-  refs.weatherHumidity.textContent = "";
-  refs.weatherWind.textContent = "";
-  refs.weatherRain.textContent = "";
-  refs.weatherUpdated.textContent = t("weatherOpenSettingsHint");
-  refs.weatherUpdated.title = "";
-  refs.weatherRefreshButton.disabled = status?.kind === "loading";
+  refs.icon.textContent = status?.kind === "loading" ? "…" : "☁";
+  refs.temp.textContent = "";
+  refs.place.textContent = t("weatherTitle");
+  refs.place.title = "";
+  refs.widget.title = "";
+  refs.condition.textContent = status?.message || t("weatherNeedsLocation");
+  refs.feels.textContent = "";
+  refs.range.textContent = "";
+  refs.humidity.textContent = "";
+  refs.wind.textContent = "";
+  refs.rain.textContent = "";
+  setWeatherUpdated(refs, t("weatherOpenSettingsHint"));
+  refs.updated.title = "";
+  refs.refreshButton.disabled = status?.kind === "loading";
+}
+
+function setWeatherUpdated(refs, value) {
+  if (!refs.splitUpdated) {
+    refs.updated.textContent = value;
+    return;
+  }
+  const parts = String(value || "")
+    .split(" · ")
+    .filter(Boolean);
+  if (parts.length < 2) {
+    refs.updated.textContent = value;
+    return;
+  }
+  refs.updated.replaceChildren(...parts.map(createWeatherUpdatedLine));
+}
+
+function createWeatherUpdatedLine(text) {
+  const line = document.createElement("span");
+  line.textContent = text;
+  return line;
 }
 
 export function renderGitHubTrending(app) {

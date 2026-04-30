@@ -133,6 +133,18 @@ function bindRefs() {
   refs.quickLinks = byId("quickLinks");
   refs.servicesLayout = byId("servicesLayout");
   refs.servicesGrid = byId("servicesGrid");
+  refs.topWeatherWidget = byId("topWeatherWidget");
+  refs.topWeatherIcon = byId("topWeatherIcon");
+  refs.topWeatherTemp = byId("topWeatherTemp");
+  refs.topWeatherPlace = byId("topWeatherPlace");
+  refs.topWeatherCondition = byId("topWeatherCondition");
+  refs.topWeatherFeels = byId("topWeatherFeels");
+  refs.topWeatherRange = byId("topWeatherRange");
+  refs.topWeatherHumidity = byId("topWeatherHumidity");
+  refs.topWeatherWind = byId("topWeatherWind");
+  refs.topWeatherRain = byId("topWeatherRain");
+  refs.topWeatherUpdated = byId("topWeatherUpdated");
+  refs.topWeatherRefreshButton = byId("topWeatherRefreshButton");
   refs.weatherWidget = byId("weatherWidget");
   refs.weatherIcon = byId("weatherIcon");
   refs.weatherTemp = byId("weatherTemp");
@@ -161,8 +173,10 @@ function bindRefs() {
   refs.addQuickLinkButton = byId("addQuickLinkButton");
   refs.homerUrlInput = byId("homerUrlInput");
   refs.homerDisabledInput = byId("homerDisabledInput");
-  refs.weatherEnabledInput = byId("weatherEnabledInput");
+  refs.topWeatherEnabledInput = byId("topWeatherEnabledInput");
+  refs.weatherCardEnabledInput = byId("weatherCardEnabledInput");
   refs.weatherLocationInput = byId("weatherLocationInput");
+  refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
   refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
   refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
@@ -188,6 +202,9 @@ function bindEvents() {
     void syncHomer(app, { force: true });
   });
   refs.weatherRefreshButton.addEventListener("click", () => {
+    void syncWeather(app, { force: true });
+  });
+  refs.topWeatherRefreshButton.addEventListener("click", () => {
     void syncWeather(app, { force: true });
   });
   refs.githubTrendingRefreshButton.addEventListener("click", () => {

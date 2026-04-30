@@ -73,8 +73,13 @@
       weather: "\u041F\u043E\u0433\u043E\u0434\u0430",
       weatherTitle: "\u041F\u043E\u0433\u043E\u0434\u0430",
       weatherEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043F\u043E\u0433\u043E\u0434\u0443",
+      topWeatherEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0432\u0435\u0440\u0445\u043D\u044E\u044E \u043F\u043E\u0433\u043E\u0434\u0443",
+      weatherCardEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u043F\u043E\u0433\u043E\u0434\u044B",
       weatherLocation: "\u0413\u043E\u0440\u043E\u0434 \u0438\u043B\u0438 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B \u0434\u043B\u044F \u044D\u0442\u043E\u0439 \u043C\u0430\u0448\u0438\u043D\u044B",
       weatherLocationPlaceholder: "\u041F\u0443\u0441\u0442\u043E: \u0431\u0440\u0430\u0442\u044C \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044E \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430",
+      topWeatherPlacement: "\u0412\u0435\u0440\u0445\u043D\u044F\u044F \u043F\u043E\u0433\u043E\u0434\u0430",
+      topWeatherPlacementActions: "\u041A\u0430\u043A \u0441\u0435\u0439\u0447\u0430\u0441",
+      topWeatherPlacementCenter: "\u041F\u043E \u0446\u0435\u043D\u0442\u0440\u0443 \u044D\u043A\u0440\u0430\u043D\u0430",
       refreshWeather: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u043E\u0433\u043E\u0434\u0443",
       currentLocation: "\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
       weatherLoadingGeo: "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u044E \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435...",
@@ -87,9 +92,9 @@
       weatherGeolocationFailed: "\u0413\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430. \u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u0433\u043E\u0440\u043E\u0434 \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445.",
       weatherFeelsLike: (temp) => `\u041E\u0449\u0443\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A ${temp}`,
       weatherRange: (min, max) => `${min} / ${max}`,
-      weatherHumidity: (humidity) => `\u2652 ${humidity}`,
+      weatherHumidity: (humidity) => `\u{1F4A7} ${humidity}`,
       weatherWind: (wind) => `\u224B ${wind}`,
-      weatherRain: (chance) => `\u041E\u0441 ${chance}`,
+      weatherRain: (chance) => `\u2614 ${chance}`,
       weatherUpdated: (date) => `\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${date}`,
       githubTrending: "GitHub Trending",
       githubTrendingEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C GitHub Trending",
@@ -166,8 +171,13 @@
       weather: "Weather",
       weatherTitle: "Weather",
       weatherEnabled: "Show weather",
+      topWeatherEnabled: "Show top weather",
+      weatherCardEnabled: "Show weather card",
       weatherLocation: "City or coordinates for this machine",
       weatherLocationPlaceholder: "Blank: use browser geolocation",
+      topWeatherPlacement: "Top weather",
+      topWeatherPlacementActions: "Current position",
+      topWeatherPlacementCenter: "Centered on screen",
       refreshWeather: "Refresh weather",
       currentLocation: "Current location",
       weatherLoadingGeo: "Detecting location...",
@@ -180,9 +190,9 @@
       weatherGeolocationFailed: "Geolocation is unavailable. Set a city in settings.",
       weatherFeelsLike: (temp) => `Feels like ${temp}`,
       weatherRange: (min, max) => `${min} / ${max}`,
-      weatherHumidity: (humidity) => `\u2652 ${humidity}`,
+      weatherHumidity: (humidity) => `\u{1F4A7} ${humidity}`,
       weatherWind: (wind) => `\u224B ${wind}`,
-      weatherRain: (chance) => `Rain ${chance}`,
+      weatherRain: (chance) => `\u2614 ${chance}`,
       weatherUpdated: (date) => `Updated ${date}`,
       githubTrending: "GitHub Trending",
       githubTrendingEnabled: "Show GitHub Trending",
@@ -254,6 +264,9 @@
     visits: {
       frequentHistoryPool: 5e3,
       frequentMinVisits: 3
+    },
+    weather: {
+      topWidgetPlacement: "center"
     },
     githubTrending: {
       excludedTerms: []
@@ -876,6 +889,7 @@
       search: normalizeSearch(source.search, fallback.search),
       quickLinks: normalizeQuickLinks(source.quickLinks, fallback.quickLinks),
       visits: normalizeVisitSettings(source.visits, fallback.visits),
+      weather: normalizeWeatherSettings(source.weather, fallback.weather),
       githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
       services: normalizeServiceGroups(source.services, "")
     };
@@ -886,6 +900,7 @@
       quickLinks: clone(baseConfig.quickLinks),
       homer: clone(baseConfig.homer),
       visits: clone(baseConfig.visits),
+      weather: clone(baseConfig.weather),
       githubTrending: clone(baseConfig.githubTrending)
     };
   }
@@ -899,6 +914,7 @@
       quickLinks: normalizeQuickLinks(raw.quickLinks, base.quickLinks),
       homer: normalizeHomerSettings(raw.homer, base.homer),
       visits: normalizeVisitSettings(raw.visits, base.visits),
+      weather: normalizeWeatherSettings(raw.weather, base.weather),
       githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending)
     };
   }
@@ -915,6 +931,7 @@
       quickLinks: clone(state.quickLinks),
       homer: clone(state.homer),
       visits: clone(state.visits),
+      weather: clone(state.weather),
       githubTrending: clone(state.githubTrending)
     };
   }
@@ -939,7 +956,8 @@
         disabled: source.homer?.disabled === true
       },
       weather: {
-        disabled: source.weather?.disabled === true,
+        topDisabled: source.weather?.disabled === true || source.weather?.topDisabled === true,
+        cardDisabled: source.weather?.disabled === true || source.weather?.cardDisabled === true,
         locationName: normalizeWeatherLocationName(source.weather?.locationName)
       },
       githubTrending: {
@@ -1034,6 +1052,15 @@
       frequentHistoryPool: clampInt(raw?.frequentHistoryPool, 50, 5e4, base.frequentHistoryPool),
       frequentMinVisits: clampInt(raw?.frequentMinVisits, 2, 1e3, base.frequentMinVisits)
     };
+  }
+  function normalizeWeatherSettings(raw, fallback) {
+    const base = fallback || FALLBACK_CONFIG.weather;
+    return {
+      topWidgetPlacement: normalizeTopWeatherPlacement(raw?.topWidgetPlacement, base.topWidgetPlacement)
+    };
+  }
+  function normalizeTopWeatherPlacement(value, fallback = "actions") {
+    return ["actions", "center"].includes(value) ? value : fallback;
   }
   function normalizeGitHubTrendingSettings(raw, fallback) {
     const base = fallback || FALLBACK_CONFIG.githubTrending;
@@ -1604,7 +1631,7 @@
     };
   }
   async function syncWeather(app2, { force = false } = {}) {
-    if (app2.localPatch?.weather?.disabled) {
+    if (app2.localPatch?.weather?.topDisabled && app2.localPatch?.weather?.cardDisabled) {
       app2.weatherStatus = null;
       renderWeatherWidget(app2);
       return;
@@ -1678,7 +1705,7 @@
       humidity: formatPercent(cache?.current?.humidity),
       precipitationProbability: formatPercent(cache?.daily?.precipitationProbability),
       wind: formatWind(cache?.current?.windSpeed, cache?.current?.windDirection),
-      updatedAt: cache?.fetchedAt ? formatUpdatedLabel(cache, formatElapsed(cache.fetchedAt)) : "",
+      updatedAt: cache?.fetchedAt ? formatUpdatedLabel(cache, formatClockTime(cache.fetchedAt)) : "",
       updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : ""
     };
   }
@@ -1839,25 +1866,16 @@
     }
     return `${Math.round(value)} m`;
   }
-  function formatElapsed(timestamp) {
-    const elapsedMs = Math.max(0, Date.now() - timestamp);
-    const elapsedMinutes = Math.floor(elapsedMs / 6e4);
-    if (elapsedMinutes < 1) {
-      return LOCALE === "ru" ? "\u0441\u0435\u0439\u0447\u0430\u0441" : "now";
-    }
-    if (elapsedMinutes < 60) {
-      return LOCALE === "ru" ? `${elapsedMinutes} \u043C\u0438\u043D` : `${elapsedMinutes}m`;
-    }
-    const elapsedHours = Math.floor(elapsedMinutes / 60);
-    if (elapsedHours < 24) {
-      return LOCALE === "ru" ? `${elapsedHours} \u0447` : `${elapsedHours}h`;
-    }
-    const elapsedDays = Math.floor(elapsedHours / 24);
-    return LOCALE === "ru" ? `${elapsedDays} \u0434` : `${elapsedDays}d`;
+  function formatClockTime(timestamp) {
+    return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+      hour: "2-digit",
+      hour12: false,
+      minute: "2-digit"
+    }).format(new Date(timestamp));
   }
-  function formatUpdatedLabel(cache, elapsed) {
+  function formatUpdatedLabel(cache, updatedTime) {
     const label = cache?.source === "geolocation" ? LOCALE === "ru" ? "\u0442\u0443\u0442" : "here" : compactPlaceName(cache?.place);
-    return [label, elapsed].filter(Boolean).join(" \xB7 ");
+    return [label, updatedTime].filter(Boolean).join(" \xB7 ");
   }
   function compactPlaceName(value) {
     return String(value || "").split(",")[0].trim();
@@ -2148,49 +2166,100 @@
   }
   function renderWeatherWidget(app2) {
     const { refs } = app2;
-    if (!refs.weatherWidget) {
+    document.body.dataset.topWeatherPlacement = app2.state.weather?.topWidgetPlacement || "actions";
+    renderWeatherBlock(app2, {
+      widget: refs.weatherWidget,
+      icon: refs.weatherIcon,
+      temp: refs.weatherTemp,
+      place: refs.weatherPlace,
+      condition: refs.weatherCondition,
+      feels: refs.weatherFeels,
+      range: refs.weatherRange,
+      humidity: refs.weatherHumidity,
+      wind: refs.weatherWind,
+      rain: refs.weatherRain,
+      updated: refs.weatherUpdated,
+      refreshButton: refs.weatherRefreshButton,
+      disabled: app2.localPatch?.weather?.cardDisabled === true
+    });
+    renderWeatherBlock(app2, {
+      widget: refs.topWeatherWidget,
+      icon: refs.topWeatherIcon,
+      temp: refs.topWeatherTemp,
+      place: refs.topWeatherPlace,
+      condition: refs.topWeatherCondition,
+      feels: refs.topWeatherFeels,
+      range: refs.topWeatherRange,
+      humidity: refs.topWeatherHumidity,
+      wind: refs.topWeatherWind,
+      rain: refs.topWeatherRain,
+      updated: refs.topWeatherUpdated,
+      refreshButton: refs.topWeatherRefreshButton,
+      disabled: app2.localPatch?.weather?.topDisabled === true,
+      splitUpdated: true
+    });
+  }
+  function renderWeatherBlock(app2, refs) {
+    if (!refs.widget) {
       return;
     }
-    const disabled = app2.localPatch?.weather?.disabled === true;
-    refs.weatherWidget.classList.toggle("hidden", disabled);
+    const disabled = refs.disabled === true;
+    refs.widget.classList.toggle("hidden", disabled);
     if (disabled) {
       return;
     }
     const status = app2.weatherStatus;
     const cache = app2.weatherCache;
-    refs.weatherWidget.dataset.state = status?.kind || (cache ? "ready" : "empty");
+    refs.widget.dataset.state = status?.kind || (cache ? "ready" : "empty");
     if (cache) {
       const summary = getWeatherSummary(cache);
-      refs.weatherIcon.textContent = summary.icon;
-      refs.weatherTemp.textContent = "";
-      refs.weatherPlace.textContent = "";
-      refs.weatherPlace.title = summary.placeTitle || summary.place;
-      refs.weatherWidget.title = summary.placeTitle || "";
-      refs.weatherCondition.replaceChildren(createWeatherTempLine(summary));
-      refs.weatherFeels.textContent = summary.description;
-      refs.weatherRange.textContent = "";
-      refs.weatherHumidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
-      refs.weatherWind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
-      refs.weatherRain.textContent = summary.precipitationProbability ? t("weatherRain", summary.precipitationProbability) : "";
-      refs.weatherUpdated.textContent = summary.updatedAt;
-      refs.weatherUpdated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
-      refs.weatherRefreshButton.disabled = status?.kind === "loading";
+      refs.icon.textContent = summary.icon;
+      refs.temp.textContent = "";
+      refs.place.textContent = "";
+      refs.place.title = summary.placeTitle || summary.place;
+      refs.widget.title = summary.placeTitle || "";
+      refs.condition.replaceChildren(createWeatherTempLine(summary));
+      refs.feels.textContent = summary.description;
+      refs.range.textContent = "";
+      refs.humidity.textContent = summary.humidity ? t("weatherHumidity", summary.humidity) : "";
+      refs.wind.textContent = summary.wind ? t("weatherWind", summary.wind) : "";
+      refs.rain.textContent = summary.precipitationProbability ? t("weatherRain", summary.precipitationProbability) : "";
+      setWeatherUpdated(refs, summary.updatedAt);
+      refs.updated.title = status?.kind === "error" ? status.message : t("weatherUpdated", summary.updatedAtTitle);
+      refs.refreshButton.disabled = status?.kind === "loading";
       return;
     }
-    refs.weatherIcon.textContent = status?.kind === "loading" ? "\u2026" : "\u2601";
-    refs.weatherTemp.textContent = "";
-    refs.weatherPlace.textContent = t("weatherTitle");
-    refs.weatherPlace.title = "";
-    refs.weatherWidget.title = "";
-    refs.weatherCondition.textContent = status?.message || t("weatherNeedsLocation");
-    refs.weatherFeels.textContent = "";
-    refs.weatherRange.textContent = "";
-    refs.weatherHumidity.textContent = "";
-    refs.weatherWind.textContent = "";
-    refs.weatherRain.textContent = "";
-    refs.weatherUpdated.textContent = t("weatherOpenSettingsHint");
-    refs.weatherUpdated.title = "";
-    refs.weatherRefreshButton.disabled = status?.kind === "loading";
+    refs.icon.textContent = status?.kind === "loading" ? "\u2026" : "\u2601";
+    refs.temp.textContent = "";
+    refs.place.textContent = t("weatherTitle");
+    refs.place.title = "";
+    refs.widget.title = "";
+    refs.condition.textContent = status?.message || t("weatherNeedsLocation");
+    refs.feels.textContent = "";
+    refs.range.textContent = "";
+    refs.humidity.textContent = "";
+    refs.wind.textContent = "";
+    refs.rain.textContent = "";
+    setWeatherUpdated(refs, t("weatherOpenSettingsHint"));
+    refs.updated.title = "";
+    refs.refreshButton.disabled = status?.kind === "loading";
+  }
+  function setWeatherUpdated(refs, value) {
+    if (!refs.splitUpdated) {
+      refs.updated.textContent = value;
+      return;
+    }
+    const parts = String(value || "").split(" \xB7 ").filter(Boolean);
+    if (parts.length < 2) {
+      refs.updated.textContent = value;
+      return;
+    }
+    refs.updated.replaceChildren(...parts.map(createWeatherUpdatedLine));
+  }
+  function createWeatherUpdatedLine(text) {
+    const line = document.createElement("span");
+    line.textContent = text;
+    return line;
   }
   function renderGitHubTrending(app2) {
     const { refs } = app2;
@@ -2624,8 +2693,10 @@
     renderQuickLinkSettings(app2);
     app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
     app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
-    app2.refs.weatherEnabledInput.checked = app2.localPatchDraft?.weather?.disabled !== true;
+    app2.refs.topWeatherEnabledInput.checked = app2.localPatchDraft?.weather?.topDisabled !== true;
+    app2.refs.weatherCardEnabledInput.checked = app2.localPatchDraft?.weather?.cardDisabled !== true;
     app2.refs.weatherLocationInput.value = app2.localPatchDraft?.weather?.locationName || "";
+    app2.refs.topWeatherPlacementInput.value = app2.settingsDraft.weather.topWidgetPlacement;
     app2.refs.githubTrendingEnabledInput.checked = app2.localPatchDraft?.githubTrending?.disabled !== true;
     app2.refs.githubTrendingExcludeInput.value = app2.settingsDraft.githubTrending.excludedTerms.join(", ");
     app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
@@ -2836,6 +2907,7 @@ ${result.error}`);
         quickLinks: cleanedLinks,
         homer: nextHomer,
         visits: readVisitsDraft(app2),
+        weather: readWeatherDraft(app2),
         githubTrending: readGitHubTrendingDraft(app2)
       },
       localPatch: normalizeLocalPatch(
@@ -2849,7 +2921,8 @@ ${result.error}`);
             disabled: app2.refs.homerDisabledInput.checked
           },
           weather: {
-            disabled: !app2.refs.weatherEnabledInput.checked,
+            topDisabled: !app2.refs.topWeatherEnabledInput.checked,
+            cardDisabled: !app2.refs.weatherCardEnabledInput.checked,
             locationName: app2.refs.weatherLocationInput.value
           },
           githubTrending: {
@@ -2868,6 +2941,7 @@ ${result.error}`);
           quickLinks: cleanedLinks,
           homer: nextHomer,
           visits: readVisitsDraft(app2),
+          weather: readWeatherDraft(app2),
           githubTrending: readGitHubTrendingDraft(app2)
         }
       )
@@ -2885,6 +2959,14 @@ ${result.error}`);
         frequentMinVisits: app2.refs.frequentMinVisitsInput.value
       },
       FALLBACK_CONFIG.visits
+    );
+  }
+  function readWeatherDraft(app2) {
+    return normalizeWeatherSettings(
+      {
+        topWidgetPlacement: app2.refs.topWeatherPlacementInput.value
+      },
+      FALLBACK_CONFIG.weather
     );
   }
   function readGitHubTrendingDraft(app2) {
@@ -3114,6 +3196,18 @@ ${result.error}`);
     refs.quickLinks = byId("quickLinks");
     refs.servicesLayout = byId("servicesLayout");
     refs.servicesGrid = byId("servicesGrid");
+    refs.topWeatherWidget = byId("topWeatherWidget");
+    refs.topWeatherIcon = byId("topWeatherIcon");
+    refs.topWeatherTemp = byId("topWeatherTemp");
+    refs.topWeatherPlace = byId("topWeatherPlace");
+    refs.topWeatherCondition = byId("topWeatherCondition");
+    refs.topWeatherFeels = byId("topWeatherFeels");
+    refs.topWeatherRange = byId("topWeatherRange");
+    refs.topWeatherHumidity = byId("topWeatherHumidity");
+    refs.topWeatherWind = byId("topWeatherWind");
+    refs.topWeatherRain = byId("topWeatherRain");
+    refs.topWeatherUpdated = byId("topWeatherUpdated");
+    refs.topWeatherRefreshButton = byId("topWeatherRefreshButton");
     refs.weatherWidget = byId("weatherWidget");
     refs.weatherIcon = byId("weatherIcon");
     refs.weatherTemp = byId("weatherTemp");
@@ -3142,8 +3236,10 @@ ${result.error}`);
     refs.addQuickLinkButton = byId("addQuickLinkButton");
     refs.homerUrlInput = byId("homerUrlInput");
     refs.homerDisabledInput = byId("homerDisabledInput");
-    refs.weatherEnabledInput = byId("weatherEnabledInput");
+    refs.topWeatherEnabledInput = byId("topWeatherEnabledInput");
+    refs.weatherCardEnabledInput = byId("weatherCardEnabledInput");
     refs.weatherLocationInput = byId("weatherLocationInput");
+    refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
     refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
     refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
@@ -3168,6 +3264,9 @@ ${result.error}`);
       void syncHomer(app, { force: true });
     });
     refs.weatherRefreshButton.addEventListener("click", () => {
+      void syncWeather(app, { force: true });
+    });
+    refs.topWeatherRefreshButton.addEventListener("click", () => {
       void syncWeather(app, { force: true });
     });
     refs.githubTrendingRefreshButton.addEventListener("click", () => {
