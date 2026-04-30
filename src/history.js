@@ -1,6 +1,11 @@
 import { HISTORY_KEY, LOCAL_AREA, VISIT_HISTORY_LIMIT } from "./constants.js";
 import { FALLBACK_CONFIG } from "./default-config.js";
-import { normalizeVisitHistory, normalizeVisitHistoryItem, normalizeVisitSettings } from "./state.js";
+import {
+  getVisibleQuickLinks,
+  normalizeVisitHistory,
+  normalizeVisitHistoryItem,
+  normalizeVisitSettings,
+} from "./state.js";
 import { isHttpUrl, normalizeUrlKey, storageGet, storageSet } from "./utils.js";
 
 export async function addVisitHistoryItem(app, item) {
@@ -89,8 +94,34 @@ export async function loadFrequentVisits(app) {
             }
             return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
           });
-        resolve(normalizeVisitHistory(frequent).slice(0, VISIT_HISTORY_LIMIT));
+        resolve(filterFrequentVisits(app, normalizeVisitHistory(frequent)).slice(0, VISIT_HISTORY_LIMIT));
       },
     );
   });
+}
+
+export function filterFrequentVisits(app, items) {
+  const excludedKeys = getFrequentVisitExcludedKeys(app);
+  if (!excludedKeys.size) {
+    return items;
+  }
+  return items.filter((item) => {
+    const key = normalizeUrlKey(item.url);
+    return key && !excludedKeys.has(key);
+  });
+}
+
+function getFrequentVisitExcludedKeys(app) {
+  const keys = new Set();
+  for (const link of getVisibleQuickLinks(app)) {
+    const key = normalizeUrlKey(link.url);
+    if (key) {
+      keys.add(key);
+    }
+  }
+  const homerKey = normalizeUrlKey(app.state?.homer?.url);
+  if (homerKey) {
+    keys.add(homerKey);
+  }
+  return keys;
 }

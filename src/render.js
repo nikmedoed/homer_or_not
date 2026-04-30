@@ -1,8 +1,16 @@
 import { ICONS, normalizeSectionIcon } from "./homer.js";
+import { filterFrequentVisits } from "./history.js";
 import { t } from "./i18n.js";
 import { getQuickLinkMeta, getQuickLinkTitle, getSearchEngineMeta } from "./metadata.js";
 import { getVisibleQuickLinks, getVisibleSearchEngines } from "./state.js";
-import { formatFrequentMeta, formatHistoryMeta, formatDateTime, makeInitial, toDomain } from "./utils.js";
+import {
+  formatFrequentMeta,
+  formatHistoryMeta,
+  formatDateTime,
+  makeInitial,
+  normalizeUrlKey,
+  toDomain,
+} from "./utils.js";
 import { getWeatherSummary } from "./weather.js";
 
 export function renderAll(app) {
@@ -201,7 +209,7 @@ export function renderVisitPanels(app) {
   renderVisitList({
     panel: app.refs.frequentPanel,
     list: app.refs.frequentList,
-    items: app.frequentVisits,
+    items: filterFrequentVisits(app, app.frequentVisits),
     isEnabled: app.localPatch?.visits?.showFrequent !== false,
     metaFormatter: formatFrequentMeta,
     showVisitCount: true,
@@ -213,6 +221,8 @@ export function renderVisitPanels(app) {
     items: app.visitHistory,
     isEnabled: app.localPatch?.visits?.showRecent !== false,
     metaFormatter: formatHistoryMeta,
+    showAddButton: true,
+    hideAddedAction: true,
     app,
   });
 }
@@ -284,7 +294,17 @@ function createWeatherTempLine(summary) {
   return fragment;
 }
 
-function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app }) {
+function renderVisitList({
+  panel,
+  list,
+  items,
+  isEnabled = true,
+  metaFormatter,
+  showVisitCount = false,
+  showAddButton = false,
+  hideAddedAction = false,
+  app,
+}) {
   list.replaceChildren();
   const isEmpty = !isEnabled || !items.length;
   panel.classList.toggle("hidden", isEmpty);
@@ -293,8 +313,11 @@ function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, 
   }
 
   for (const item of items) {
+    const row = document.createElement("div");
+    row.className = "visit-row";
+
     const anchor = document.createElement("a");
-    anchor.className = "visit-row";
+    anchor.className = "visit-link";
     anchor.href = item.url;
     anchor.target = "_blank";
     anchor.rel = "noreferrer";
@@ -311,17 +334,74 @@ function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, 
     meta.className = "visit-meta";
     meta.textContent = metaFormatter(item);
 
-    if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
-      const count = document.createElement("span");
-      count.className = "visit-count";
-      count.textContent = String(item.visitCount);
-      count.title = t("visitCount", item.visitCount);
-      anchor.append(title, count, meta);
-    } else {
-      anchor.append(title, meta);
+    anchor.append(title, meta);
+    row.append(anchor);
+
+    if (showVisitCount || showAddButton) {
+      const action = createVisitAddButton(app, item, { showVisitCount, hideAddedAction });
+      if (action) {
+        row.append(action);
+      }
     }
-    list.append(anchor);
+    list.append(row);
   }
+}
+
+function createVisitAddButton(app, item, { showVisitCount, hideAddedAction }) {
+  const isAdded = hasVisibleQuickLink(app, item.url);
+  if (hideAddedAction && isAdded) {
+    return null;
+  }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = showVisitCount ? "visit-action visit-count" : "visit-action visit-add";
+  if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
+    button.textContent = String(item.visitCount);
+  } else {
+    button.append(createPlusIcon());
+  }
+  button.title = t("quickAddLinkTooltip");
+  button.setAttribute("aria-label", t("quickAddLinkAria", item.title || toDomain(item.url) || item.url));
+
+  if (isAdded) {
+    button.disabled = true;
+    button.title = t("quickLinkAlreadyAdded");
+  }
+
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof app.addQuickLinkFromVisit === "function") {
+      void app.addQuickLinkFromVisit(item);
+    }
+  });
+  return button;
+}
+
+function createPlusIcon() {
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("class", "visit-add-icon");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+
+  const horizontal = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  horizontal.setAttribute("d", "M5 12h14");
+
+  const vertical = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  vertical.setAttribute("d", "M12 5v14");
+
+  icon.append(horizontal, vertical);
+  return icon;
+}
+
+function hasVisibleQuickLink(app, url) {
+  const key = normalizeUrlKey(url);
+  if (!key) {
+    return false;
+  }
+  return getVisibleQuickLinks(app).some((link) => normalizeUrlKey(link.url) === key);
 }
 
 export function getVisibleServices(app) {

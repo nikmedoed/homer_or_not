@@ -387,10 +387,17 @@ a {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1px 8px;
+  gap: 8px;
   align-items: center;
   padding: 4px 8px;
   border-radius: 6px;
+}
+
+.visit-link {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  color: inherit;
   text-decoration: none;
 }
 
@@ -399,8 +406,7 @@ a {
 }
 
 .visit-title,
-.visit-meta,
-.visit-count {
+.visit-meta {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -415,21 +421,59 @@ a {
 }
 
 .visit-meta {
-  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.12;
 }
 
-.visit-count {
+.visit-action {
+  min-width: 28px;
   max-width: 82px;
-  padding: 2px 6px;
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
   border-radius: 999px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
   color: #e7edf8;
   background: rgba(255, 255, 255, 0.1);
+  font-family: inherit;
   font-size: 10px;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  flex-shrink: 0;
+}
+
+.visit-add {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.visit-add-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.visit-action:hover,
+.visit-action:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.visit-action:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .service-heading {

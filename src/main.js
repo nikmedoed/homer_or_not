@@ -44,7 +44,17 @@ import {
 } from "./state.js";
 import { syncHomer } from "./sync.js";
 import { applyTheme } from "./theme.js";
-import { byId, clone, makeId, storageGet, storageRemove, storageSet } from "./utils.js";
+import {
+  byId,
+  clone,
+  isHttpUrl,
+  makeId,
+  normalizeUrlKey,
+  storageGet,
+  storageRemove,
+  storageSet,
+  toDomain,
+} from "./utils.js";
 import { normalizeWeatherCache, syncWeather } from "./weather.js";
 
 const app = {
@@ -65,6 +75,7 @@ const app = {
 
 app.state = createDefaultState(app.baseConfig);
 app.addVisitHistoryItem = (item) => addVisitHistoryItem(app, item);
+app.addQuickLinkFromVisit = addQuickLinkFromVisit;
 app.applyTheme = () => applyTheme(app);
 app.persistState = persistState;
 app.persistLocalPatch = persistLocalPatch;
@@ -309,6 +320,43 @@ async function runSearch(engine, query) {
     source: "search",
   });
   window.location.assign(target);
+}
+
+async function addQuickLinkFromVisit(item) {
+  const url = typeof item?.url === "string" ? item.url.trim() : "";
+  const key = normalizeUrlKey(url);
+  if (!key || !isHttpUrl(url)) {
+    return;
+  }
+
+  const existing = app.state.quickLinks.find((link) => normalizeUrlKey(link.url) === key);
+  if (existing) {
+    app.localPatch.quickLinks.disabledLinkIds = app.localPatch.quickLinks.disabledLinkIds.filter(
+      (id) => id !== existing.id,
+    );
+    app.state = applyLocalPatch(app.state, app.localPatch);
+    await persistLocalPatch();
+    renderAll(app);
+    void refreshQuickLinkMetadata(app, { force: false });
+    return;
+  }
+
+  const title = String(item.title || toDomain(url) || url)
+    .replace(/\s+/g, " ")
+    .trim();
+  app.state.quickLinks = [
+    ...app.state.quickLinks,
+    {
+      id: makeId("quick"),
+      title,
+      url,
+    },
+  ];
+  app.localPatch = normalizeLocalPatch(app.localPatch, app.state);
+  app.state = applyLocalPatch(app.state, app.localPatch);
+  await Promise.all([persistState(), persistLocalPatch()]);
+  renderAll(app);
+  void refreshQuickLinkMetadata(app, { force: false });
 }
 
 async function saveSettings() {

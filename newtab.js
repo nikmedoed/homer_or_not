@@ -98,7 +98,10 @@
       needSearchEngine: "\u041D\u0443\u0436\u0435\u043D \u0445\u043E\u0442\u044F \u0431\u044B \u043E\u0434\u0438\u043D \u043F\u043E\u0438\u0441\u043A\u043E\u0432\u0438\u043A.",
       searchTemplateMissingQuery: "\u0412 URL \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043F\u043E\u0438\u0441\u043A\u043E\u0432\u0438\u043A\u0430 \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C {q}.",
       quickLinkBadUrl: "\u0412 \u0431\u044B\u0441\u0442\u0440\u044B\u0445 \u0441\u0441\u044B\u043B\u043A\u0430\u0445 \u0435\u0441\u0442\u044C \u043D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 URL.",
-      visitCount: (count) => `${count} \u043F\u043E\u0441\u0435\u0449.`
+      visitCount: (count) => `${count} \u043F\u043E\u0441\u0435\u0449.`,
+      quickAddLinkTooltip: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u0441\u044B\u043B\u043A\u0438",
+      quickAddLinkAria: (title) => `\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \xAB${title}\xBB \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u0441\u044B\u043B\u043A\u0438`,
+      quickLinkAlreadyAdded: "\u0423\u0436\u0435 \u0435\u0441\u0442\u044C \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0445 \u0441\u0441\u044B\u043B\u043A\u0430\u0445"
     },
     en: {
       topActions: "Controls",
@@ -177,7 +180,10 @@
       needSearchEngine: "At least one search engine is required.",
       searchTemplateMissingQuery: "Every search engine URL must include {q}.",
       quickLinkBadUrl: "One of the quick links has an invalid URL.",
-      visitCount: (count) => `${count} visits`
+      visitCount: (count) => `${count} visits`,
+      quickAddLinkTooltip: "Add to quick links",
+      quickAddLinkAria: (title) => `Add ${title} to quick links`,
+      quickLinkAlreadyAdded: "Already in quick links"
     }
   };
   function getPreferredLocale() {
@@ -1142,10 +1148,34 @@
             }
             return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
           });
-          resolve(normalizeVisitHistory(frequent).slice(0, VISIT_HISTORY_LIMIT));
+          resolve(filterFrequentVisits(app2, normalizeVisitHistory(frequent)).slice(0, VISIT_HISTORY_LIMIT));
         }
       );
     });
+  }
+  function filterFrequentVisits(app2, items) {
+    const excludedKeys = getFrequentVisitExcludedKeys(app2);
+    if (!excludedKeys.size) {
+      return items;
+    }
+    return items.filter((item) => {
+      const key = normalizeUrlKey(item.url);
+      return key && !excludedKeys.has(key);
+    });
+  }
+  function getFrequentVisitExcludedKeys(app2) {
+    const keys = /* @__PURE__ */ new Set();
+    for (const link of getVisibleQuickLinks(app2)) {
+      const key = normalizeUrlKey(link.url);
+      if (key) {
+        keys.add(key);
+      }
+    }
+    const homerKey = normalizeUrlKey(app2.state?.homer?.url);
+    if (homerKey) {
+      keys.add(homerKey);
+    }
+    return keys;
   }
 
   // src/metadata.js
@@ -1869,7 +1899,7 @@
     renderVisitList({
       panel: app2.refs.frequentPanel,
       list: app2.refs.frequentList,
-      items: app2.frequentVisits,
+      items: filterFrequentVisits(app2, app2.frequentVisits),
       isEnabled: app2.localPatch?.visits?.showFrequent !== false,
       metaFormatter: formatFrequentMeta,
       showVisitCount: true,
@@ -1881,6 +1911,8 @@
       items: app2.visitHistory,
       isEnabled: app2.localPatch?.visits?.showRecent !== false,
       metaFormatter: formatHistoryMeta,
+      showAddButton: true,
+      hideAddedAction: true,
       app: app2
     });
   }
@@ -1944,7 +1976,17 @@
     }
     return fragment;
   }
-  function renderVisitList({ panel, list, items, isEnabled = true, metaFormatter, showVisitCount = false, app: app2 }) {
+  function renderVisitList({
+    panel,
+    list,
+    items,
+    isEnabled = true,
+    metaFormatter,
+    showVisitCount = false,
+    showAddButton = false,
+    hideAddedAction = false,
+    app: app2
+  }) {
     list.replaceChildren();
     const isEmpty = !isEnabled || !items.length;
     panel.classList.toggle("hidden", isEmpty);
@@ -1952,8 +1994,10 @@
       return;
     }
     for (const item of items) {
+      const row = document.createElement("div");
+      row.className = "visit-row";
       const anchor = document.createElement("a");
-      anchor.className = "visit-row";
+      anchor.className = "visit-link";
       anchor.href = item.url;
       anchor.target = "_blank";
       anchor.rel = "noreferrer";
@@ -1967,17 +2011,64 @@
       const meta = document.createElement("span");
       meta.className = "visit-meta";
       meta.textContent = metaFormatter(item);
-      if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
-        const count = document.createElement("span");
-        count.className = "visit-count";
-        count.textContent = String(item.visitCount);
-        count.title = t("visitCount", item.visitCount);
-        anchor.append(title, count, meta);
-      } else {
-        anchor.append(title, meta);
+      anchor.append(title, meta);
+      row.append(anchor);
+      if (showVisitCount || showAddButton) {
+        const action = createVisitAddButton(app2, item, { showVisitCount, hideAddedAction });
+        if (action) {
+          row.append(action);
+        }
       }
-      list.append(anchor);
+      list.append(row);
     }
+  }
+  function createVisitAddButton(app2, item, { showVisitCount, hideAddedAction }) {
+    const isAdded = hasVisibleQuickLink(app2, item.url);
+    if (hideAddedAction && isAdded) {
+      return null;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = showVisitCount ? "visit-action visit-count" : "visit-action visit-add";
+    if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
+      button.textContent = String(item.visitCount);
+    } else {
+      button.append(createPlusIcon());
+    }
+    button.title = t("quickAddLinkTooltip");
+    button.setAttribute("aria-label", t("quickAddLinkAria", item.title || toDomain(item.url) || item.url));
+    if (isAdded) {
+      button.disabled = true;
+      button.title = t("quickLinkAlreadyAdded");
+    }
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof app2.addQuickLinkFromVisit === "function") {
+        void app2.addQuickLinkFromVisit(item);
+      }
+    });
+    return button;
+  }
+  function createPlusIcon() {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("class", "visit-add-icon");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    const horizontal = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    horizontal.setAttribute("d", "M5 12h14");
+    const vertical = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    vertical.setAttribute("d", "M12 5v14");
+    icon.append(horizontal, vertical);
+    return icon;
+  }
+  function hasVisibleQuickLink(app2, url) {
+    const key = normalizeUrlKey(url);
+    if (!key) {
+      return false;
+    }
+    return getVisibleQuickLinks(app2).some((link) => normalizeUrlKey(link.url) === key);
   }
   function getVisibleServices(app2) {
     if (app2.localPatch?.homer?.disabled || !app2.state.homer.url) {
@@ -2456,6 +2547,7 @@ ${result.error}`);
   };
   app.state = createDefaultState(app.baseConfig);
   app.addVisitHistoryItem = (item) => addVisitHistoryItem(app, item);
+  app.addQuickLinkFromVisit = addQuickLinkFromVisit;
   app.applyTheme = () => applyTheme(app);
   app.persistState = persistState;
   app.persistLocalPatch = persistLocalPatch;
@@ -2686,6 +2778,38 @@ ${result.error}`);
       source: "search"
     });
     window.location.assign(target);
+  }
+  async function addQuickLinkFromVisit(item) {
+    const url = typeof item?.url === "string" ? item.url.trim() : "";
+    const key = normalizeUrlKey(url);
+    if (!key || !isHttpUrl(url)) {
+      return;
+    }
+    const existing = app.state.quickLinks.find((link) => normalizeUrlKey(link.url) === key);
+    if (existing) {
+      app.localPatch.quickLinks.disabledLinkIds = app.localPatch.quickLinks.disabledLinkIds.filter(
+        (id) => id !== existing.id
+      );
+      app.state = applyLocalPatch(app.state, app.localPatch);
+      await persistLocalPatch();
+      renderAll(app);
+      void refreshQuickLinkMetadata(app, { force: false });
+      return;
+    }
+    const title = String(item.title || toDomain(url) || url).replace(/\s+/g, " ").trim();
+    app.state.quickLinks = [
+      ...app.state.quickLinks,
+      {
+        id: makeId("quick"),
+        title,
+        url
+      }
+    ];
+    app.localPatch = normalizeLocalPatch(app.localPatch, app.state);
+    app.state = applyLocalPatch(app.state, app.localPatch);
+    await Promise.all([persistState(), persistLocalPatch()]);
+    renderAll(app);
+    void refreshQuickLinkMetadata(app, { force: false });
   }
   async function saveSettings() {
     const result = validateSettingsDraft(app);

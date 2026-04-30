@@ -79,6 +79,9 @@ const I18N = {
     searchTemplateMissingQuery: "В URL каждого поисковика должен быть {q}.",
     quickLinkBadUrl: "В быстрых ссылках есть некорректный URL.",
     visitCount: (count) => `${count} посещ.`,
+    quickAddLinkTooltip: "Добавить в быстрые ссылки",
+    quickAddLinkAria: (title) => `Добавить «${title}» в быстрые ссылки`,
+    quickLinkAlreadyAdded: "Уже есть в быстрых ссылках",
   },
   en: {
     topActions: "Controls",
@@ -158,6 +161,9 @@ const I18N = {
     searchTemplateMissingQuery: "Every search engine URL must include {q}.",
     quickLinkBadUrl: "One of the quick links has an invalid URL.",
     visitCount: (count) => `${count} visits`,
+    quickAddLinkTooltip: "Add to quick links",
+    quickAddLinkAria: (title) => `Add ${title} to quick links`,
+    quickLinkAlreadyAdded: "Already in quick links",
   },
 };
 
