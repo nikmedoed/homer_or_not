@@ -2,8 +2,8 @@ export const STATE_KEY = "homerOrNot.state.v2";
 export const LOCAL_PATCH_KEY = "homerOrNot.localPatch.v1";
 export const CACHE_KEY = "homerOrNot.homerCache.v2";
 export const META_KEY = "homerOrNot.homerMeta.v2";
-export const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v1";
-export const SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v1";
+export const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v2";
+export const SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v2";
 export const HISTORY_KEY = "homerOrNot.visitHistory.v1";
 export const WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
 
