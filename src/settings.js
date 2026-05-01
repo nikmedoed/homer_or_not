@@ -37,6 +37,7 @@ export function renderSettings(app) {
   renderQuickLinkSettings(app);
   renderWidgetSettings(app);
   app.refs.topWeatherEnabledInput.checked = app.localPatchDraft?.weather?.topDisabled !== true;
+  app.refs.topWeatherZenInput.checked = app.localPatchDraft?.weather?.showInZen === true;
   app.refs.weatherLocationInput.value = app.localPatchDraft?.weather?.locationName || "";
   app.refs.topWeatherPlacementInput.value = app.settingsDraft.weather.topWidgetPlacement;
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
@@ -405,6 +406,7 @@ export function validateSettingsDraft(app) {
         weather: {
           topDisabled: !app.refs.topWeatherEnabledInput.checked,
           cardDisabled: true,
+          showInZen: app.refs.topWeatherZenInput.checked,
           locationName: app.refs.weatherLocationInput.value,
         },
         githubTrending: {

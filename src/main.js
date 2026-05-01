@@ -197,6 +197,7 @@ function bindRefs() {
   refs.addQuickLinkButton = byId("addQuickLinkButton");
   refs.addRssButton = byId("addRssButton");
   refs.topWeatherEnabledInput = byId("topWeatherEnabledInput");
+  refs.topWeatherZenInput = byId("topWeatherZenInput");
   refs.weatherLocationInput = byId("weatherLocationInput");
   refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
   refs.widgetRows = byId("widgetRows");

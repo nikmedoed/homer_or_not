@@ -57,6 +57,7 @@ export function createDefaultLocalPatch() {
     weather: {
       topDisabled: false,
       cardDisabled: false,
+      showInZen: false,
       locationName: "",
     },
     githubTrending: {
@@ -140,6 +141,7 @@ export function normalizeLocalPatch(raw, state) {
     weather: {
       topDisabled: source.weather?.disabled === true || source.weather?.topDisabled === true,
       cardDisabled: source.weather?.disabled === true || source.weather?.cardDisabled === true,
+      showInZen: source.weather?.showInZen === true,
       locationName: normalizeWeatherLocationName(source.weather?.locationName),
     },
     githubTrending: {

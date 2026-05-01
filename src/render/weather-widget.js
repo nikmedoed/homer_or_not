@@ -4,6 +4,7 @@ import { getWeatherSummary } from "../weather.js";
 export function renderWeatherWidget(app) {
   const { refs } = app;
   document.body.dataset.topWeatherPlacement = app.state.weather?.topWidgetPlacement || "actions";
+  document.body.dataset.topWeatherZen = app.localPatch?.weather?.showInZen === true ? "true" : "false";
   renderWeatherBlock(app, {
     widget: refs.weatherWidget,
     icon: refs.weatherIcon,
