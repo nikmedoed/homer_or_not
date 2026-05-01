@@ -4,6 +4,7 @@ import { getVisibleQuickLinks } from "../state.js";
 import { formatFrequentMeta, formatHistoryMeta, normalizeUrlKey, toDomain } from "../utils.js";
 
 export function renderVisitPanels(app) {
+  const visibleQuickLinkKeys = getVisibleQuickLinkKeys(app);
   renderVisitList({
     panel: app.refs.frequentPanel,
     list: app.refs.frequentList,
@@ -11,6 +12,7 @@ export function renderVisitPanels(app) {
     isEnabled: app.localPatch?.visits?.showFrequent !== false,
     metaFormatter: formatFrequentMeta,
     showVisitCount: true,
+    visibleQuickLinkKeys,
     app,
   });
   renderVisitList({
@@ -21,6 +23,7 @@ export function renderVisitPanels(app) {
     metaFormatter: formatHistoryMeta,
     showAddButton: true,
     hideAddedAction: true,
+    visibleQuickLinkKeys,
     app,
   });
 }
@@ -34,6 +37,7 @@ function renderVisitList({
   showVisitCount = false,
   showAddButton = false,
   hideAddedAction = false,
+  visibleQuickLinkKeys,
   app,
 }) {
   list.replaceChildren();
@@ -69,7 +73,7 @@ function renderVisitList({
     row.append(anchor);
 
     if (showVisitCount || showAddButton) {
-      const action = createVisitAddButton(app, item, { showVisitCount, hideAddedAction });
+      const action = createVisitAddButton(app, item, { showVisitCount, hideAddedAction, visibleQuickLinkKeys });
       if (action) {
         row.append(action);
       }
@@ -78,8 +82,8 @@ function renderVisitList({
   }
 }
 
-function createVisitAddButton(app, item, { showVisitCount, hideAddedAction }) {
-  const isAdded = hasVisibleQuickLink(app, item.url);
+function createVisitAddButton(app, item, { showVisitCount, hideAddedAction, visibleQuickLinkKeys }) {
+  const isAdded = hasVisibleQuickLink(item.url, visibleQuickLinkKeys);
   if (hideAddedAction && isAdded) {
     return null;
   }
@@ -127,10 +131,18 @@ function createPlusIcon() {
   return icon;
 }
 
-function hasVisibleQuickLink(app, url) {
-  const key = normalizeUrlKey(url);
-  if (!key) {
-    return false;
+function getVisibleQuickLinkKeys(app) {
+  const keys = new Set();
+  for (const link of getVisibleQuickLinks(app)) {
+    const key = normalizeUrlKey(link.url);
+    if (key) {
+      keys.add(key);
+    }
   }
-  return getVisibleQuickLinks(app).some((link) => normalizeUrlKey(link.url) === key);
+  return keys;
+}
+
+function hasVisibleQuickLink(url, visibleQuickLinkKeys) {
+  const key = normalizeUrlKey(url);
+  return Boolean(key && visibleQuickLinkKeys?.has(key));
 }

@@ -14,6 +14,17 @@
   align-items: start;
 }
 
+.services-layout > .services-grid:not(:first-child) {
+  margin-top: 42px;
+}
+
+.services-layout > .news-widget:first-child,
+.services-layout > .github-trending:first-child,
+.services-layout > .weather-widget:first-child,
+.services-layout > .visit-panel:first-child {
+  margin-top: 0;
+}
+
 .visit-panel {
   margin-top: 36px;
   min-width: 0;

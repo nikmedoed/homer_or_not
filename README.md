@@ -106,6 +106,8 @@ The settings button in the page can also edit search engines, quick links, the H
 
 Quick-link labels are manual when `title` is set. If `title` is empty, the extension falls back to the domain. Quick-link and search-engine icons are fetched through Chrome's favicon endpoint and cached locally.
 
+Central-column widgets are configured in one ordered list in Settings. Homer, GitHub Trending, and news feeds keep their enable toggles and source-specific fields in that list. The compact weather card widget is still present in the code but intentionally hidden for now; only the top weather widget is exposed until there is a broader compact-widget area.
+
 ## Homer Sync
 
 Supported Homer URL forms:

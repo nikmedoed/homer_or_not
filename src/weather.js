@@ -48,7 +48,7 @@ export function normalizeWeatherCache(raw) {
 }
 
 export async function syncWeather(app, { force = false } = {}) {
-  if (app.localPatch?.weather?.topDisabled && app.localPatch?.weather?.cardDisabled) {
+  if (app.localPatch?.weather?.topDisabled) {
     app.weatherStatus = null;
     renderWeatherWidget(app);
     return;

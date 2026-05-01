@@ -9,6 +9,7 @@
   var HISTORY_KEY = "homerOrNot.visitHistory.v1";
   var WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
   var GITHUB_TRENDING_CACHE_KEY = "homerOrNot.githubTrendingCache.v1";
+  var NEWS_FEED_CACHE_KEY = "homerOrNot.newsFeedCache.v1";
   var SYNC_AREA = "sync";
   var LOCAL_AREA = "local";
   var QUICK_LINK_META_TTL_MS = 1e3 * 60 * 60 * 24 * 7;
@@ -19,6 +20,7 @@
   var WEATHER_SYNC_INTERVAL_MINUTES = 30;
   var WEATHER_FETCH_TIMEOUT_MS = 7e3;
   var GITHUB_TRENDING_FETCH_TIMEOUT_MS = 7e3;
+  var NEWS_FEED_FETCH_TIMEOUT_MS = 8e3;
 
   // src/i18n.js
   var LOCALE = getPreferredLocale();
@@ -37,11 +39,14 @@
       searchServices: "\u041F\u043E\u0438\u0441\u043A\u043E\u0432\u044B\u0435 \u0441\u0435\u0440\u0432\u0438\u0441\u044B",
       quickLinks: "\u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u0441\u044B\u043B\u043A\u0438",
       servicesArea: "Homer \u0438 \u043F\u043E\u0441\u0435\u0449\u0451\u043D\u043D\u044B\u0435 \u0441\u0430\u0439\u0442\u044B",
+      centralColumn: "\u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430\u044F \u043A\u043E\u043B\u043E\u043D\u043A\u0430",
+      homerWidget: "Homer",
       frequentVisits: "\u0427\u0430\u0441\u0442\u043E \u043F\u043E\u0441\u0435\u0449\u0430\u0435\u043C\u044B\u0435",
       recentVisits: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 \u043F\u043E\u0441\u0435\u0449\u0451\u043D\u043D\u044B\u0435",
       close: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C",
       search: "\u041F\u043E\u0438\u0441\u043A",
       add: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C",
+      addRss: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C RSS",
       visits: "\u041F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u044F",
       historyPool: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C",
       minVisits: "\u041C\u0438\u043D\u0438\u043C\u0443\u043C \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u0439 \u0434\u043B\u044F \u0447\u0430\u0441\u0442\u044B\u0445",
@@ -68,12 +73,10 @@
       homerOfflineCache: (date) => `Homer \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u043A\u0435\u0448: ${date}.`,
       homerOfflineNoCache: "Homer \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u043A\u0435\u0448\u0430 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.",
       homerDisabled: "Homer \u043E\u0442\u043A\u043B\u044E\u0447\u0435\u043D \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E.",
-      disableHomerLocally: "\u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C Homer \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E",
       weather: "\u041F\u043E\u0433\u043E\u0434\u0430",
       weatherTitle: "\u041F\u043E\u0433\u043E\u0434\u0430",
       weatherEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043F\u043E\u0433\u043E\u0434\u0443",
       topWeatherEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0432\u0435\u0440\u0445\u043D\u044E\u044E \u043F\u043E\u0433\u043E\u0434\u0443",
-      weatherCardEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u043F\u043E\u0433\u043E\u0434\u044B",
       weatherLocation: "\u0413\u043E\u0440\u043E\u0434 \u0438\u043B\u0438 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B \u0434\u043B\u044F \u044D\u0442\u043E\u0439 \u043C\u0430\u0448\u0438\u043D\u044B",
       weatherLocationPlaceholder: "\u041F\u0443\u0441\u0442\u043E: \u0431\u0440\u0430\u0442\u044C \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044E \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430",
       topWeatherPlacement: "\u0412\u0435\u0440\u0445\u043D\u044F\u044F \u043F\u043E\u0433\u043E\u0434\u0430",
@@ -107,6 +110,27 @@
       githubTrendingUpdated: (elapsed) => `\u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${elapsed}`,
       githubTrendingStale: (elapsed) => `\u043A\u0435\u0448 ${elapsed}`,
       githubTrendingNoDescription: "\u0411\u0435\u0437 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F",
+      news: "\u041D\u043E\u0432\u043E\u0441\u0442\u0438",
+      newsEnabled: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043D\u043E\u0432\u043E\u0441\u0442\u0438",
+      newsSyncInterval: "\u041E\u0431\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043A\u0435\u0448, \u043C\u0438\u043D\u0443\u0442",
+      widgetName: "\u041A\u043E\u043B\u043E\u043D\u043A\u0430",
+      widgetConfig: "URL / \u0444\u0438\u043B\u044C\u0442\u0440",
+      widgetCache: "\u041A\u0435\u0448, \u043C\u0438\u043D.",
+      widgetVisible: "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C",
+      newsSourceBadUrl: "\u0412 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430\u0445 \u043D\u043E\u0432\u043E\u0441\u0442\u0435\u0439 \u0435\u0441\u0442\u044C \u043D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 URL.",
+      refreshNews: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043D\u043E\u0432\u043E\u0441\u0442\u0438",
+      refreshNewsSource: (source) => `\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C ${source}`,
+      newsLoading: "\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u044E \u043D\u043E\u0432\u043E\u0441\u0442\u0438...",
+      newsUnavailable: "\u041D\u043E\u0432\u043E\u0441\u0442\u0438 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B.",
+      newsSourceFailed: "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B.",
+      newsPartial: "\u0427\u0430\u0441\u0442\u044C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u043E\u0432 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B\u0430.",
+      newsSource: "HN, Reddit, Habr, vc.ru, AI Trends \u0438 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 AI Trends",
+      newsUpdated: (elapsed) => `\u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${elapsed}`,
+      newsStale: (elapsed) => `\u043A\u0435\u0448 ${elapsed}`,
+      newsFailedSources: (sources) => `\u041D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B\u0438: ${sources}`,
+      newsComments: (count) => `${count} \u043A\u043E\u043C\u043C.`,
+      newsPoints: (count) => `${count} \u043E\u0447\u043A.`,
+      newsScore: (count) => `${count} \u0440\u0435\u0439\u0442\u0438\u043D\u0433`,
       localEnabled: "\u0412\u043A\u043B",
       inputTitle: "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435",
       inputSearchTemplate: "URL \u0441 {q}",
@@ -136,11 +160,14 @@
       searchServices: "Search services",
       quickLinks: "Quick links",
       servicesArea: "Homer and visited sites",
+      centralColumn: "Central column",
+      homerWidget: "Homer",
       frequentVisits: "Frequently visited",
       recentVisits: "Recently visited",
       close: "Close",
       search: "Search",
       add: "Add",
+      addRss: "Add RSS",
       visits: "Visits",
       historyPool: "History entries to scan",
       minVisits: "Minimum visits for frequent sites",
@@ -167,12 +194,10 @@
       homerOfflineCache: (date) => `Homer is unavailable, using cache: ${date}.`,
       homerOfflineNoCache: "Homer is unavailable, and there is no cache yet.",
       homerDisabled: "Homer is disabled locally.",
-      disableHomerLocally: "Disable Homer locally",
       weather: "Weather",
       weatherTitle: "Weather",
       weatherEnabled: "Show weather",
       topWeatherEnabled: "Show top weather",
-      weatherCardEnabled: "Show weather card",
       weatherLocation: "City or coordinates for this machine",
       weatherLocationPlaceholder: "Blank: use browser geolocation",
       topWeatherPlacement: "Top weather",
@@ -206,6 +231,27 @@
       githubTrendingUpdated: (elapsed) => `updated ${elapsed}`,
       githubTrendingStale: (elapsed) => `cache ${elapsed}`,
       githubTrendingNoDescription: "No description",
+      news: "News",
+      newsEnabled: "Show news",
+      newsSyncInterval: "Refresh cache, minutes",
+      widgetName: "Column",
+      widgetConfig: "URL / filter",
+      widgetCache: "Cache, min.",
+      widgetVisible: "Show",
+      newsSourceBadUrl: "One of the news source URLs is invalid.",
+      refreshNews: "Refresh news",
+      refreshNewsSource: (source) => `Refresh ${source}`,
+      newsLoading: "Loading news...",
+      newsUnavailable: "News is unavailable right now.",
+      newsSourceFailed: "Source did not respond.",
+      newsPartial: "Some sources did not respond.",
+      newsSource: "HN, Reddit, Habr, vc.ru, AI Trends and AI Trends sources",
+      newsUpdated: (elapsed) => `updated ${elapsed}`,
+      newsStale: (elapsed) => `cache ${elapsed}`,
+      newsFailedSources: (sources) => `Failed: ${sources}`,
+      newsComments: (count) => `${count} comments`,
+      newsPoints: (count) => `${count} points`,
+      newsScore: (count) => `${count} score`,
       localEnabled: "On",
       inputTitle: "Name",
       inputSearchTemplate: "URL with {q}",
@@ -273,10 +319,157 @@
       excludedTerms: [],
       syncIntervalMinutes: 60
     },
+    news: {
+      defaultSourcesVersion: 4,
+      sources: [
+        {
+          id: "hacker-news",
+          title: "Hacker News",
+          type: "hackerNews",
+          url: "https://hacker-news.firebaseio.com/v0/topstories.json",
+          enabled: true,
+          syncIntervalMinutes: 45,
+          maxItems: 12
+        },
+        {
+          id: "reddit-dev",
+          title: "Reddit",
+          type: "reddit",
+          url: "https://www.reddit.com/r/programming+webdev+technology/hot.json?limit=16",
+          enabled: true,
+          syncIntervalMinutes: 45,
+          maxItems: 12
+        },
+        {
+          id: "habr",
+          title: "Habr",
+          type: "rss",
+          url: "https://habr.com/ru/rss/best/daily/?fl=ru",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "vc",
+          title: "vc.ru",
+          type: "rss",
+          url: "https://vc.ru/rss/all",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends",
+          title: "AI Trends",
+          type: "rss",
+          url: "https://shir-man.com/api/rss?sort=trending",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-day",
+          title: "AI Trends Day",
+          type: "rss",
+          url: "https://shir-man.com/api/rss?sort=day",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-week",
+          title: "AI Trends Week",
+          type: "rss",
+          url: "https://shir-man.com/api/rss?sort=week",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-month",
+          title: "AI Trends Month",
+          type: "rss",
+          url: "https://shir-man.com/api/rss?sort=month",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-hacker-news",
+          title: "AI Trends HN",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=trending",
+          sourceKey: "hackerNews",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-midjourney",
+          title: "AI Trends Midjourney",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=trending",
+          sourceKey: "midjourney",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 36
+        },
+        {
+          id: "ai-trends-github",
+          title: "AI Trends GitHub",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=trending",
+          sourceKey: "github",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-hype-replicate",
+          title: "AI Trends Hype Replicate",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=trending",
+          sourceKey: "hypeReplicate",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-lesswrong",
+          title: "AI Trends LessWrong",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=day",
+          sourceKey: "lessWrong",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        },
+        {
+          id: "ai-trends-lobsters",
+          title: "AI Trends Lobsters",
+          type: "shirMan",
+          url: "https://shir-man.com/api/feed?sort=trending",
+          sourceKey: "lobsters",
+          enabled: true,
+          syncIntervalMinutes: 60,
+          maxItems: 12
+        }
+      ]
+    },
     services: []
   };
 
   // src/utils.js
+  var TIME_FORMATTER = new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  var DATE_TIME_FORMATTER = new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
   function byId(id) {
     const node = document.getElementById(id);
     if (!node) {
@@ -333,22 +526,14 @@
   }
   function formatTime(timestamp) {
     try {
-      return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
-        hour: "2-digit",
-        minute: "2-digit"
-      }).format(new Date(timestamp));
+      return TIME_FORMATTER.format(new Date(timestamp));
     } catch {
       return "";
     }
   }
   function formatDateTime(timestamp) {
     try {
-      return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
-      }).format(new Date(timestamp));
+      return DATE_TIME_FORMATTER.format(new Date(timestamp));
     } catch {
       return "";
     }
@@ -433,25 +618,37 @@
     }
   }
   async function storageGet(key, area = LOCAL_AREA) {
+    const values = await storageGetMany([key], area);
+    return values[key] ?? null;
+  }
+  async function storageGetMany(keys, area = LOCAL_AREA) {
+    const list = Array.isArray(keys) ? keys : [keys];
     const chromeApi = globalThis.chrome;
     const storageArea = chromeApi?.storage?.[area] || chromeApi?.storage?.local;
     if (storageArea) {
       return await new Promise((resolve) => {
-        storageArea.get([key], (result) => {
+        storageArea.get(list, (result) => {
           if (chromeApi.runtime.lastError) {
-            resolve(null);
+            resolve({});
             return;
           }
-          resolve(result?.[key] ?? null);
+          resolve(result || {});
         });
       });
     }
-    try {
-      const raw = globalThis.localStorage?.getItem(`${area}:${key}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
+    const out = {};
+    for (const key of list) {
+      out[key] = null;
     }
+    for (const key of list) {
+      try {
+        const raw = globalThis.localStorage?.getItem(`${area}:${key}`);
+        out[key] = raw ? JSON.parse(raw) : null;
+      } catch {
+        out[key] = null;
+      }
+    }
+    return out;
   }
   async function storageSet(key, value, area = LOCAL_AREA) {
     const chromeApi = globalThis.chrome;
@@ -984,6 +1181,8 @@
   }
 
   // src/state.js
+  var LEGACY_DEFAULT_NEWS_SOURCE_IDS = ["hacker-news", "reddit-dev", "habr", "vc"];
+  var NEWS_SOURCE_MAX_ITEMS = 60;
   function normalizeBootConfig(raw) {
     const fallback = clone(FALLBACK_CONFIG);
     const source = raw && typeof raw === "object" ? raw : {};
@@ -998,6 +1197,7 @@
       visits: normalizeVisitSettings(source.visits, fallback.visits),
       weather: normalizeWeatherSettings(source.weather, fallback.weather),
       githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
+      news: normalizeNewsSettings(source.news, fallback.news),
       services: normalizeServiceGroups(source.services, "")
     };
   }
@@ -1008,7 +1208,8 @@
       homer: clone(baseConfig.homer),
       visits: clone(baseConfig.visits),
       weather: clone(baseConfig.weather),
-      githubTrending: clone(baseConfig.githubTrending)
+      githubTrending: clone(baseConfig.githubTrending),
+      news: clone(baseConfig.news)
     };
   }
   function normalizeState(raw, baseConfig) {
@@ -1022,7 +1223,8 @@
       homer: normalizeHomerSettings(raw.homer, base.homer),
       visits: normalizeVisitSettings(raw.visits, base.visits),
       weather: normalizeWeatherSettings(raw.weather, base.weather),
-      githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending)
+      githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending),
+      news: normalizeNewsSettings(raw.news, base.news)
     };
   }
   function normalizeSyncedState(raw, baseConfig) {
@@ -1039,7 +1241,8 @@
       homer: clone(state.homer),
       visits: clone(state.visits),
       weather: clone(state.weather),
-      githubTrending: clone(state.githubTrending)
+      githubTrending: clone(state.githubTrending),
+      news: clone(state.news)
     };
   }
   function normalizeLocalPatch(raw, state) {
@@ -1070,14 +1273,54 @@
       githubTrending: {
         disabled: source.githubTrending?.disabled === true
       },
+      news: {
+        disabledFeedIds: source.news?.disabled === true ? state.news.sources.map((feed) => feed.id) : normalizeIdList(
+          source.news?.disabledFeedIds,
+          new Set(state.news.sources.map((feed) => feed.id))
+        )
+      },
       visits: {
         showFrequent: source.visits?.showFrequent !== false,
         showRecent: source.visits?.showRecent !== false
+      },
+      widgets: {
+        order: normalizeWidgetOrder(source.widgets?.order, state)
       }
     };
   }
   function normalizeViewMode(value) {
     return ["full", "base", "zen"].includes(value) ? value : "full";
+  }
+  function normalizeWidgetOrder(raw, state = FALLBACK_CONFIG) {
+    const allowed = getDefaultWidgetOrder(state);
+    const source = Array.isArray(raw) ? raw : [];
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const value of source) {
+      if (allowed.includes(value) && !seen.has(value)) {
+        seen.add(value);
+        out.push(value);
+      }
+    }
+    for (const [allowedIndex, id] of allowed.entries()) {
+      if (!seen.has(id)) {
+        const insertAt = out.findIndex((existing) => allowed.indexOf(existing) > allowedIndex);
+        if (insertAt === -1) {
+          out.push(id);
+        } else {
+          out.splice(insertAt, 0, id);
+        }
+        seen.add(id);
+      }
+    }
+    return out;
+  }
+  function getDefaultWidgetOrder(state = FALLBACK_CONFIG) {
+    const newsIds = (state.news?.sources || []).map((source) => getNewsWidgetId(source.id));
+    return ["services", "githubTrending", ...newsIds];
+  }
+  function getNewsWidgetId(sourceId) {
+    return `news:${sourceId}`;
   }
   function applyLocalPatch(state, localPatch) {
     const next = normalizeState(state, state);
@@ -1176,6 +1419,83 @@
       syncIntervalMinutes: clampInt(raw?.syncIntervalMinutes, 15, 1440, base.syncIntervalMinutes)
     };
   }
+  function normalizeNewsSettings(raw, fallback) {
+    const base = fallback || FALLBACK_CONFIG.news;
+    const fallbackSources = Array.isArray(base.sources) ? base.sources : [];
+    const rawSources = Array.isArray(raw?.sources) ? raw.sources : fallbackSources;
+    const sourceVersion = Number.isFinite(raw?.defaultSourcesVersion) ? raw.defaultSourcesVersion : 0;
+    const targetVersion = Number.isFinite(base.defaultSourcesVersion) ? base.defaultSourcesVersion : sourceVersion;
+    let sources = rawSources.map((source) => normalizeNewsSource(source, fallbackSources)).filter(Boolean);
+    if (Array.isArray(raw?.sources)) {
+      sources = upgradeDefaultNewsSources(sources, fallbackSources, sourceVersion, targetVersion);
+    }
+    if (!sources.length) {
+      sources.push(...fallbackSources.map((source) => normalizeNewsSource(source, fallbackSources)).filter(Boolean));
+    }
+    return {
+      defaultSourcesVersion: targetVersion,
+      sources
+    };
+  }
+  function upgradeDefaultNewsSources(sources, fallbackSources, sourceVersion, targetVersion) {
+    if (sourceVersion >= targetVersion) {
+      return sources;
+    }
+    const existingIds = new Set(sources.map((source) => source.id));
+    const hasLegacyDefaults = LEGACY_DEFAULT_NEWS_SOURCE_IDS.every((id) => existingIds.has(id));
+    if (!hasLegacyDefaults) {
+      return sources;
+    }
+    const next = sources.map((source) => upgradeDefaultNewsSource(source, fallbackSources));
+    for (const source of fallbackSources) {
+      if (existingIds.has(source.id)) {
+        continue;
+      }
+      const normalized = normalizeNewsSource(source, fallbackSources);
+      if (normalized) {
+        next.push(normalized);
+        existingIds.add(normalized.id);
+      }
+    }
+    return next;
+  }
+  function upgradeDefaultNewsSource(source, fallbackSources) {
+    const fallback = fallbackSources.find((item) => item.id === source.id);
+    if (!fallback) {
+      return source;
+    }
+    return {
+      ...source,
+      maxItems: Number.isFinite(fallback.maxItems) && fallback.maxItems > source.maxItems ? fallback.maxItems : source.maxItems
+    };
+  }
+  function normalizeNewsSource(raw, fallbackSources = []) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : makeId("news");
+    const fallback = fallbackSources.find((source2) => source2.id === id) || {};
+    const title = typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : fallback.title || "";
+    const type = ["hackerNews", "reddit", "rss", "shirMan"].includes(raw.type) ? raw.type : fallback.type || "";
+    const url = typeof raw.url === "string" && raw.url.trim() ? raw.url.trim() : fallback.url || "";
+    if (!title || !type || !isHttpUrl(url)) {
+      return null;
+    }
+    const source = {
+      id,
+      title,
+      type,
+      url,
+      enabled: raw.enabled !== false,
+      syncIntervalMinutes: clampInt(raw.syncIntervalMinutes, 15, 1440, fallback.syncIntervalMinutes || 45),
+      maxItems: clampInt(raw.maxItems, 1, NEWS_SOURCE_MAX_ITEMS, fallback.maxItems || 12)
+    };
+    const sourceKey = typeof raw.sourceKey === "string" && raw.sourceKey.trim() ? raw.sourceKey.trim() : typeof fallback.sourceKey === "string" ? fallback.sourceKey : "";
+    if (sourceKey) {
+      source.sourceKey = sourceKey;
+    }
+    return source;
+  }
   function normalizeGitHubTrendingExcludedTerms(raw, fallback = []) {
     const source = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[\s,;]+/) : fallback;
     const seen = /* @__PURE__ */ new Set();
@@ -1263,6 +1583,722 @@
     };
   }
 
+  // src/layout.js
+  var WIDGET_LABEL_KEYS = {
+    services: "homerWidget",
+    githubTrending: "githubTrending"
+  };
+  function applyWidgetLayout(app2) {
+    const layout = app2.refs.servicesLayout;
+    if (!layout) {
+      return;
+    }
+    const nodes = {
+      services: app2.refs.servicesGrid,
+      githubTrending: app2.refs.githubTrending
+    };
+    for (const source of app2.state?.news?.sources || []) {
+      nodes[getNewsWidgetId(source.id)] = app2.refs.newsWidgetNodes?.[source.id] || null;
+    }
+    for (const id of normalizeWidgetOrder(app2.localPatch?.widgets?.order, app2.state)) {
+      const node = nodes[id];
+      if (node) {
+        layout.append(node);
+      }
+    }
+  }
+
+  // src/news.js
+  var MAX_SOURCE_ITEMS = 60;
+  var HN_ITEM_LIMIT = 30;
+  var shirManPayloadRequests = /* @__PURE__ */ new Map();
+  function normalizeNewsFeedCache(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const rawFeeds = source.feeds && typeof source.feeds === "object" ? source.feeds : {};
+    const feeds = {};
+    for (const [id, value] of Object.entries(rawFeeds)) {
+      const normalized = normalizeSingleFeedCache(value);
+      if (normalized) {
+        feeds[id] = normalized;
+      }
+    }
+    const legacy = normalizeSingleFeedCache(source);
+    if (legacy && !Object.keys(feeds).length) {
+      feeds.legacy = legacy;
+    }
+    return { feeds };
+  }
+  async function syncNewsFeeds(app2, { force = false, sourceIds = null } = {}) {
+    const sourceFilter = Array.isArray(sourceIds) ? new Set(sourceIds) : null;
+    const feeds = getVisibleNewsSources(app2).filter((source) => !sourceFilter || sourceFilter.has(source.id));
+    if (!feeds.length) {
+      app2.newsStatuses = {};
+      renderNewsFeedWidgets(app2);
+      return;
+    }
+    app2.newsStatuses = app2.newsStatuses || {};
+    await Promise.all(feeds.map((source) => syncNewsFeed(app2, source, { force })));
+  }
+  function getVisibleNewsSources(app2) {
+    const disabled = new Set(app2.localPatch?.news?.disabledFeedIds || []);
+    return (app2.state?.news?.sources || []).filter((source) => source.enabled !== false && !disabled.has(source.id));
+  }
+  function getNewsFeedSummary(app2, source) {
+    const cache = app2.newsFeedCache?.feeds?.[source.id] || null;
+    return {
+      updatedAt: cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: false }) : "",
+      updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : "",
+      items: Array.isArray(cache?.items) ? cache.items : []
+    };
+  }
+  function formatNewsMeta(item, { showAge = true, showDomain = true } = {}) {
+    const parts = [];
+    const score = formatScore(item);
+    if (score) {
+      parts.push(score);
+    }
+    if (item.comments > 0) {
+      parts.push(t("newsComments", item.comments));
+    }
+    const age = formatNewsTime(item);
+    if (showAge && age) {
+      parts.push(age);
+    }
+    if (item.tag) {
+      parts.push(item.tag);
+    }
+    if (item.author) {
+      parts.push(`@${item.author}`);
+    }
+    if (showDomain && item.domain) {
+      parts.push(item.domain);
+    }
+    return parts.join(" \xB7 ");
+  }
+  function formatNewsTime(item) {
+    return formatAge(item?.publishedAt);
+  }
+  async function syncNewsFeed(app2, source, { force }) {
+    const currentCache = app2.newsFeedCache?.feeds?.[source.id] || null;
+    const queryKey = getNewsFeedQueryKey(source);
+    if (!force && isCacheFresh(currentCache, source.syncIntervalMinutes) && currentCache.queryKey === queryKey) {
+      app2.newsStatuses[source.id] = null;
+      renderNewsFeedWidgets(app2);
+      return;
+    }
+    app2.newsStatuses[source.id] = {
+      kind: "loading",
+      message: currentCache ? "" : t("newsLoading")
+    };
+    renderNewsFeedWidgets(app2);
+    try {
+      const items = sortAndDedupeItems(await fetchNewsSource(source)).slice(0, source.maxItems);
+      const normalized = normalizeSingleFeedCache({
+        fetchedAt: Date.now(),
+        queryKey,
+        items
+      });
+      if (!normalized) {
+        throw new Error(t("newsUnavailable"));
+      }
+      app2.newsFeedCache = normalizeNewsFeedCache(app2.newsFeedCache);
+      app2.newsFeedCache.feeds[source.id] = normalized;
+      app2.newsStatuses[source.id] = null;
+      await storageSet(NEWS_FEED_CACHE_KEY, app2.newsFeedCache, LOCAL_AREA);
+    } catch (error) {
+      app2.newsStatuses[source.id] = {
+        kind: "error",
+        message: error?.message || t("newsUnavailable")
+      };
+    }
+    renderNewsFeedWidgets(app2);
+  }
+  function normalizeSingleFeedCache(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const fetchedAt = Number.isFinite(raw.fetchedAt) ? raw.fetchedAt : 0;
+    const queryKey = typeof raw.queryKey === "string" ? raw.queryKey : "";
+    const items = Array.isArray(raw.items) ? raw.items.map(normalizeNewsItem).filter(Boolean).slice(0, MAX_SOURCE_ITEMS) : [];
+    if (!fetchedAt || !items.length) {
+      return null;
+    }
+    return {
+      fetchedAt,
+      queryKey,
+      items
+    };
+  }
+  function getNewsFeedQueryKey(source) {
+    return [source.type, source.url, source.sourceKey || "", source.maxItems].join("|");
+  }
+  async function fetchNewsSource(source) {
+    if (source.type === "hackerNews") {
+      return await fetchHackerNews(source);
+    }
+    if (source.type === "reddit") {
+      return await fetchReddit(source);
+    }
+    if (source.type === "shirMan") {
+      return await fetchShirManFeed(source);
+    }
+    return await fetchRss(source);
+  }
+  async function fetchHackerNews(source) {
+    const ids = await fetchJsonWithTimeout(source.url, NEWS_FEED_FETCH_TIMEOUT_MS);
+    if (!Array.isArray(ids)) {
+      throw new Error(t("newsSourceFailed"));
+    }
+    const origin = new URL(source.url).origin;
+    const itemUrls = ids.slice(0, Math.min(HN_ITEM_LIMIT, source.maxItems * 2)).map((id) => `${origin}/v0/item/${id}.json`);
+    const results = await Promise.allSettled(itemUrls.map((url) => fetchJsonWithTimeout(url, NEWS_FEED_FETCH_TIMEOUT_MS)));
+    return results.filter((result) => result.status === "fulfilled").map((result) => normalizeHackerNewsItem(result.value, source)).filter(Boolean);
+  }
+  async function fetchReddit(source) {
+    const data = await fetchJsonWithTimeout(source.url, NEWS_FEED_FETCH_TIMEOUT_MS);
+    const children = Array.isArray(data?.data?.children) ? data.data.children : [];
+    return children.map((child) => normalizeRedditItem(child?.data, source)).filter(Boolean);
+  }
+  async function fetchShirManFeed(source) {
+    const data = await fetchShirManPayload(source.url);
+    const items = Array.isArray(data?.[source.sourceKey]) ? data[source.sourceKey] : [];
+    if (!items.length) {
+      throw new Error(t("newsSourceFailed"));
+    }
+    return items.map((item) => normalizeShirManItem(item, source)).filter(Boolean);
+  }
+  function fetchShirManPayload(url) {
+    if (!shirManPayloadRequests.has(url)) {
+      const request = fetchJsonWithTimeout(url, NEWS_FEED_FETCH_TIMEOUT_MS).finally(() => {
+        shirManPayloadRequests.delete(url);
+      });
+      shirManPayloadRequests.set(url, request);
+    }
+    return shirManPayloadRequests.get(url);
+  }
+  async function fetchRss(source) {
+    const text = await fetchTextWithTimeout(source.url, NEWS_FEED_FETCH_TIMEOUT_MS);
+    const document2 = new DOMParser().parseFromString(text, "application/xml");
+    if (document2.querySelector("parsererror")) {
+      throw new Error(t("newsSourceFailed"));
+    }
+    return [...document2.querySelectorAll("item, entry")].map((item) => normalizeRssItem(item, source)).filter(Boolean);
+  }
+  function normalizeHackerNewsItem(raw, source) {
+    if (!raw || raw.type !== "story") {
+      return null;
+    }
+    const title = normalizeText2(raw.title);
+    const commentsUrl = `https://news.ycombinator.com/item?id=${raw.id}`;
+    const url = isHttpUrl(raw.url) ? raw.url : commentsUrl;
+    if (!title || !isHttpUrl(url)) {
+      return null;
+    }
+    return normalizeNewsItem({
+      id: `${source.id}:${raw.id}`,
+      sourceId: source.id,
+      sourceTitle: source.title,
+      title,
+      url,
+      commentsUrl,
+      domain: toDomain(url),
+      author: raw.by,
+      description: normalizeText2(raw.text),
+      score: Number.isFinite(raw.score) ? raw.score : 0,
+      comments: Number.isFinite(raw.descendants) ? raw.descendants : 0,
+      publishedAt: Number.isFinite(raw.time) ? raw.time * 1e3 : 0
+    });
+  }
+  function normalizeRedditItem(raw, source) {
+    if (!raw || raw.stickied || raw.over_18) {
+      return null;
+    }
+    const title = normalizeText2(raw.title);
+    const commentsUrl = raw.permalink ? `https://www.reddit.com${raw.permalink}` : "";
+    const url = isHttpUrl(commentsUrl) ? commentsUrl : typeof raw.url === "string" ? raw.url : "";
+    if (!title || !isHttpUrl(url)) {
+      return null;
+    }
+    return normalizeNewsItem({
+      id: `${source.id}:${raw.id || url}`,
+      sourceId: source.id,
+      sourceTitle: source.title,
+      title,
+      url,
+      commentsUrl,
+      domain: raw.subreddit_name_prefixed || toDomain(raw.url) || "reddit",
+      author: raw.author,
+      tag: raw.link_flair_text,
+      description: getRedditDescription(raw),
+      imageUrl: getRedditImageUrl(raw),
+      score: Number.isFinite(raw.score) ? raw.score : 0,
+      comments: Number.isFinite(raw.num_comments) ? raw.num_comments : 0,
+      publishedAt: Number.isFinite(raw.created_utc) ? raw.created_utc * 1e3 : 0
+    });
+  }
+  function normalizeShirManItem(raw, source) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const url = absolutizeUrl(raw.url, source.url);
+    const title = normalizeText2(raw.title || raw.repo || raw.prompt);
+    if (!title || !isHttpUrl(url)) {
+      return null;
+    }
+    const sourceKey = source.sourceKey || "";
+    const commentsUrl = sourceKey === "hackerNews" && raw.id ? `https://news.ycombinator.com/item?id=${raw.id}` : absolutizeUrl(raw.comments_url || raw.commentsUrl || "", source.url);
+    return normalizeNewsItem({
+      id: `${source.id}:${raw.id || url}`,
+      sourceId: source.id,
+      sourceTitle: source.title,
+      title,
+      url,
+      commentsUrl,
+      domain: toDomain(url),
+      author: raw.by || raw.author || raw.username || raw.submitter_user,
+      tag: getShirManTag(raw),
+      description: getShirManDescription(raw),
+      imageUrl: getShirManImageUrl(raw, source.url),
+      imageWidth: Number.isFinite(raw.width) ? raw.width : 0,
+      imageHeight: Number.isFinite(raw.height) ? raw.height : 0,
+      score: getShirManScore(raw),
+      comments: getShirManCommentCount(raw),
+      publishedAt: getShirManPublishedAt(raw)
+    });
+  }
+  function getShirManDescription(raw) {
+    return normalizeText2(raw.ai_summary?.tldr || raw.description || raw.prompt);
+  }
+  function getShirManImageUrl(raw, baseUrl) {
+    return [raw.img_preview, raw.img, raw.img_origin].map((url) => absolutizeUrl(url, baseUrl)).find((url) => isUsableImageUrl(url)) || "";
+  }
+  function getShirManTag(raw) {
+    if (Array.isArray(raw.tags) && raw.tags.length) {
+      return raw.tags.map(normalizeText2).filter(Boolean).slice(0, 3).join(", ");
+    }
+    return normalizeText2(raw.language || raw.source);
+  }
+  function getShirManScore(raw) {
+    const value = [raw.stars, raw.score, raw.baseScore, raw.agg_score, raw.score_computed].find(Number.isFinite);
+    return Number.isFinite(value) ? Math.round(value) : 0;
+  }
+  function getShirManCommentCount(raw) {
+    const value = [raw.descendants, raw.commentCount, raw.comment_count].find(Number.isFinite);
+    return Number.isFinite(value) ? value : 0;
+  }
+  function getShirManPublishedAt(raw) {
+    if (Number.isFinite(raw.time)) {
+      return raw.time * 1e3;
+    }
+    const parsed = Date.parse(raw.postedAt || raw.created_at || raw.pushed_at || raw.inserted_at || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  function normalizeRssItem(item, source) {
+    const title = normalizeText2(readNodeText(item, "title"));
+    const link = readRssLink(item);
+    if (!title || !isHttpUrl(link)) {
+      return null;
+    }
+    const timestamp = Date.parse(readNodeText(item, "pubDate") || readNodeText(item, "updated") || readNodeText(item, "published"));
+    const rawDescription = readNodeTextByLocalNames(item, ["description", "summary", "encoded", "content"]) || readNodeText(item, "description") || readNodeText(item, "summary");
+    const description = normalizeText2(rawDescription);
+    return normalizeNewsItem({
+      id: `${source.id}:${link}`,
+      sourceId: source.id,
+      sourceTitle: source.title,
+      title,
+      url: link,
+      domain: toDomain(link),
+      description,
+      imageUrl: getRssImageUrl(item, rawDescription, link),
+      publishedAt: Number.isFinite(timestamp) ? timestamp : 0
+    });
+  }
+  function normalizeNewsItem(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const title = normalizeText2(raw.title);
+    const url = typeof raw.url === "string" ? raw.url.trim() : "";
+    if (!title || !isHttpUrl(url)) {
+      return null;
+    }
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : url,
+      sourceId: typeof raw.sourceId === "string" ? raw.sourceId : "",
+      sourceTitle: typeof raw.sourceTitle === "string" ? raw.sourceTitle : "",
+      title,
+      url,
+      commentsUrl: typeof raw.commentsUrl === "string" && isHttpUrl(raw.commentsUrl) ? raw.commentsUrl : "",
+      domain: typeof raw.domain === "string" ? raw.domain : toDomain(url),
+      description: truncateDescription(normalizeText2(raw.description)),
+      imageUrl: typeof raw.imageUrl === "string" && isHttpUrl(raw.imageUrl) ? raw.imageUrl : "",
+      imageWidth: Number.isFinite(raw.imageWidth) ? raw.imageWidth : 0,
+      imageHeight: Number.isFinite(raw.imageHeight) ? raw.imageHeight : 0,
+      author: normalizeText2(raw.author),
+      tag: normalizeText2(raw.tag),
+      score: Number.isFinite(raw.score) ? raw.score : 0,
+      comments: Number.isFinite(raw.comments) ? raw.comments : 0,
+      publishedAt: Number.isFinite(raw.publishedAt) ? raw.publishedAt : 0
+    };
+  }
+  function readNodeText(parent, selector) {
+    return parent.querySelector(selector)?.textContent || "";
+  }
+  function readNodeTextByLocalNames(parent, localNames) {
+    const wanted = new Set(localNames);
+    for (const node of parent.querySelectorAll("*")) {
+      if (wanted.has(node.localName)) {
+        const value = node.textContent || "";
+        if (value.trim()) {
+          return value;
+        }
+      }
+    }
+    return "";
+  }
+  function readRssLink(item) {
+    const link = readNodeText(item, "link").trim();
+    if (link) {
+      return link;
+    }
+    return item.querySelector("link[href]")?.getAttribute("href") || "";
+  }
+  function getRssImageUrl(item, rawDescription, baseUrl) {
+    for (const mediaNode of findNodesByLocalName(item, ["thumbnail", "content"])) {
+      const mediaUrl = mediaNode.getAttribute("url") || "";
+      if (isUsableImageUrl(mediaUrl, mediaNode.getAttribute("type"), mediaNode.getAttribute("medium"))) {
+        return absolutizeUrl(mediaUrl, baseUrl);
+      }
+    }
+    for (const enclosure of item.querySelectorAll("enclosure[url]")) {
+      const url = enclosure.getAttribute("url") || "";
+      if (isUsableImageUrl(url, enclosure.getAttribute("type"), enclosure.getAttribute("medium"))) {
+        return absolutizeUrl(url, baseUrl);
+      }
+    }
+    return readFirstImageFromHtml(rawDescription, baseUrl);
+  }
+  function getRedditImageUrl(raw) {
+    const candidates = [
+      raw.thumbnail,
+      raw.url_overridden_by_dest,
+      raw.preview?.images?.[0]?.source?.url
+    ];
+    const imageUrl = candidates.map(decodeHtmlEntities).find((url) => isUsableImageUrl(url));
+    return imageUrl || "";
+  }
+  function getRedditDescription(raw) {
+    const crosspost = Array.isArray(raw.crosspost_parent_list) ? raw.crosspost_parent_list[0] : null;
+    const text = [
+      raw.selftext,
+      raw.selftext_html,
+      crosspost?.selftext,
+      crosspost?.selftext_html
+    ].map(decodeHtmlEntities).map(normalizeText2).find(Boolean);
+    if (text) {
+      return text;
+    }
+    const flair = normalizeText2(raw.link_flair_text);
+    const domain = toDomain(raw.url);
+    const details = [flair, domain && domain !== "reddit.com" ? domain : ""].filter(Boolean);
+    if (details.length) {
+      return details.join(" \xB7 ");
+    }
+    return "";
+  }
+  function findNodesByLocalName(parent, localNames) {
+    const wanted = new Set(localNames);
+    const matches = [];
+    for (const node of parent.querySelectorAll("*")) {
+      if (wanted.has(node.localName)) {
+        matches.push(node);
+      }
+    }
+    return matches;
+  }
+  function readFirstImageFromHtml(value, baseUrl) {
+    const html = String(value || "");
+    if (!html.includes("<img")) {
+      return "";
+    }
+    const document2 = new DOMParser().parseFromString(html, "text/html");
+    const src = document2.querySelector("img[src]")?.getAttribute("src") || "";
+    return isUsableImageUrl(src) ? absolutizeUrl(src, baseUrl) : "";
+  }
+  function isUsableImageUrl(url, type = "", medium = "") {
+    const value = decodeHtmlEntities(url);
+    if (!value || !isHttpUrl(value)) {
+      return false;
+    }
+    const normalizedType = String(type || "").toLowerCase();
+    const normalizedMedium = String(medium || "").toLowerCase();
+    return normalizedType.startsWith("image/") || normalizedMedium === "image" || /\.(avif|gif|jpe?g|png|webp)(\?|#|$)/i.test(value);
+  }
+  function absolutizeUrl(url, baseUrl) {
+    const value = decodeHtmlEntities(url);
+    try {
+      return new URL(value, baseUrl).href;
+    } catch {
+      return value;
+    }
+  }
+  function decodeHtmlEntities(value) {
+    return String(value || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  }
+  function normalizeText2(value) {
+    return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function truncateDescription(value) {
+    if (value.length <= 260) {
+      return value;
+    }
+    return `${value.slice(0, 257).trim()}...`;
+  }
+  function sortAndDedupeItems(items) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const item of items.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0))) {
+      const key = item.url.toLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  }
+  function formatScore(item) {
+    if (!Number.isFinite(item?.score) || item.score <= 0) {
+      return "";
+    }
+    if (item.sourceId === "hacker-news") {
+      return t("newsPoints", item.score);
+    }
+    return t("newsScore", item.score);
+  }
+  function formatAge(timestamp) {
+    if (!Number.isFinite(timestamp) || timestamp <= 0) {
+      return "";
+    }
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 6e4));
+    if (minutes < 60) {
+      return LOCALE === "ru" ? `${Math.max(1, minutes)} \u043C\u0438\u043D.` : `${Math.max(1, minutes)}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return LOCALE === "ru" ? `${hours} \u0447.` : `${hours}h`;
+    }
+    const days = Math.floor(hours / 24);
+    return LOCALE === "ru" ? `${days} \u0434\u043D.` : `${days}d`;
+  }
+  function formatUpdatedAt(timestamp, { includeDate }) {
+    const date = new Date(timestamp);
+    if (!Number.isFinite(date.getTime())) {
+      return "";
+    }
+    const locale = LOCALE === "ru" ? "ru-RU" : "en-GB";
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      ...includeDate ? { day: "2-digit", month: "2-digit" } : {}
+    }).format(date);
+  }
+
+  // src/render/feed-widget.js
+  function renderFeedWidget({
+    section,
+    list,
+    meta,
+    refreshButton,
+    title,
+    sourceLabel,
+    status,
+    items,
+    emptyText,
+    sourceText,
+    updatedText,
+    staleText,
+    updatedTitle,
+    createRow
+  }) {
+    const hasItems = items.length > 0;
+    section.classList.toggle("hidden", !hasItems && !status);
+    section.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
+    refreshButton.disabled = status?.kind === "loading";
+    list.replaceChildren();
+    const heading = section.querySelector("[data-feed-title]");
+    if (heading) {
+      heading.textContent = title;
+    }
+    section.setAttribute("aria-label", title);
+    if (!hasItems) {
+      const empty = document.createElement("p");
+      empty.className = "feed-message";
+      empty.textContent = status?.message || emptyText;
+      list.append(empty);
+      meta.textContent = sourceText || sourceLabel || "";
+      meta.title = "";
+      return;
+    }
+    for (const item of items) {
+      list.append(createRow(item));
+    }
+    if (status?.kind === "error") {
+      meta.textContent = staleText;
+      meta.title = [status.message, updatedTitle].filter(Boolean).join(" \xB7 ");
+      return;
+    }
+    meta.textContent = updatedText || sourceText || sourceLabel || "";
+    meta.title = updatedTitle || "";
+  }
+
+  // src/render/news-widget.js
+  function renderNewsFeedWidgets(app2) {
+    const { refs } = app2;
+    if (!refs.servicesLayout) {
+      return;
+    }
+    refs.newsWidgetNodes = refs.newsWidgetNodes || {};
+    const visibleIds = new Set(getVisibleNewsSources(app2).map((source) => source.id));
+    for (const [id, node] of Object.entries(refs.newsWidgetNodes)) {
+      if (!visibleIds.has(id)) {
+        node.classList.add("hidden");
+      }
+    }
+    for (const source of getVisibleNewsSources(app2)) {
+      const section = getOrCreateNewsSection(app2, source);
+      const summary = getNewsFeedSummary(app2, source);
+      const status = app2.newsStatuses?.[source.id] || null;
+      renderFeedWidget({
+        section,
+        list: section.querySelector("[data-feed-list]"),
+        meta: section.querySelector("[data-feed-meta]"),
+        refreshButton: section.querySelector("[data-feed-refresh]"),
+        title: source.title,
+        sourceLabel: source.title,
+        status,
+        items: summary.items,
+        emptyText: t("newsUnavailable"),
+        sourceText: source.title,
+        updatedText: summary.updatedAt ? t("newsUpdated", summary.updatedAt) : source.title,
+        staleText: summary.updatedAt ? t("newsStale", summary.updatedAt) : t("newsUnavailable"),
+        updatedTitle: summary.updatedAtTitle,
+        createRow: (item) => createNewsRow(app2, item, source)
+      });
+    }
+  }
+  function getOrCreateNewsSection(app2, source) {
+    const { refs } = app2;
+    if (refs.newsWidgetNodes[source.id]) {
+      return refs.newsWidgetNodes[source.id];
+    }
+    const section = document.createElement("section");
+    section.id = `newsWidget-${source.id}`;
+    section.className = `feed-widget news-widget news-widget-${source.type}`;
+    if (source.sourceKey) {
+      section.classList.add(`news-widget-source-${source.sourceKey}`);
+    }
+    section.dataset.widgetId = getNewsWidgetId(source.id);
+    const header = document.createElement("header");
+    header.className = "feed-header news-header";
+    const heading = document.createElement("h2");
+    heading.dataset.feedTitle = "";
+    heading.textContent = source.title;
+    const meta = document.createElement("div");
+    meta.className = "feed-meta news-meta";
+    meta.dataset.feedMeta = "";
+    const refresh = document.createElement("button");
+    refresh.className = "icon-button feed-refresh news-refresh";
+    refresh.type = "button";
+    refresh.title = t("refreshNewsSource", source.title);
+    refresh.dataset.feedRefresh = "";
+    refresh.textContent = "\u21BB";
+    refresh.addEventListener("click", () => {
+      void app2.syncNewsFeed(source.id, { force: true });
+    });
+    const list = document.createElement("div");
+    list.className = "feed-list news-list";
+    list.dataset.feedList = "";
+    header.append(heading, meta, refresh);
+    section.append(header, list);
+    refs.newsWidgetNodes[source.id] = section;
+    refs.servicesLayout.append(section);
+    return section;
+  }
+  function createNewsRow(app2, item, source) {
+    const isImageFeed = source.sourceKey === "midjourney";
+    const anchor = document.createElement("a");
+    anchor.className = `news-row news-row-${source.type}`;
+    if (source.sourceKey) {
+      anchor.classList.add(`news-row-source-${source.sourceKey}`);
+    }
+    anchor.href = item.url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.title = item.description || item.title;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.title,
+        url: item.url,
+        source: `news:${source.id}`
+      });
+    });
+    if (item.imageUrl) {
+      anchor.classList.add("news-row-has-thumb");
+      const media = document.createElement("span");
+      media.className = "news-thumb";
+      if (isImageFeed && item.imageWidth > 0 && item.imageHeight > 0) {
+        media.style.aspectRatio = `${item.imageWidth} / ${item.imageHeight}`;
+      }
+      const image = document.createElement("img");
+      image.src = item.imageUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      if (item.imageWidth > 0 && item.imageHeight > 0) {
+        image.width = item.imageWidth;
+        image.height = item.imageHeight;
+      }
+      image.addEventListener("error", () => {
+        anchor.classList.remove("news-row-has-thumb");
+        media.remove();
+      });
+      media.append(image);
+      anchor.append(media);
+    }
+    const body = document.createElement("span");
+    body.className = "news-body";
+    const titleLine = document.createElement("span");
+    titleLine.className = "news-title-line";
+    const title = document.createElement("span");
+    title.className = "news-title";
+    title.textContent = item.title;
+    titleLine.append(title);
+    const inlineTime = source.type === "rss" ? formatNewsTime(item) : "";
+    if (inlineTime) {
+      const time = document.createElement("span");
+      time.className = "news-title-time";
+      time.textContent = inlineTime;
+      titleLine.append(time);
+    }
+    const meta = document.createElement("span");
+    meta.className = "news-item-meta";
+    meta.textContent = formatNewsMeta(item, { showAge: source.type !== "rss", showDomain: source.type !== "rss" });
+    body.append(titleLine);
+    if (item.description && !isImageFeed) {
+      const description = document.createElement("span");
+      description.className = "news-description";
+      description.textContent = item.description;
+      body.append(description);
+    }
+    if (meta.textContent && !isImageFeed) {
+      body.append(meta);
+    }
+    anchor.append(body);
+    return anchor;
+  }
+
   // src/metadata.js
   var FAVICON_SIZE = 128;
   var MIN_FRESH_ICON_SIZE = 96;
@@ -1322,11 +2358,11 @@
         iconSize: meta.iconDataUrl ? meta.iconSize : cached?.iconSize || 0
       };
       changed = true;
-      app2.renderQuickLinks();
     }
     if (changed) {
       pruneQuickLinkMeta(app2, seen);
       await storageSet(QUICK_LINK_META_KEY, app2.quickLinkMeta, LOCAL_AREA);
+      app2.renderQuickLinks();
     }
   }
   async function refreshSearchEngineMetadata(app2, { force }) {
@@ -1351,11 +2387,11 @@
         iconSize: meta.iconDataUrl ? meta.iconSize : cached?.iconSize || 0
       };
       changed = true;
-      app2.renderSearchButtons();
     }
     if (changed) {
       pruneSearchEngineMeta(app2, seen);
       await storageSet(SEARCH_ENGINE_META_KEY, app2.searchEngineMeta, LOCAL_AREA);
+      app2.renderSearchButtons();
     }
   }
   async function fetchQuickLinkMetadata(url) {
@@ -1843,9 +2879,10 @@
       return;
     }
     normalized.visitedAt = Date.now();
+    const normalizedKey = normalizeUrlKey(normalized.url);
     app2.visitHistory = [
       normalized,
-      ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url))
+      ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizedKey)
     ].slice(0, VISIT_HISTORY_LIMIT);
     app2.renderVisitPanels();
     if (hasBrowserHistoryApi()) {
@@ -1876,7 +2913,16 @@
     });
   }
   async function refreshVisitHistory(app2) {
-    const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits(app2)]);
+    if (app2.localPatch?.visits?.showRecent === false && app2.localPatch?.visits?.showFrequent === false) {
+      app2.visitHistory = [];
+      app2.frequentVisits = [];
+      app2.renderVisitPanels();
+      return;
+    }
+    const [nextHistory, nextFrequent] = await Promise.all([
+      app2.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+      app2.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app2) : []
+    ]);
     if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
       return;
     }
@@ -1946,6 +2992,7 @@
 
   // src/render/visits.js
   function renderVisitPanels(app2) {
+    const visibleQuickLinkKeys = getVisibleQuickLinkKeys(app2);
     renderVisitList({
       panel: app2.refs.frequentPanel,
       list: app2.refs.frequentList,
@@ -1953,6 +3000,7 @@
       isEnabled: app2.localPatch?.visits?.showFrequent !== false,
       metaFormatter: formatFrequentMeta,
       showVisitCount: true,
+      visibleQuickLinkKeys,
       app: app2
     });
     renderVisitList({
@@ -1963,6 +3011,7 @@
       metaFormatter: formatHistoryMeta,
       showAddButton: true,
       hideAddedAction: true,
+      visibleQuickLinkKeys,
       app: app2
     });
   }
@@ -1975,6 +3024,7 @@
     showVisitCount = false,
     showAddButton = false,
     hideAddedAction = false,
+    visibleQuickLinkKeys,
     app: app2
   }) {
     list.replaceChildren();
@@ -2004,7 +3054,7 @@
       anchor.append(title, meta);
       row.append(anchor);
       if (showVisitCount || showAddButton) {
-        const action = createVisitAddButton(app2, item, { showVisitCount, hideAddedAction });
+        const action = createVisitAddButton(app2, item, { showVisitCount, hideAddedAction, visibleQuickLinkKeys });
         if (action) {
           row.append(action);
         }
@@ -2012,8 +3062,8 @@
       list.append(row);
     }
   }
-  function createVisitAddButton(app2, item, { showVisitCount, hideAddedAction }) {
-    const isAdded = hasVisibleQuickLink(app2, item.url);
+  function createVisitAddButton(app2, item, { showVisitCount, hideAddedAction, visibleQuickLinkKeys }) {
+    const isAdded = hasVisibleQuickLink(item.url, visibleQuickLinkKeys);
     if (hideAddedAction && isAdded) {
       return null;
     }
@@ -2053,12 +3103,19 @@
     icon.append(horizontal, vertical);
     return icon;
   }
-  function hasVisibleQuickLink(app2, url) {
-    const key = normalizeUrlKey(url);
-    if (!key) {
-      return false;
+  function getVisibleQuickLinkKeys(app2) {
+    const keys = /* @__PURE__ */ new Set();
+    for (const link of getVisibleQuickLinks(app2)) {
+      const key = normalizeUrlKey(link.url);
+      if (key) {
+        keys.add(key);
+      }
     }
-    return getVisibleQuickLinks(app2).some((link) => normalizeUrlKey(link.url) === key);
+    return keys;
+  }
+  function hasVisibleQuickLink(url, visibleQuickLinkKeys) {
+    const key = normalizeUrlKey(url);
+    return Boolean(key && visibleQuickLinkKeys?.has(key));
   }
 
   // src/weather.js
@@ -2105,7 +3162,7 @@
     };
   }
   async function syncWeather(app2, { force = false } = {}) {
-    if (app2.localPatch?.weather?.topDisabled && app2.localPatch?.weather?.cardDisabled) {
+    if (app2.localPatch?.weather?.topDisabled) {
       app2.weatherStatus = null;
       renderWeatherWidget(app2);
       return;
@@ -2459,7 +3516,7 @@
       rain: refs.weatherRain,
       updated: refs.weatherUpdated,
       refreshButton: refs.weatherRefreshButton,
-      disabled: app2.localPatch?.weather?.cardDisabled === true
+      disabled: true
     });
     renderWeatherBlock(app2, {
       widget: refs.topWeatherWidget,
@@ -2559,6 +3616,8 @@
   function renderAll(app2) {
     renderSearchButtons(app2);
     renderQuickLinks(app2);
+    renderNewsFeedWidgets(app2);
+    applyWidgetLayout(app2);
     renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
     renderWeatherWidget(app2);
     renderGitHubTrending(app2);
@@ -2629,10 +3688,10 @@
     renderGitHubTrending(app2);
   }
   function getGitHubTrendingSummary(cache) {
-    const updatedAt = cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: false }) : "";
+    const updatedAt = cache?.fetchedAt ? formatUpdatedAt2(cache.fetchedAt, { includeDate: false }) : "";
     return {
       updatedAt,
-      updatedAtTitle: cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: true }) : "",
+      updatedAtTitle: cache?.fetchedAt ? formatUpdatedAt2(cache.fetchedAt, { includeDate: true }) : "",
       items: Array.isArray(cache?.items) ? cache.items : []
     };
   }
@@ -2741,7 +3800,7 @@
     }
     return days === 1 ? "1 day" : `${days} days`;
   }
-  function formatUpdatedAt(timestamp, { includeDate }) {
+  function formatUpdatedAt2(timestamp, { includeDate }) {
     const date = new Date(timestamp);
     if (!Number.isFinite(date.getTime())) {
       return "";
@@ -2767,7 +3826,7 @@
     app2.localPatchDraft = clone(app2.localPatch);
     renderSettings(app2);
     app2.refs.settingsOverlay.classList.remove("hidden");
-    app2.refs.homerUrlInput.focus();
+    app2.refs.widgetRows.querySelector("input")?.focus();
   }
   function closeSettings(app2) {
     app2.refs.settingsOverlay.classList.add("hidden");
@@ -2780,19 +3839,120 @@
     }
     renderEngineSettings(app2);
     renderQuickLinkSettings(app2);
-    app2.refs.homerUrlInput.value = app2.settingsDraft.homer.url;
-    app2.refs.homerDisabledInput.checked = app2.localPatchDraft?.homer?.disabled === true;
+    renderWidgetSettings(app2);
     app2.refs.topWeatherEnabledInput.checked = app2.localPatchDraft?.weather?.topDisabled !== true;
-    app2.refs.weatherCardEnabledInput.checked = app2.localPatchDraft?.weather?.cardDisabled !== true;
     app2.refs.weatherLocationInput.value = app2.localPatchDraft?.weather?.locationName || "";
     app2.refs.topWeatherPlacementInput.value = app2.settingsDraft.weather.topWidgetPlacement;
-    app2.refs.githubTrendingEnabledInput.checked = app2.localPatchDraft?.githubTrending?.disabled !== true;
-    app2.refs.githubTrendingExcludeInput.value = app2.settingsDraft.githubTrending.excludedTerms.join(", ");
-    app2.refs.githubTrendingSyncIntervalInput.value = String(app2.settingsDraft.githubTrending.syncIntervalMinutes);
     app2.refs.showFrequentVisitsInput.checked = app2.localPatchDraft?.visits?.showFrequent !== false;
     app2.refs.showRecentVisitsInput.checked = app2.localPatchDraft?.visits?.showRecent !== false;
     app2.refs.frequentHistoryPoolInput.value = String(app2.settingsDraft.visits.frequentHistoryPool);
     app2.refs.frequentMinVisitsInput.value = String(app2.settingsDraft.visits.frequentMinVisits);
+  }
+  function renderWidgetSettings(app2) {
+    const { refs } = app2;
+    const localPatchDraft = ensureLocalPatchDraft(app2);
+    const order = normalizeWidgetOrder(localPatchDraft.widgets?.order, app2.settingsDraft);
+    localPatchDraft.widgets.order = order;
+    refs.widgetRows.replaceChildren();
+    refs.widgetRows.append(createWidgetHeaderRow());
+    for (const [index, id] of order.entries()) {
+      const row = document.createElement("div");
+      row.className = "settings-row widget-row";
+      const dragHandle = createDragHandle();
+      attachReorderHandlers(row, dragHandle, order, index, () => {
+        localPatchDraft.widgets.order = order;
+        renderSettings(app2);
+      });
+      const enabledWrap = createCheckField(t("localEnabled"), isWidgetEnabled(localPatchDraft, id));
+      const source = getNewsSourceForWidget(app2, id);
+      if (source) {
+        row.classList.add("news-widget-row");
+        const title = source.type === "rss" ? createInput(t("inputTitle"), source.title) : createStaticCell(source.title);
+        const url = createInput("URL", source.url, "url");
+        const interval = createInput(t("newsSyncInterval"), source.syncIntervalMinutes, "number");
+        interval.min = "15";
+        interval.max = "1440";
+        interval.step = "15";
+        const remove = source.type === "rss" ? createSmallButton("\xD7", t("remove")) : createEmptyCell();
+        if (source.type === "rss") {
+          title.addEventListener("input", () => {
+            source.title = title.value;
+          });
+          remove.addEventListener("click", () => {
+            app2.settingsDraft.news.sources = app2.settingsDraft.news.sources.filter((item) => item.id !== source.id);
+            updateDisabledId(localPatchDraft.news.disabledFeedIds, source.id, false);
+            localPatchDraft.widgets.order = normalizeWidgetOrder(localPatchDraft.widgets?.order, app2.settingsDraft);
+            renderSettings(app2);
+          });
+        }
+        url.addEventListener("input", () => {
+          source.url = url.value;
+        });
+        interval.addEventListener("input", () => {
+          source.syncIntervalMinutes = interval.value;
+        });
+        enabledWrap.input.addEventListener("change", () => {
+          source.enabled = enabledWrap.input.checked;
+          setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+          renderSettings(app2);
+        });
+        row.append(dragHandle, title, url, interval, enabledWrap.label, remove);
+      } else if (id === "services") {
+        row.classList.add("homer-widget-row");
+        const name = document.createElement("strong");
+        name.textContent = getWidgetLabel(app2, id);
+        const url = createInput("URL", app2.settingsDraft.homer.url, "url");
+        url.placeholder = "http://192.168.1.28/";
+        url.addEventListener("input", () => {
+          app2.settingsDraft.homer.url = url.value;
+        });
+        enabledWrap.input.addEventListener("change", () => {
+          setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+          renderSettings(app2);
+        });
+        row.append(dragHandle, name, url, createEmptyCell(), enabledWrap.label, createEmptyCell());
+      } else if (id === "githubTrending") {
+        row.classList.add("github-widget-row");
+        const name = document.createElement("strong");
+        name.textContent = getWidgetLabel(app2, id);
+        const interval = createInput(t("githubTrendingSyncInterval"), app2.settingsDraft.githubTrending.syncIntervalMinutes, "number");
+        interval.min = "15";
+        interval.max = "1440";
+        interval.step = "15";
+        const exclude = createInput(t("githubTrendingExcludedTerms"), app2.settingsDraft.githubTrending.excludedTerms.join(", "));
+        exclude.placeholder = t("githubTrendingExcludedTermsPlaceholder");
+        interval.addEventListener("input", () => {
+          app2.settingsDraft.githubTrending.syncIntervalMinutes = interval.value;
+        });
+        exclude.addEventListener("input", () => {
+          app2.settingsDraft.githubTrending.excludedTerms = exclude.value;
+        });
+        enabledWrap.input.addEventListener("change", () => {
+          setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+          renderSettings(app2);
+        });
+        row.append(dragHandle, name, exclude, interval, enabledWrap.label, createEmptyCell());
+      } else {
+        enabledWrap.input.addEventListener("change", () => {
+          setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+          renderSettings(app2);
+        });
+        const name = document.createElement("strong");
+        name.textContent = getWidgetLabel(app2, id);
+        row.append(dragHandle, name, createEmptyCell(), createEmptyCell(), enabledWrap.label, createEmptyCell());
+      }
+      refs.widgetRows.append(row);
+    }
+  }
+  function createWidgetHeaderRow() {
+    const row = document.createElement("div");
+    row.className = "settings-row widget-row widget-label-row";
+    for (const text of ["", t("widgetName"), t("widgetConfig"), t("widgetCache"), t("widgetVisible"), ""]) {
+      const cell = document.createElement("span");
+      cell.textContent = text;
+      row.append(cell);
+    }
+    return row;
   }
   function renderEngineSettings(app2) {
     const { refs, settingsDraft } = app2;
@@ -2987,6 +4147,10 @@ ${result.error}`);
     if (nextHomer.url && !deriveHomerEndpoints(nextHomer.url)) {
       return { ok: false, error: t("homerUrlInvalid") };
     }
+    const nextNews = readNewsDraft(app2);
+    if (app2.settingsDraft.news.sources.some((source) => source.url && !isHttpUrl(source.url))) {
+      return { ok: false, error: t("newsSourceBadUrl") };
+    }
     return {
       ok: true,
       state: {
@@ -2998,7 +4162,8 @@ ${result.error}`);
         homer: nextHomer,
         visits: readVisitsDraft(app2),
         weather: readWeatherDraft(app2),
-        githubTrending: readGitHubTrendingDraft(app2)
+        githubTrending: readGitHubTrendingDraft(app2),
+        news: nextNews
       },
       localPatch: normalizeLocalPatch(
         {
@@ -3008,19 +4173,28 @@ ${result.error}`);
             defaultEngineId: cleanedEngines.find((engine) => engine.id === settingsDraft.search.defaultEngineId)?.id || cleanedEngines[0].id
           },
           homer: {
-            disabled: app2.refs.homerDisabledInput.checked
+            disabled: ensureLocalPatchDraft(app2).homer.disabled
           },
           weather: {
             topDisabled: !app2.refs.topWeatherEnabledInput.checked,
-            cardDisabled: !app2.refs.weatherCardEnabledInput.checked,
+            cardDisabled: true,
             locationName: app2.refs.weatherLocationInput.value
           },
           githubTrending: {
-            disabled: !app2.refs.githubTrendingEnabledInput.checked
+            disabled: ensureLocalPatchDraft(app2).githubTrending.disabled
+          },
+          news: {
+            disabledFeedIds: ensureLocalPatchDraft(app2).news.disabledFeedIds
           },
           visits: {
             showFrequent: app2.refs.showFrequentVisitsInput.checked,
             showRecent: app2.refs.showRecentVisitsInput.checked
+          },
+          widgets: {
+            order: normalizeWidgetOrder(ensureLocalPatchDraft(app2).widgets?.order, {
+              ...settingsDraft,
+              news: nextNews
+            })
           }
         },
         {
@@ -3032,14 +4206,15 @@ ${result.error}`);
           homer: nextHomer,
           visits: readVisitsDraft(app2),
           weather: readWeatherDraft(app2),
-          githubTrending: readGitHubTrendingDraft(app2)
+          githubTrending: readGitHubTrendingDraft(app2),
+          news: nextNews
         }
       )
     };
   }
   function readHomerDraft(app2) {
     return {
-      url: app2.refs.homerUrlInput.value.trim()
+      url: app2.settingsDraft.homer.url.trim()
     };
   }
   function readVisitsDraft(app2) {
@@ -3062,10 +4237,16 @@ ${result.error}`);
   function readGitHubTrendingDraft(app2) {
     return normalizeGitHubTrendingSettings(
       {
-        excludedTerms: app2.refs.githubTrendingExcludeInput.value,
-        syncIntervalMinutes: app2.refs.githubTrendingSyncIntervalInput.value
+        excludedTerms: app2.settingsDraft.githubTrending.excludedTerms,
+        syncIntervalMinutes: app2.settingsDraft.githubTrending.syncIntervalMinutes
       },
       FALLBACK_CONFIG.githubTrending
+    );
+  }
+  function readNewsDraft(app2) {
+    return normalizeNewsSettings(
+      app2.settingsDraft.news,
+      FALLBACK_CONFIG.news
     );
   }
   function createInput(placeholder, value, type = "text") {
@@ -3095,6 +4276,18 @@ ${result.error}`);
     button.title = title;
     return button;
   }
+  function createStaticCell(text) {
+    const cell = document.createElement("strong");
+    cell.className = "settings-static";
+    cell.textContent = text;
+    return cell;
+  }
+  function createEmptyCell() {
+    const cell = document.createElement("span");
+    cell.className = "settings-empty-cell";
+    cell.setAttribute("aria-hidden", "true");
+    return cell;
+  }
   function ensureLocalPatchDraft(app2) {
     if (!app2.localPatchDraft) {
       app2.localPatchDraft = normalizeLocalPatch(null, app2.settingsDraft);
@@ -3113,6 +4306,46 @@ ${result.error}`);
   }
   function getFirstEnabledEngineId(settingsDraft, localPatchDraft) {
     return settingsDraft.search.engines.find((engine) => !localPatchDraft.search.disabledEngineIds.includes(engine.id))?.id || "";
+  }
+  function isWidgetEnabled(localPatch, id) {
+    if (id === "services") {
+      return localPatch.homer?.disabled !== true;
+    }
+    if (id.startsWith("news:")) {
+      return !localPatch.news?.disabledFeedIds?.includes(id.slice("news:".length));
+    }
+    if (id === "githubTrending") {
+      return localPatch.githubTrending?.disabled !== true;
+    }
+    if (id === "weather") {
+      return localPatch.weather?.cardDisabled !== true;
+    }
+    return true;
+  }
+  function setWidgetEnabled(localPatch, id, enabled) {
+    if (id === "services") {
+      localPatch.homer.disabled = !enabled;
+    } else if (id.startsWith("news:")) {
+      updateDisabledId(localPatch.news.disabledFeedIds, id.slice("news:".length), !enabled);
+    } else if (id === "githubTrending") {
+      localPatch.githubTrending.disabled = !enabled;
+    } else if (id === "weather") {
+      localPatch.weather.cardDisabled = !enabled;
+    }
+  }
+  function getWidgetLabel(app2, id) {
+    if (id.startsWith("news:")) {
+      const sourceId = id.slice("news:".length);
+      return app2.settingsDraft.news.sources.find((source) => getNewsWidgetId(source.id) === getNewsWidgetId(sourceId))?.title || sourceId;
+    }
+    return t(WIDGET_LABEL_KEYS[id] || id);
+  }
+  function getNewsSourceForWidget(app2, id) {
+    if (!id.startsWith("news:")) {
+      return null;
+    }
+    const sourceId = id.slice("news:".length);
+    return app2.settingsDraft.news.sources.find((source) => getNewsWidgetId(source.id) === getNewsWidgetId(sourceId)) || null;
   }
 
   // src/sync.js
@@ -3231,9 +4464,12 @@ ${result.error}`);
     weatherStatus: null,
     githubTrendingCache: null,
     githubTrendingStatus: null,
+    newsFeedCache: null,
+    newsStatuses: {},
     visitHistory: [],
     frequentVisits: [],
-    settingsDraft: null
+    settingsDraft: null,
+    foregroundRefreshPromise: null
   };
   app.state = createDefaultState(app.baseConfig);
   app.addVisitHistoryItem = (item) => addVisitHistoryItem(app, item);
@@ -3246,6 +4482,8 @@ ${result.error}`);
   app.renderVisitPanels = () => renderVisitPanels(app);
   app.renderWeatherWidget = () => renderWeatherWidget(app);
   app.renderGitHubTrending = () => renderGitHubTrending(app);
+  app.renderNewsFeedWidgets = () => renderNewsFeedWidgets(app);
+  app.syncNewsFeed = syncNewsFeedById;
   app.runSearch = runSearch;
   app.setViewMode = setViewMode;
   document.addEventListener("DOMContentLoaded", () => {
@@ -3256,20 +4494,33 @@ ${result.error}`);
     applyLocalization();
     bindEvents();
     await loadSettingsState();
-    app.homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
-    app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
-    app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
-    app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
-    app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
-    app.githubTrendingCache = normalizeGitHubTrendingCache(await storageGet(GITHUB_TRENDING_CACHE_KEY));
-    app.visitHistory = await loadVisitHistory();
-    app.frequentVisits = await loadFrequentVisits(app);
+    const localCache = await storageGetMany([
+      CACHE_KEY,
+      META_KEY,
+      QUICK_LINK_META_KEY,
+      SEARCH_ENGINE_META_KEY,
+      WEATHER_CACHE_KEY,
+      GITHUB_TRENDING_CACHE_KEY,
+      NEWS_FEED_CACHE_KEY
+    ]);
+    app.homerCache = normalizeHomerCache(localCache[CACHE_KEY]);
+    app.syncMeta = normalizeSyncMeta(localCache[META_KEY]);
+    app.quickLinkMeta = normalizeQuickLinkMeta(localCache[QUICK_LINK_META_KEY]);
+    app.searchEngineMeta = normalizeSearchEngineMeta(localCache[SEARCH_ENGINE_META_KEY]);
+    app.weatherCache = normalizeWeatherCache(localCache[WEATHER_CACHE_KEY]);
+    app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
+    app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
+    [app.visitHistory, app.frequentVisits] = await Promise.all([
+      app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+      app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : []
+    ]);
     applyTheme(app);
     renderViewMode(app);
     renderAll(app);
     void refreshSearchEngineMetadata(app, { force: false });
     void refreshQuickLinkMetadata(app, { force: false });
     void syncWeather(app, { force: false });
+    void syncNewsFeeds(app, { force: false });
     void syncGitHubTrending(app, { force: false });
     await syncHomer(app, { force: false });
   }
@@ -3315,6 +4566,7 @@ ${result.error}`);
     refs.githubTrendingList = byId("githubTrendingList");
     refs.githubTrendingMeta = byId("githubTrendingMeta");
     refs.githubTrendingRefreshButton = byId("githubTrendingRefreshButton");
+    refs.newsWidgetNodes = {};
     refs.frequentPanel = byId("frequentPanel");
     refs.frequentList = byId("frequentList");
     refs.historyPanel = byId("historyPanel");
@@ -3325,15 +4577,11 @@ ${result.error}`);
     refs.quickLinkRows = byId("quickLinkRows");
     refs.addEngineButton = byId("addEngineButton");
     refs.addQuickLinkButton = byId("addQuickLinkButton");
-    refs.homerUrlInput = byId("homerUrlInput");
-    refs.homerDisabledInput = byId("homerDisabledInput");
+    refs.addRssButton = byId("addRssButton");
     refs.topWeatherEnabledInput = byId("topWeatherEnabledInput");
-    refs.weatherCardEnabledInput = byId("weatherCardEnabledInput");
     refs.weatherLocationInput = byId("weatherLocationInput");
     refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
-    refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
-    refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
-    refs.githubTrendingSyncIntervalInput = byId("githubTrendingSyncIntervalInput");
+    refs.widgetRows = byId("widgetRows");
     refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
     refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
     refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -3379,13 +4627,11 @@ ${result.error}`);
     });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        void refreshVisitHistory(app);
-        void syncWeather(app, { force: false });
+        void refreshForegroundData();
       }
     });
     window.addEventListener("focus", () => {
-      void refreshVisitHistory(app);
-      void syncWeather(app, { force: false });
+      void refreshForegroundData();
     });
     refs.addEngineButton.addEventListener("click", () => {
       if (!app.settingsDraft) {
@@ -3409,6 +4655,24 @@ ${result.error}`);
       });
       renderSettings(app);
     });
+    refs.addRssButton.addEventListener("click", () => {
+      if (!app.settingsDraft) {
+        return;
+      }
+      const source = {
+        id: makeId("rss"),
+        title: "RSS",
+        type: "rss",
+        url: "",
+        enabled: true,
+        syncIntervalMinutes: 60,
+        maxItems: 12
+      };
+      app.settingsDraft.news.sources.push(source);
+      app.localPatchDraft = normalizeLocalPatch(app.localPatchDraft, app.settingsDraft);
+      app.localPatchDraft.widgets.order = normalizeWidgetOrder(app.localPatchDraft.widgets?.order, app.settingsDraft);
+      renderSettings(app);
+    });
     refs.exportSettingsButton.addEventListener("click", () => handleExportSettings(app));
     refs.importSettingsInput.addEventListener("change", (event) => {
       void handleImportSettings(app, event);
@@ -3417,7 +4681,7 @@ ${result.error}`);
     refs.resetButton.addEventListener("click", resetSettings);
   }
   async function loadSettingsState() {
-    const syncState = await storageGet(STATE_KEY, SYNC_AREA);
+    const [syncState, rawLocalPatch] = await Promise.all([storageGet(STATE_KEY, SYNC_AREA), storageGet(LOCAL_PATCH_KEY)]);
     let syncedState;
     let shouldPersistSyncedState = false;
     let sourceDefaultEngineId = "";
@@ -3436,7 +4700,6 @@ ${result.error}`);
         syncedState = normalizeSyncedState(null, app.baseConfig);
       }
     }
-    const rawLocalPatch = await storageGet(LOCAL_PATCH_KEY);
     const localPatch = normalizeLocalPatch(rawLocalPatch, syncedState);
     let shouldPersistLocalPatch = !rawLocalPatch;
     if (!rawLocalPatch && sourceDefaultEngineId) {
@@ -3462,9 +4725,34 @@ ${result.error}`);
     if (!app.localPatch) {
       app.localPatch = normalizeLocalPatch(null, app.state);
     }
-    app.localPatch.viewMode = normalizeViewMode(mode);
+    const nextMode = normalizeViewMode(mode);
+    if (app.localPatch.viewMode === nextMode) {
+      return;
+    }
+    app.localPatch.viewMode = nextMode;
     renderViewMode(app);
     await persistLocalPatch();
+  }
+  function refreshForegroundData() {
+    if (document.visibilityState !== "visible") {
+      return app.foregroundRefreshPromise || Promise.resolve();
+    }
+    if (!app.foregroundRefreshPromise) {
+      app.foregroundRefreshPromise = Promise.all([
+        refreshVisitHistory(app),
+        syncWeather(app, { force: false }),
+        syncNewsFeeds(app, { force: false })
+      ]).finally(() => {
+        app.foregroundRefreshPromise = null;
+      });
+    }
+    return app.foregroundRefreshPromise;
+  }
+  function syncNewsFeedById(sourceId, options = {}) {
+    if (!getVisibleNewsSources(app).some((item) => item.id === sourceId)) {
+      return Promise.resolve();
+    }
+    return syncNewsFeeds(app, { ...options, sourceIds: [sourceId] });
   }
   function renderViewMode({ refs, localPatch }) {
     const mode = normalizeViewMode(localPatch?.viewMode);
@@ -3546,6 +4834,7 @@ ${result.error}`);
     void refreshSearchEngineMetadata(app, { force: true });
     void refreshQuickLinkMetadata(app, { force: true });
     void syncWeather(app, { force: true });
+    void syncNewsFeeds(app, { force: false });
     void syncGitHubTrending(app, { force: false });
     await syncHomer(app, { force: true });
   }
@@ -3564,6 +4853,8 @@ ${result.error}`);
     app.weatherStatus = null;
     app.githubTrendingCache = null;
     app.githubTrendingStatus = null;
+    app.newsFeedCache = null;
+    app.newsStatuses = {};
     app.visitHistory = [];
     app.frequentVisits = [];
     app.settingsDraft = clone(app.state);
@@ -3580,7 +4871,8 @@ ${result.error}`);
           SEARCH_ENGINE_META_KEY,
           HISTORY_KEY,
           WEATHER_CACHE_KEY,
-          GITHUB_TRENDING_CACHE_KEY
+          GITHUB_TRENDING_CACHE_KEY,
+          NEWS_FEED_CACHE_KEY
         ],
         LOCAL_AREA
       )
@@ -3590,6 +4882,7 @@ ${result.error}`);
     renderSettings(app);
     void refreshSearchEngineMetadata(app, { force: true });
     void syncWeather(app, { force: true });
+    void syncNewsFeeds(app, { force: true });
     void syncGitHubTrending(app, { force: true });
     await syncHomer(app, { force: true });
   }

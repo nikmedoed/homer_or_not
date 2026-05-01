@@ -1,4 +1,6 @@
 import { renderGitHubTrending } from "./render/github-trending-widget.js";
+import { applyWidgetLayout } from "./layout.js";
+import { renderNewsFeedWidgets } from "./render/news-widget.js";
 import { renderQuickLinks, renderSearchButtons } from "./render/search.js";
 import {
   getEmptyServicesMessage,
@@ -14,6 +16,7 @@ export {
   getEmptyServicesMessage,
   getVisibleServices,
   renderGitHubTrending,
+  renderNewsFeedWidgets,
   renderQuickLinks,
   renderSearchButtons,
   renderServices,
@@ -26,6 +29,8 @@ export {
 export function renderAll(app) {
   renderSearchButtons(app);
   renderQuickLinks(app);
+  renderNewsFeedWidgets(app);
+  applyWidgetLayout(app);
   renderServices(app, getVisibleServices(app), getEmptyServicesMessage(app));
   renderWeatherWidget(app);
   renderGitHubTrending(app);

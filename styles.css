@@ -325,6 +325,15 @@ a {
   gap: 42px 24px;
   align-items: start;
 }
+.services-layout > .services-grid:not(:first-child) {
+  margin-top: 42px;
+}
+.services-layout > .news-widget:first-child,
+.services-layout > .github-trending:first-child,
+.services-layout > .weather-widget:first-child,
+.services-layout > .visit-panel:first-child {
+  margin-top: 0;
+}
 .visit-panel {
   margin-top: 36px;
   min-width: 0;
@@ -898,6 +907,181 @@ body[data-top-weather-placement=center] .top-weather-widget {
   text-align: right;
 }
 
+/* src/styles/news.css */
+.news-widget {
+  width: 100%;
+  min-width: 0;
+  margin: 42px 0 0;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.news-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.news-header h2 {
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.news-refresh {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 15px;
+}
+.news-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px 14px;
+  align-items: start;
+}
+.news-row {
+  min-width: 0;
+  display: block;
+  align-items: start;
+  padding: 9px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+.news-row-has-thumb {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+}
+.news-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.news-body {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.news-thumb {
+  width: 54px;
+  height: 54px;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.news-thumb img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.news-widget-source-midjourney .news-list {
+  display: block;
+  column-width: 156px;
+  column-gap: 12px;
+}
+.news-row-source-midjourney,
+.news-row-source-midjourney.news-row-has-thumb {
+  display: block;
+  break-inside: avoid;
+  padding: 0;
+  margin: 0 0 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.news-row-source-midjourney .news-thumb {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+.news-row-source-midjourney .news-thumb img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.news-row-source-midjourney .news-body {
+  padding: 8px;
+}
+.news-row-source-midjourney .news-title {
+  display: -webkit-box;
+  font-size: 12px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.news-title-line,
+.news-title,
+.news-title-time,
+.news-description,
+.news-item-meta,
+.news-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+.news-title-line {
+  display: block;
+}
+.news-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.news-title-time {
+  display: inline;
+  margin-left: 7px;
+  color: rgba(243, 243, 248, 0.5);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.news-description {
+  display: -webkit-box;
+  color: rgba(243, 243, 248, 0.72);
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.news-item-meta {
+  color: rgba(243, 243, 248, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.news-meta {
+  flex: 0 1 auto;
+  margin-left: auto;
+  color: rgba(243, 243, 248, 0.58);
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.news-message,
+.feed-message {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 /* src/styles/github-trending.css */
 .github-trending {
   width: 100%;
@@ -936,16 +1120,16 @@ body[data-top-weather-placement=center] .top-weather-widget {
 .github-trending-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: 6px 12px;
   align-items: start;
 }
 .github-trending-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
   align-items: start;
-  padding: 11px 10px;
+  padding: 8px;
   border-radius: 6px;
   color: inherit;
   text-decoration: none;
@@ -954,8 +1138,8 @@ body[data-top-weather-placement=center] .top-weather-widget {
   background: rgba(255, 255, 255, 0.06);
 }
 .github-trending-avatar {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -975,7 +1159,7 @@ body[data-top-weather-placement=center] .top-weather-widget {
 .github-trending-body {
   min-width: 0;
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 .github-trending-name,
 .github-trending-repo-meta,
@@ -1089,6 +1273,11 @@ body[data-view-mode=zen] .launch-panel {
   gap: 9px;
   margin-top: 12px;
 }
+.settings-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 .settings-row {
   display: grid;
   gap: 8px;
@@ -1099,6 +1288,38 @@ body[data-view-mode=zen] .launch-panel {
 }
 .quick-row {
   grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 72px 34px;
+}
+.widget-row {
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 96px 76px 34px;
+}
+.news-widget-row {
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 96px 76px 34px;
+}
+.homer-widget-row {
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 96px 76px 34px;
+}
+.github-widget-row {
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 96px 76px 34px;
+}
+.widget-label-row {
+  align-items: end;
+  padding: 0 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.settings-static {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-empty-cell {
+  min-width: 0;
 }
 .settings-row input,
 .field-grid input,
@@ -1215,6 +1436,29 @@ body[data-view-mode=zen] .launch-panel {
 .settings-footer {
   margin-top: 22px;
 }
+.settings-credit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: rgba(243, 243, 248, 0.58);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
+}
+.settings-credit a {
+  color: rgba(243, 243, 248, 0.82);
+  text-decoration: none;
+}
+.settings-credit a:hover,
+.settings-credit a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
 
 /* src/styles/responsive.css */
 @media (min-width: 1600px) {
@@ -1297,11 +1541,16 @@ body[data-view-mode=zen] .launch-panel {
     width: min(100vw - 30px, var(--page-max));
   }
   .visit-list,
+  .news-list,
   .github-trending-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .engine-row,
   .quick-row,
+  .widget-row,
+  .homer-widget-row,
+  .github-widget-row,
+  .news-widget-row,
   .field-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1332,9 +1581,14 @@ body[data-view-mode=zen] .launch-panel {
   .search-row,
   .visit-list,
   .services-grid,
+  .news-list,
   .github-trending-list,
   .engine-row,
   .quick-row,
+  .widget-row,
+  .homer-widget-row,
+  .github-widget-row,
+  .news-widget-row,
   .field-grid {
     grid-template-columns: 1fr;
   }
@@ -1408,6 +1662,7 @@ body[data-view-mode=zen] .launch-panel {
     margin-top: 22px;
     padding: 9px 11px;
   }
+  .news-widget,
   .github-trending {
     width: 100%;
     margin-top: 28px;

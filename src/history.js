@@ -14,9 +14,10 @@ export async function addVisitHistoryItem(app, item) {
     return;
   }
   normalized.visitedAt = Date.now();
+  const normalizedKey = normalizeUrlKey(normalized.url);
   app.visitHistory = [
     normalized,
-    ...app.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url)),
+    ...app.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizedKey),
   ].slice(0, VISIT_HISTORY_LIMIT);
   app.renderVisitPanels();
   if (hasBrowserHistoryApi()) {
@@ -49,7 +50,16 @@ export async function loadVisitHistory() {
 }
 
 export async function refreshVisitHistory(app) {
-  const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits(app)]);
+  if (app.localPatch?.visits?.showRecent === false && app.localPatch?.visits?.showFrequent === false) {
+    app.visitHistory = [];
+    app.frequentVisits = [];
+    app.renderVisitPanels();
+    return;
+  }
+  const [nextHistory, nextFrequent] = await Promise.all([
+    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+    app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : [],
+  ]);
   if (!nextHistory.length && !app.visitHistory.length && !nextFrequent.length && !app.frequentVisits.length) {
     return;
   }

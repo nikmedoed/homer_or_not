@@ -1,6 +1,17 @@
 import { LOCAL_AREA } from "./constants.js";
 import { LOCALE } from "./i18n.js";
 
+const TIME_FORMATTER = new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 export function byId(id) {
   const node = document.getElementById(id);
   if (!node) {
@@ -67,10 +78,7 @@ export function formatFrequentMeta(item) {
 
 export function formatTime(timestamp) {
   try {
-    return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(timestamp));
+    return TIME_FORMATTER.format(new Date(timestamp));
   } catch {
     return "";
   }
@@ -78,12 +86,7 @@ export function formatTime(timestamp) {
 
 export function formatDateTime(timestamp) {
   try {
-    return new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(timestamp));
+    return DATE_TIME_FORMATTER.format(new Date(timestamp));
   } catch {
     return "";
   }
@@ -178,25 +181,38 @@ export async function fetchWithTimeout(url, timeoutMs, options = {}) {
 }
 
 export async function storageGet(key, area = LOCAL_AREA) {
+  const values = await storageGetMany([key], area);
+  return values[key] ?? null;
+}
+
+export async function storageGetMany(keys, area = LOCAL_AREA) {
+  const list = Array.isArray(keys) ? keys : [keys];
   const chromeApi = globalThis.chrome;
   const storageArea = chromeApi?.storage?.[area] || chromeApi?.storage?.local;
   if (storageArea) {
     return await new Promise((resolve) => {
-      storageArea.get([key], (result) => {
+      storageArea.get(list, (result) => {
         if (chromeApi.runtime.lastError) {
-          resolve(null);
+          resolve({});
           return;
         }
-        resolve(result?.[key] ?? null);
+        resolve(result || {});
       });
     });
   }
-  try {
-    const raw = globalThis.localStorage?.getItem(`${area}:${key}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+  const out = {};
+  for (const key of list) {
+    out[key] = null;
   }
+  for (const key of list) {
+    try {
+      const raw = globalThis.localStorage?.getItem(`${area}:${key}`);
+      out[key] = raw ? JSON.parse(raw) : null;
+    } catch {
+      out[key] = null;
+    }
+  }
+  return out;
 }
 
 export async function storageSet(key, value, area = LOCAL_AREA) {

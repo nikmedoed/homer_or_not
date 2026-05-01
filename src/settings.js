@@ -1,13 +1,17 @@
 import { FALLBACK_CONFIG } from "./default-config.js";
 import { deriveHomerEndpoints } from "./homer.js";
 import { t } from "./i18n.js";
+import { WIDGET_LABEL_KEYS } from "./layout.js";
 import {
   createSyncedState,
+  getNewsWidgetId,
   normalizeGitHubTrendingSettings,
   normalizeLocalPatch,
+  normalizeNewsSettings,
   normalizeState,
   normalizeWeatherSettings,
   normalizeVisitSettings,
+  normalizeWidgetOrder,
 } from "./state.js";
 import { clone, isHttpUrl, makeId } from "./utils.js";
 
@@ -16,7 +20,7 @@ export function openSettings(app) {
   app.localPatchDraft = clone(app.localPatch);
   renderSettings(app);
   app.refs.settingsOverlay.classList.remove("hidden");
-  app.refs.homerUrlInput.focus();
+  app.refs.widgetRows.querySelector("input")?.focus();
 }
 
 export function closeSettings(app) {
@@ -31,19 +35,126 @@ export function renderSettings(app) {
   }
   renderEngineSettings(app);
   renderQuickLinkSettings(app);
-  app.refs.homerUrlInput.value = app.settingsDraft.homer.url;
-  app.refs.homerDisabledInput.checked = app.localPatchDraft?.homer?.disabled === true;
+  renderWidgetSettings(app);
   app.refs.topWeatherEnabledInput.checked = app.localPatchDraft?.weather?.topDisabled !== true;
-  app.refs.weatherCardEnabledInput.checked = app.localPatchDraft?.weather?.cardDisabled !== true;
   app.refs.weatherLocationInput.value = app.localPatchDraft?.weather?.locationName || "";
   app.refs.topWeatherPlacementInput.value = app.settingsDraft.weather.topWidgetPlacement;
-  app.refs.githubTrendingEnabledInput.checked = app.localPatchDraft?.githubTrending?.disabled !== true;
-  app.refs.githubTrendingExcludeInput.value = app.settingsDraft.githubTrending.excludedTerms.join(", ");
-  app.refs.githubTrendingSyncIntervalInput.value = String(app.settingsDraft.githubTrending.syncIntervalMinutes);
   app.refs.showFrequentVisitsInput.checked = app.localPatchDraft?.visits?.showFrequent !== false;
   app.refs.showRecentVisitsInput.checked = app.localPatchDraft?.visits?.showRecent !== false;
   app.refs.frequentHistoryPoolInput.value = String(app.settingsDraft.visits.frequentHistoryPool);
   app.refs.frequentMinVisitsInput.value = String(app.settingsDraft.visits.frequentMinVisits);
+}
+
+function renderWidgetSettings(app) {
+  const { refs } = app;
+  const localPatchDraft = ensureLocalPatchDraft(app);
+  const order = normalizeWidgetOrder(localPatchDraft.widgets?.order, app.settingsDraft);
+  localPatchDraft.widgets.order = order;
+  refs.widgetRows.replaceChildren();
+  refs.widgetRows.append(createWidgetHeaderRow());
+  for (const [index, id] of order.entries()) {
+    const row = document.createElement("div");
+    row.className = "settings-row widget-row";
+    const dragHandle = createDragHandle();
+    attachReorderHandlers(row, dragHandle, order, index, () => {
+      localPatchDraft.widgets.order = order;
+      renderSettings(app);
+    });
+
+    const enabledWrap = createCheckField(t("localEnabled"), isWidgetEnabled(localPatchDraft, id));
+
+    const source = getNewsSourceForWidget(app, id);
+    if (source) {
+      row.classList.add("news-widget-row");
+      const title = source.type === "rss" ? createInput(t("inputTitle"), source.title) : createStaticCell(source.title);
+      const url = createInput("URL", source.url, "url");
+      const interval = createInput(t("newsSyncInterval"), source.syncIntervalMinutes, "number");
+      interval.min = "15";
+      interval.max = "1440";
+      interval.step = "15";
+      const remove = source.type === "rss" ? createSmallButton("×", t("remove")) : createEmptyCell();
+
+      if (source.type === "rss") {
+        title.addEventListener("input", () => {
+          source.title = title.value;
+        });
+        remove.addEventListener("click", () => {
+          app.settingsDraft.news.sources = app.settingsDraft.news.sources.filter((item) => item.id !== source.id);
+          updateDisabledId(localPatchDraft.news.disabledFeedIds, source.id, false);
+          localPatchDraft.widgets.order = normalizeWidgetOrder(localPatchDraft.widgets?.order, app.settingsDraft);
+          renderSettings(app);
+        });
+      }
+      url.addEventListener("input", () => {
+        source.url = url.value;
+      });
+      interval.addEventListener("input", () => {
+        source.syncIntervalMinutes = interval.value;
+      });
+      enabledWrap.input.addEventListener("change", () => {
+        source.enabled = enabledWrap.input.checked;
+        setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+        renderSettings(app);
+      });
+
+      row.append(dragHandle, title, url, interval, enabledWrap.label, remove);
+    } else if (id === "services") {
+      row.classList.add("homer-widget-row");
+      const name = document.createElement("strong");
+      name.textContent = getWidgetLabel(app, id);
+      const url = createInput("URL", app.settingsDraft.homer.url, "url");
+      url.placeholder = "http://192.168.1.28/";
+      url.addEventListener("input", () => {
+        app.settingsDraft.homer.url = url.value;
+      });
+      enabledWrap.input.addEventListener("change", () => {
+        setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+        renderSettings(app);
+      });
+      row.append(dragHandle, name, url, createEmptyCell(), enabledWrap.label, createEmptyCell());
+    } else if (id === "githubTrending") {
+      row.classList.add("github-widget-row");
+      const name = document.createElement("strong");
+      name.textContent = getWidgetLabel(app, id);
+      const interval = createInput(t("githubTrendingSyncInterval"), app.settingsDraft.githubTrending.syncIntervalMinutes, "number");
+      interval.min = "15";
+      interval.max = "1440";
+      interval.step = "15";
+      const exclude = createInput(t("githubTrendingExcludedTerms"), app.settingsDraft.githubTrending.excludedTerms.join(", "));
+      exclude.placeholder = t("githubTrendingExcludedTermsPlaceholder");
+      interval.addEventListener("input", () => {
+        app.settingsDraft.githubTrending.syncIntervalMinutes = interval.value;
+      });
+      exclude.addEventListener("input", () => {
+        app.settingsDraft.githubTrending.excludedTerms = exclude.value;
+      });
+      enabledWrap.input.addEventListener("change", () => {
+        setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+        renderSettings(app);
+      });
+      row.append(dragHandle, name, exclude, interval, enabledWrap.label, createEmptyCell());
+    } else {
+      enabledWrap.input.addEventListener("change", () => {
+        setWidgetEnabled(localPatchDraft, id, enabledWrap.input.checked);
+        renderSettings(app);
+      });
+      const name = document.createElement("strong");
+      name.textContent = getWidgetLabel(app, id);
+      row.append(dragHandle, name, createEmptyCell(), createEmptyCell(), enabledWrap.label, createEmptyCell());
+    }
+    refs.widgetRows.append(row);
+  }
+}
+
+function createWidgetHeaderRow() {
+  const row = document.createElement("div");
+  row.className = "settings-row widget-row widget-label-row";
+  for (const text of ["", t("widgetName"), t("widgetConfig"), t("widgetCache"), t("widgetVisible"), ""]) {
+    const cell = document.createElement("span");
+    cell.textContent = text;
+    row.append(cell);
+  }
+  return row;
 }
 
 function renderEngineSettings(app) {
@@ -258,6 +369,10 @@ export function validateSettingsDraft(app) {
   if (nextHomer.url && !deriveHomerEndpoints(nextHomer.url)) {
     return { ok: false, error: t("homerUrlInvalid") };
   }
+  const nextNews = readNewsDraft(app);
+  if (app.settingsDraft.news.sources.some((source) => source.url && !isHttpUrl(source.url))) {
+    return { ok: false, error: t("newsSourceBadUrl") };
+  }
 
   return {
     ok: true,
@@ -273,6 +388,7 @@ export function validateSettingsDraft(app) {
       visits: readVisitsDraft(app),
       weather: readWeatherDraft(app),
       githubTrending: readGitHubTrendingDraft(app),
+      news: nextNews,
     },
     localPatch: normalizeLocalPatch(
       {
@@ -284,19 +400,28 @@ export function validateSettingsDraft(app) {
             cleanedEngines[0].id,
         },
         homer: {
-          disabled: app.refs.homerDisabledInput.checked,
+          disabled: ensureLocalPatchDraft(app).homer.disabled,
         },
         weather: {
           topDisabled: !app.refs.topWeatherEnabledInput.checked,
-          cardDisabled: !app.refs.weatherCardEnabledInput.checked,
+          cardDisabled: true,
           locationName: app.refs.weatherLocationInput.value,
         },
         githubTrending: {
-          disabled: !app.refs.githubTrendingEnabledInput.checked,
+          disabled: ensureLocalPatchDraft(app).githubTrending.disabled,
+        },
+        news: {
+          disabledFeedIds: ensureLocalPatchDraft(app).news.disabledFeedIds,
         },
         visits: {
           showFrequent: app.refs.showFrequentVisitsInput.checked,
           showRecent: app.refs.showRecentVisitsInput.checked,
+        },
+        widgets: {
+          order: normalizeWidgetOrder(ensureLocalPatchDraft(app).widgets?.order, {
+            ...settingsDraft,
+            news: nextNews,
+          }),
         },
       },
       {
@@ -309,6 +434,7 @@ export function validateSettingsDraft(app) {
         visits: readVisitsDraft(app),
         weather: readWeatherDraft(app),
         githubTrending: readGitHubTrendingDraft(app),
+        news: nextNews,
       },
     ),
   };
@@ -316,7 +442,7 @@ export function validateSettingsDraft(app) {
 
 function readHomerDraft(app) {
   return {
-    url: app.refs.homerUrlInput.value.trim(),
+    url: app.settingsDraft.homer.url.trim(),
   };
 }
 
@@ -342,10 +468,17 @@ function readWeatherDraft(app) {
 function readGitHubTrendingDraft(app) {
   return normalizeGitHubTrendingSettings(
     {
-      excludedTerms: app.refs.githubTrendingExcludeInput.value,
-      syncIntervalMinutes: app.refs.githubTrendingSyncIntervalInput.value,
+      excludedTerms: app.settingsDraft.githubTrending.excludedTerms,
+      syncIntervalMinutes: app.settingsDraft.githubTrending.syncIntervalMinutes,
     },
     FALLBACK_CONFIG.githubTrending,
+  );
+}
+
+function readNewsDraft(app) {
+  return normalizeNewsSettings(
+    app.settingsDraft.news,
+    FALLBACK_CONFIG.news,
   );
 }
 
@@ -382,6 +515,20 @@ function createSmallButton(text, title) {
   return button;
 }
 
+function createStaticCell(text) {
+  const cell = document.createElement("strong");
+  cell.className = "settings-static";
+  cell.textContent = text;
+  return cell;
+}
+
+function createEmptyCell() {
+  const cell = document.createElement("span");
+  cell.className = "settings-empty-cell";
+  cell.setAttribute("aria-hidden", "true");
+  return cell;
+}
+
 function ensureLocalPatchDraft(app) {
   if (!app.localPatchDraft) {
     app.localPatchDraft = normalizeLocalPatch(null, app.settingsDraft);
@@ -402,4 +549,48 @@ function updateDisabledId(list, id, disabled) {
 
 function getFirstEnabledEngineId(settingsDraft, localPatchDraft) {
   return settingsDraft.search.engines.find((engine) => !localPatchDraft.search.disabledEngineIds.includes(engine.id))?.id || "";
+}
+
+function isWidgetEnabled(localPatch, id) {
+  if (id === "services") {
+    return localPatch.homer?.disabled !== true;
+  }
+  if (id.startsWith("news:")) {
+    return !localPatch.news?.disabledFeedIds?.includes(id.slice("news:".length));
+  }
+  if (id === "githubTrending") {
+    return localPatch.githubTrending?.disabled !== true;
+  }
+  if (id === "weather") {
+    return localPatch.weather?.cardDisabled !== true;
+  }
+  return true;
+}
+
+function setWidgetEnabled(localPatch, id, enabled) {
+  if (id === "services") {
+    localPatch.homer.disabled = !enabled;
+  } else if (id.startsWith("news:")) {
+    updateDisabledId(localPatch.news.disabledFeedIds, id.slice("news:".length), !enabled);
+  } else if (id === "githubTrending") {
+    localPatch.githubTrending.disabled = !enabled;
+  } else if (id === "weather") {
+    localPatch.weather.cardDisabled = !enabled;
+  }
+}
+
+function getWidgetLabel(app, id) {
+  if (id.startsWith("news:")) {
+    const sourceId = id.slice("news:".length);
+    return app.settingsDraft.news.sources.find((source) => getNewsWidgetId(source.id) === getNewsWidgetId(sourceId))?.title || sourceId;
+  }
+  return t(WIDGET_LABEL_KEYS[id] || id);
+}
+
+function getNewsSourceForWidget(app, id) {
+  if (!id.startsWith("news:")) {
+    return null;
+  }
+  const sourceId = id.slice("news:".length);
+  return app.settingsDraft.news.sources.find((source) => getNewsWidgetId(source.id) === getNewsWidgetId(sourceId)) || null;
 }

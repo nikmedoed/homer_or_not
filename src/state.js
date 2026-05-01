@@ -3,6 +3,9 @@ import { FALLBACK_CONFIG } from "./default-config.js";
 import { normalizeServiceGroups } from "./homer.js";
 import { clampInt, clone, isHttpUrl, makeId, normalizeUrlKey, toDomain, truncateHistoryTitle } from "./utils.js";
 
+const LEGACY_DEFAULT_NEWS_SOURCE_IDS = ["hacker-news", "reddit-dev", "habr", "vc"];
+const NEWS_SOURCE_MAX_ITEMS = 60;
+
 export function normalizeBootConfig(raw) {
   const fallback = clone(FALLBACK_CONFIG);
   const source = raw && typeof raw === "object" ? raw : {};
@@ -21,6 +24,7 @@ export function normalizeBootConfig(raw) {
     visits: normalizeVisitSettings(source.visits, fallback.visits),
     weather: normalizeWeatherSettings(source.weather, fallback.weather),
     githubTrending: normalizeGitHubTrendingSettings(source.githubTrending, fallback.githubTrending),
+    news: normalizeNewsSettings(source.news, fallback.news),
     services: normalizeServiceGroups(source.services, ""),
   };
 }
@@ -33,6 +37,7 @@ export function createDefaultState(baseConfig) {
     visits: clone(baseConfig.visits),
     weather: clone(baseConfig.weather),
     githubTrending: clone(baseConfig.githubTrending),
+    news: clone(baseConfig.news),
   };
 }
 
@@ -57,9 +62,15 @@ export function createDefaultLocalPatch() {
     githubTrending: {
       disabled: false,
     },
+    news: {
+      disabledFeedIds: [],
+    },
     visits: {
       showFrequent: true,
       showRecent: true,
+    },
+    widgets: {
+      order: getDefaultWidgetOrder(FALLBACK_CONFIG),
     },
   };
 }
@@ -76,6 +87,7 @@ export function normalizeState(raw, baseConfig) {
     visits: normalizeVisitSettings(raw.visits, base.visits),
     weather: normalizeWeatherSettings(raw.weather, base.weather),
     githubTrending: normalizeGitHubTrendingSettings(raw.githubTrending, base.githubTrending),
+    news: normalizeNewsSettings(raw.news, base.news),
   };
 }
 
@@ -95,6 +107,7 @@ export function createSyncedState(state) {
     visits: clone(state.visits),
     weather: clone(state.weather),
     githubTrending: clone(state.githubTrending),
+    news: clone(state.news),
   };
 }
 
@@ -132,15 +145,61 @@ export function normalizeLocalPatch(raw, state) {
     githubTrending: {
       disabled: source.githubTrending?.disabled === true,
     },
+    news: {
+      disabledFeedIds:
+        source.news?.disabled === true
+          ? state.news.sources.map((feed) => feed.id)
+          : normalizeIdList(
+              source.news?.disabledFeedIds,
+              new Set(state.news.sources.map((feed) => feed.id)),
+            ),
+    },
     visits: {
       showFrequent: source.visits?.showFrequent !== false,
       showRecent: source.visits?.showRecent !== false,
+    },
+    widgets: {
+      order: normalizeWidgetOrder(source.widgets?.order, state),
     },
   };
 }
 
 export function normalizeViewMode(value) {
   return ["full", "base", "zen"].includes(value) ? value : "full";
+}
+
+export function normalizeWidgetOrder(raw, state = FALLBACK_CONFIG) {
+  const allowed = getDefaultWidgetOrder(state);
+  const source = Array.isArray(raw) ? raw : [];
+  const seen = new Set();
+  const out = [];
+  for (const value of source) {
+    if (allowed.includes(value) && !seen.has(value)) {
+      seen.add(value);
+      out.push(value);
+    }
+  }
+  for (const [allowedIndex, id] of allowed.entries()) {
+    if (!seen.has(id)) {
+      const insertAt = out.findIndex((existing) => allowed.indexOf(existing) > allowedIndex);
+      if (insertAt === -1) {
+        out.push(id);
+      } else {
+        out.splice(insertAt, 0, id);
+      }
+      seen.add(id);
+    }
+  }
+  return out;
+}
+
+export function getDefaultWidgetOrder(state = FALLBACK_CONFIG) {
+  const newsIds = (state.news?.sources || []).map((source) => getNewsWidgetId(source.id));
+  return ["services", "githubTrending", ...newsIds];
+}
+
+export function getNewsWidgetId(sourceId) {
+  return `news:${sourceId}`;
 }
 
 export function applyLocalPatch(state, localPatch) {
@@ -258,6 +317,93 @@ export function normalizeGitHubTrendingSettings(raw, fallback) {
     excludedTerms: normalizeGitHubTrendingExcludedTerms(raw?.excludedTerms, base.excludedTerms),
     syncIntervalMinutes: clampInt(raw?.syncIntervalMinutes, 15, 1440, base.syncIntervalMinutes),
   };
+}
+
+export function normalizeNewsSettings(raw, fallback) {
+  const base = fallback || FALLBACK_CONFIG.news;
+  const fallbackSources = Array.isArray(base.sources) ? base.sources : [];
+  const rawSources = Array.isArray(raw?.sources) ? raw.sources : fallbackSources;
+  const sourceVersion = Number.isFinite(raw?.defaultSourcesVersion) ? raw.defaultSourcesVersion : 0;
+  const targetVersion = Number.isFinite(base.defaultSourcesVersion) ? base.defaultSourcesVersion : sourceVersion;
+  let sources = rawSources.map((source) => normalizeNewsSource(source, fallbackSources)).filter(Boolean);
+  if (Array.isArray(raw?.sources)) {
+    sources = upgradeDefaultNewsSources(sources, fallbackSources, sourceVersion, targetVersion);
+  }
+  if (!sources.length) {
+    sources.push(...fallbackSources.map((source) => normalizeNewsSource(source, fallbackSources)).filter(Boolean));
+  }
+  return {
+    defaultSourcesVersion: targetVersion,
+    sources,
+  };
+}
+
+function upgradeDefaultNewsSources(sources, fallbackSources, sourceVersion, targetVersion) {
+  if (sourceVersion >= targetVersion) {
+    return sources;
+  }
+  const existingIds = new Set(sources.map((source) => source.id));
+  const hasLegacyDefaults = LEGACY_DEFAULT_NEWS_SOURCE_IDS.every((id) => existingIds.has(id));
+  if (!hasLegacyDefaults) {
+    return sources;
+  }
+  const next = sources.map((source) => upgradeDefaultNewsSource(source, fallbackSources));
+  for (const source of fallbackSources) {
+    if (existingIds.has(source.id)) {
+      continue;
+    }
+    const normalized = normalizeNewsSource(source, fallbackSources);
+    if (normalized) {
+      next.push(normalized);
+      existingIds.add(normalized.id);
+    }
+  }
+  return next;
+}
+
+function upgradeDefaultNewsSource(source, fallbackSources) {
+  const fallback = fallbackSources.find((item) => item.id === source.id);
+  if (!fallback) {
+    return source;
+  }
+  return {
+    ...source,
+    maxItems:
+      Number.isFinite(fallback.maxItems) && fallback.maxItems > source.maxItems ? fallback.maxItems : source.maxItems,
+  };
+}
+
+export function normalizeNewsSource(raw, fallbackSources = []) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : makeId("news");
+  const fallback = fallbackSources.find((source) => source.id === id) || {};
+  const title = typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : fallback.title || "";
+  const type = ["hackerNews", "reddit", "rss", "shirMan"].includes(raw.type) ? raw.type : fallback.type || "";
+  const url = typeof raw.url === "string" && raw.url.trim() ? raw.url.trim() : fallback.url || "";
+  if (!title || !type || !isHttpUrl(url)) {
+    return null;
+  }
+  const source = {
+    id,
+    title,
+    type,
+    url,
+    enabled: raw.enabled !== false,
+    syncIntervalMinutes: clampInt(raw.syncIntervalMinutes, 15, 1440, fallback.syncIntervalMinutes || 45),
+    maxItems: clampInt(raw.maxItems, 1, NEWS_SOURCE_MAX_ITEMS, fallback.maxItems || 12),
+  };
+  const sourceKey =
+    typeof raw.sourceKey === "string" && raw.sourceKey.trim()
+      ? raw.sourceKey.trim()
+      : typeof fallback.sourceKey === "string"
+        ? fallback.sourceKey
+        : "";
+  if (sourceKey) {
+    source.sourceKey = sourceKey;
+  }
+  return source;
 }
 
 export function normalizeGitHubTrendingExcludedTerms(raw, fallback = []) {

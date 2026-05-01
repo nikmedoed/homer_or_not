@@ -1,0 +1,197 @@
+.news-widget {
+  width: 100%;
+  min-width: 0;
+  margin: 42px 0 0;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.news-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.news-header h2 {
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-refresh {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 15px;
+}
+
+.news-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px 14px;
+  align-items: start;
+}
+
+.news-row {
+  min-width: 0;
+  display: block;
+  align-items: start;
+  padding: 9px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.news-row-has-thumb {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+}
+
+.news-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.news-body {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.news-thumb {
+  width: 54px;
+  height: 54px;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.news-thumb img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.news-widget-source-midjourney .news-list {
+  display: block;
+  column-width: 156px;
+  column-gap: 12px;
+}
+
+.news-row-source-midjourney,
+.news-row-source-midjourney.news-row-has-thumb {
+  display: block;
+  break-inside: avoid;
+  padding: 0;
+  margin: 0 0 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.news-row-source-midjourney .news-thumb {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+.news-row-source-midjourney .news-thumb img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.news-row-source-midjourney .news-body {
+  padding: 8px;
+}
+
+.news-row-source-midjourney .news-title {
+  display: -webkit-box;
+  font-size: 12px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.news-title-line,
+.news-title,
+.news-title-time,
+.news-description,
+.news-item-meta,
+.news-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.news-title-line {
+  display: block;
+}
+
+.news-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.news-title-time {
+  display: inline;
+  margin-left: 7px;
+  color: rgba(243, 243, 248, 0.5);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.news-description {
+  display: -webkit-box;
+  color: rgba(243, 243, 248, 0.72);
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.news-item-meta {
+  color: rgba(243, 243, 248, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-meta {
+  flex: 0 1 auto;
+  margin-left: auto;
+  color: rgba(243, 243, 248, 0.58);
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-message,
+.feed-message {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}

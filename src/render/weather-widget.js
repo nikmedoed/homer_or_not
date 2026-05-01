@@ -17,7 +17,7 @@ export function renderWeatherWidget(app) {
     rain: refs.weatherRain,
     updated: refs.weatherUpdated,
     refreshButton: refs.weatherRefreshButton,
-    disabled: app.localPatch?.weather?.cardDisabled === true,
+    disabled: true,
   });
   renderWeatherBlock(app, {
     widget: refs.topWeatherWidget,

@@ -69,12 +69,12 @@ export async function refreshQuickLinkMetadata(app, { force }) {
       iconSize: meta.iconDataUrl ? meta.iconSize : cached?.iconSize || 0,
     };
     changed = true;
-    app.renderQuickLinks();
   }
 
   if (changed) {
     pruneQuickLinkMeta(app, seen);
     await storageSet(QUICK_LINK_META_KEY, app.quickLinkMeta, LOCAL_AREA);
+    app.renderQuickLinks();
   }
 }
 
@@ -103,12 +103,12 @@ export async function refreshSearchEngineMetadata(app, { force }) {
       iconSize: meta.iconDataUrl ? meta.iconSize : cached?.iconSize || 0,
     };
     changed = true;
-    app.renderSearchButtons();
   }
 
   if (changed) {
     pruneSearchEngineMeta(app, seen);
     await storageSet(SEARCH_ENGINE_META_KEY, app.searchEngineMeta, LOCAL_AREA);
+    app.renderSearchButtons();
   }
 }
 

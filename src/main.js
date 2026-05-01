@@ -5,6 +5,7 @@ import {
   LOCAL_AREA,
   LOCAL_PATCH_KEY,
   META_KEY,
+  NEWS_FEED_CACHE_KEY,
   QUICK_LINK_META_KEY,
   SEARCH_ENGINE_META_KEY,
   STATE_KEY,
@@ -17,9 +18,11 @@ import { normalizeHomerCache, normalizeSyncMeta } from "./homer.js";
 import { applyLocalization, t } from "./i18n.js";
 import { addVisitHistoryItem, loadFrequentVisits, loadVisitHistory, refreshVisitHistory } from "./history.js";
 import { refreshQuickLinkMetadata, refreshSearchEngineMetadata } from "./metadata.js";
+import { getVisibleNewsSources, normalizeNewsFeedCache, syncNewsFeeds } from "./news.js";
 import {
   renderAll,
   renderGitHubTrending,
+  renderNewsFeedWidgets,
   renderQuickLinks,
   renderSearchButtons,
   renderVisitPanels,
@@ -42,6 +45,7 @@ import {
   normalizeSearchEngineMeta,
   normalizeSyncedState,
   normalizeViewMode,
+  normalizeWidgetOrder,
   applyLocalPatch,
   getVisibleSearchEngines,
 } from "./state.js";
@@ -54,6 +58,7 @@ import {
   makeId,
   normalizeUrlKey,
   storageGet,
+  storageGetMany,
   storageRemove,
   storageSet,
   toDomain,
@@ -73,9 +78,12 @@ const app = {
   weatherStatus: null,
   githubTrendingCache: null,
   githubTrendingStatus: null,
+  newsFeedCache: null,
+  newsStatuses: {},
   visitHistory: [],
   frequentVisits: [],
   settingsDraft: null,
+  foregroundRefreshPromise: null,
 };
 
 app.state = createDefaultState(app.baseConfig);
@@ -89,6 +97,8 @@ app.renderSearchButtons = () => renderSearchButtons(app);
 app.renderVisitPanels = () => renderVisitPanels(app);
 app.renderWeatherWidget = () => renderWeatherWidget(app);
 app.renderGitHubTrending = () => renderGitHubTrending(app);
+app.renderNewsFeedWidgets = () => renderNewsFeedWidgets(app);
+app.syncNewsFeed = syncNewsFeedById;
 app.runSearch = runSearch;
 app.setViewMode = setViewMode;
 
@@ -101,20 +111,33 @@ async function init() {
   applyLocalization();
   bindEvents();
   await loadSettingsState();
-  app.homerCache = normalizeHomerCache(await storageGet(CACHE_KEY));
-  app.syncMeta = normalizeSyncMeta(await storageGet(META_KEY));
-  app.quickLinkMeta = normalizeQuickLinkMeta(await storageGet(QUICK_LINK_META_KEY));
-  app.searchEngineMeta = normalizeSearchEngineMeta(await storageGet(SEARCH_ENGINE_META_KEY));
-  app.weatherCache = normalizeWeatherCache(await storageGet(WEATHER_CACHE_KEY));
-  app.githubTrendingCache = normalizeGitHubTrendingCache(await storageGet(GITHUB_TRENDING_CACHE_KEY));
-  app.visitHistory = await loadVisitHistory();
-  app.frequentVisits = await loadFrequentVisits(app);
+  const localCache = await storageGetMany([
+    CACHE_KEY,
+    META_KEY,
+    QUICK_LINK_META_KEY,
+    SEARCH_ENGINE_META_KEY,
+    WEATHER_CACHE_KEY,
+    GITHUB_TRENDING_CACHE_KEY,
+    NEWS_FEED_CACHE_KEY,
+  ]);
+  app.homerCache = normalizeHomerCache(localCache[CACHE_KEY]);
+  app.syncMeta = normalizeSyncMeta(localCache[META_KEY]);
+  app.quickLinkMeta = normalizeQuickLinkMeta(localCache[QUICK_LINK_META_KEY]);
+  app.searchEngineMeta = normalizeSearchEngineMeta(localCache[SEARCH_ENGINE_META_KEY]);
+  app.weatherCache = normalizeWeatherCache(localCache[WEATHER_CACHE_KEY]);
+  app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
+  app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
+  [app.visitHistory, app.frequentVisits] = await Promise.all([
+    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+    app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : [],
+  ]);
   applyTheme(app);
   renderViewMode(app);
   renderAll(app);
   void refreshSearchEngineMetadata(app, { force: false });
   void refreshQuickLinkMetadata(app, { force: false });
   void syncWeather(app, { force: false });
+  void syncNewsFeeds(app, { force: false });
   void syncGitHubTrending(app, { force: false });
   await syncHomer(app, { force: false });
 }
@@ -161,6 +184,7 @@ function bindRefs() {
   refs.githubTrendingList = byId("githubTrendingList");
   refs.githubTrendingMeta = byId("githubTrendingMeta");
   refs.githubTrendingRefreshButton = byId("githubTrendingRefreshButton");
+  refs.newsWidgetNodes = {};
   refs.frequentPanel = byId("frequentPanel");
   refs.frequentList = byId("frequentList");
   refs.historyPanel = byId("historyPanel");
@@ -171,15 +195,11 @@ function bindRefs() {
   refs.quickLinkRows = byId("quickLinkRows");
   refs.addEngineButton = byId("addEngineButton");
   refs.addQuickLinkButton = byId("addQuickLinkButton");
-  refs.homerUrlInput = byId("homerUrlInput");
-  refs.homerDisabledInput = byId("homerDisabledInput");
+  refs.addRssButton = byId("addRssButton");
   refs.topWeatherEnabledInput = byId("topWeatherEnabledInput");
-  refs.weatherCardEnabledInput = byId("weatherCardEnabledInput");
   refs.weatherLocationInput = byId("weatherLocationInput");
   refs.topWeatherPlacementInput = byId("topWeatherPlacementInput");
-  refs.githubTrendingEnabledInput = byId("githubTrendingEnabledInput");
-  refs.githubTrendingExcludeInput = byId("githubTrendingExcludeInput");
-  refs.githubTrendingSyncIntervalInput = byId("githubTrendingSyncIntervalInput");
+  refs.widgetRows = byId("widgetRows");
   refs.frequentHistoryPoolInput = byId("frequentHistoryPoolInput");
   refs.frequentMinVisitsInput = byId("frequentMinVisitsInput");
   refs.showFrequentVisitsInput = byId("showFrequentVisitsInput");
@@ -226,13 +246,11 @@ function bindEvents() {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      void refreshVisitHistory(app);
-      void syncWeather(app, { force: false });
+      void refreshForegroundData();
     }
   });
   window.addEventListener("focus", () => {
-    void refreshVisitHistory(app);
-    void syncWeather(app, { force: false });
+    void refreshForegroundData();
   });
   refs.addEngineButton.addEventListener("click", () => {
     if (!app.settingsDraft) {
@@ -256,6 +274,24 @@ function bindEvents() {
     });
     renderSettings(app);
   });
+  refs.addRssButton.addEventListener("click", () => {
+    if (!app.settingsDraft) {
+      return;
+    }
+    const source = {
+      id: makeId("rss"),
+      title: "RSS",
+      type: "rss",
+      url: "",
+      enabled: true,
+      syncIntervalMinutes: 60,
+      maxItems: 12,
+    };
+    app.settingsDraft.news.sources.push(source);
+    app.localPatchDraft = normalizeLocalPatch(app.localPatchDraft, app.settingsDraft);
+    app.localPatchDraft.widgets.order = normalizeWidgetOrder(app.localPatchDraft.widgets?.order, app.settingsDraft);
+    renderSettings(app);
+  });
   refs.exportSettingsButton.addEventListener("click", () => handleExportSettings(app));
   refs.importSettingsInput.addEventListener("change", (event) => {
     void handleImportSettings(app, event);
@@ -265,7 +301,7 @@ function bindEvents() {
 }
 
 async function loadSettingsState() {
-  const syncState = await storageGet(STATE_KEY, SYNC_AREA);
+  const [syncState, rawLocalPatch] = await Promise.all([storageGet(STATE_KEY, SYNC_AREA), storageGet(LOCAL_PATCH_KEY)]);
   let syncedState;
   let shouldPersistSyncedState = false;
   let sourceDefaultEngineId = "";
@@ -286,7 +322,6 @@ async function loadSettingsState() {
     }
   }
 
-  const rawLocalPatch = await storageGet(LOCAL_PATCH_KEY);
   const localPatch = normalizeLocalPatch(rawLocalPatch, syncedState);
   let shouldPersistLocalPatch = !rawLocalPatch;
   if (!rawLocalPatch && sourceDefaultEngineId) {
@@ -315,9 +350,36 @@ async function setViewMode(mode) {
   if (!app.localPatch) {
     app.localPatch = normalizeLocalPatch(null, app.state);
   }
-  app.localPatch.viewMode = normalizeViewMode(mode);
+  const nextMode = normalizeViewMode(mode);
+  if (app.localPatch.viewMode === nextMode) {
+    return;
+  }
+  app.localPatch.viewMode = nextMode;
   renderViewMode(app);
   await persistLocalPatch();
+}
+
+function refreshForegroundData() {
+  if (document.visibilityState !== "visible") {
+    return app.foregroundRefreshPromise || Promise.resolve();
+  }
+  if (!app.foregroundRefreshPromise) {
+    app.foregroundRefreshPromise = Promise.all([
+      refreshVisitHistory(app),
+      syncWeather(app, { force: false }),
+      syncNewsFeeds(app, { force: false }),
+    ]).finally(() => {
+      app.foregroundRefreshPromise = null;
+    });
+  }
+  return app.foregroundRefreshPromise;
+}
+
+function syncNewsFeedById(sourceId, options = {}) {
+  if (!getVisibleNewsSources(app).some((item) => item.id === sourceId)) {
+    return Promise.resolve();
+  }
+  return syncNewsFeeds(app, { ...options, sourceIds: [sourceId] });
 }
 
 function renderViewMode({ refs, localPatch }) {
@@ -409,6 +471,7 @@ async function saveSettings() {
   void refreshSearchEngineMetadata(app, { force: true });
   void refreshQuickLinkMetadata(app, { force: true });
   void syncWeather(app, { force: true });
+  void syncNewsFeeds(app, { force: false });
   void syncGitHubTrending(app, { force: false });
   await syncHomer(app, { force: true });
 }
@@ -428,6 +491,8 @@ async function resetSettings() {
   app.weatherStatus = null;
   app.githubTrendingCache = null;
   app.githubTrendingStatus = null;
+  app.newsFeedCache = null;
+  app.newsStatuses = {};
   app.visitHistory = [];
   app.frequentVisits = [];
   app.settingsDraft = clone(app.state);
@@ -445,6 +510,7 @@ async function resetSettings() {
         HISTORY_KEY,
         WEATHER_CACHE_KEY,
         GITHUB_TRENDING_CACHE_KEY,
+        NEWS_FEED_CACHE_KEY,
       ],
       LOCAL_AREA,
     ),
@@ -454,6 +520,7 @@ async function resetSettings() {
   renderSettings(app);
   void refreshSearchEngineMetadata(app, { force: true });
   void syncWeather(app, { force: true });
+  void syncNewsFeeds(app, { force: true });
   void syncGitHubTrending(app, { force: true });
   await syncHomer(app, { force: true });
 }

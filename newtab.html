@@ -153,17 +153,11 @@
 
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Homer</h2>
+            <h2 data-i18n="centralColumn">Центральная колонка</h2>
           </div>
-          <div class="field-grid">
-            <label>
-              URL
-              <input id="homerUrlInput" type="url" placeholder="http://192.168.1.28/" />
-            </label>
-            <label class="check-field">
-              <input id="homerDisabledInput" type="checkbox" />
-              <span data-i18n="disableHomerLocally">Отключить Homer локально</span>
-            </label>
+          <div id="widgetRows" class="settings-rows"></div>
+          <div class="settings-section-actions">
+            <button id="addRssButton" class="secondary-button" type="button" data-i18n="addRss">Добавить RSS</button>
           </div>
         </section>
 
@@ -185,41 +179,12 @@
               <input id="topWeatherEnabledInput" type="checkbox" />
               <span data-i18n="topWeatherEnabled">Показывать верхнюю погоду</span>
             </label>
-            <label class="check-field">
-              <input id="weatherCardEnabledInput" type="checkbox" />
-              <span data-i18n="weatherCardEnabled">Показывать карточку погоды</span>
-            </label>
             <label>
               <span data-i18n="topWeatherPlacement">Верхняя погода</span>
               <select id="topWeatherPlacementInput">
                 <option value="actions" data-i18n="topWeatherPlacementActions">Как сейчас</option>
                 <option value="center" data-i18n="topWeatherPlacementCenter">По центру экрана</option>
               </select>
-            </label>
-          </div>
-        </section>
-
-        <section class="settings-section">
-          <div class="settings-section-head">
-            <h2 data-i18n="githubTrending">GitHub Trending</h2>
-          </div>
-          <div class="field-grid">
-            <label class="check-field">
-              <input id="githubTrendingEnabledInput" type="checkbox" />
-              <span data-i18n="githubTrendingEnabled">Показывать GitHub Trending</span>
-            </label>
-            <label>
-              <span data-i18n="githubTrendingSyncInterval">Обновлять кеш, минут</span>
-              <input id="githubTrendingSyncIntervalInput" type="number" min="15" max="1440" step="15" />
-            </label>
-            <label>
-              <span data-i18n="githubTrendingExcludedTerms">Исключать слова</span>
-              <input
-                id="githubTrendingExcludeInput"
-                type="text"
-                placeholder="ai, llm, claude, agent"
-                data-i18n-attr="placeholder:githubTrendingExcludedTermsPlaceholder"
-              />
             </label>
           </div>
         </section>
@@ -257,6 +222,11 @@
           <button id="resetButton" class="secondary-button danger-button" type="button" data-i18n="reset">Сбросить</button>
           <button id="saveButton" class="primary-button" type="button" data-i18n="save">Сохранить</button>
         </footer>
+        <div class="settings-credit" aria-label="Автор">
+          <span>Сделал Никита Муромцев</span>
+          <a href="https://nikmedoed.com/" target="_blank" rel="noreferrer">nikmedoed.com</a>
+          <a href="https://x.com/nikmeoded" target="_blank" rel="noreferrer">@nikmeoded</a>
+        </div>
       </div>
     </div>
   </body>
