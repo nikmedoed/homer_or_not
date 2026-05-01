@@ -1482,6 +1482,10 @@ body[data-view-mode=zen] .launch-panel {
   .page-shell::-webkit-scrollbar {
     display: none;
   }
+  .top-actions {
+    right: calc((100vw - var(--center-column-width)) / 2);
+    max-width: var(--center-column-width);
+  }
   .launch-panel {
     width: 100%;
   }
