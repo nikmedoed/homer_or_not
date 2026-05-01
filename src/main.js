@@ -128,7 +128,7 @@ async function init() {
   app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
   app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
   [app.visitHistory, app.frequentVisits] = await Promise.all([
-    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app) : [],
     app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : [],
   ]);
   applyTheme(app);

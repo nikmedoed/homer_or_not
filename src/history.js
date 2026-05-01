@@ -26,17 +26,18 @@ export async function addVisitHistoryItem(app, item) {
   await storageSet(HISTORY_KEY, app.visitHistory, LOCAL_AREA);
 }
 
-export async function loadVisitHistory() {
+export async function loadVisitHistory(app) {
   if (!hasBrowserHistoryApi()) {
     return normalizeVisitHistory(await storageGet(HISTORY_KEY));
   }
+  const settings = normalizeVisitSettings(app?.state?.visits, FALLBACK_CONFIG.visits);
   return await new Promise((resolve) => {
     const chromeApi = globalThis.chrome;
     chromeApi.history.search(
       {
         text: "",
         startTime: 0,
-        maxResults: VISIT_HISTORY_LIMIT * 3,
+        maxResults: settings.frequentHistoryPool,
       },
       (results) => {
         if (chromeApi.runtime.lastError) {
@@ -57,7 +58,7 @@ export async function refreshVisitHistory(app) {
     return;
   }
   const [nextHistory, nextFrequent] = await Promise.all([
-    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app) : [],
     app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : [],
   ]);
   if (!nextHistory.length && !app.visitHistory.length && !nextFrequent.length && !app.frequentVisits.length) {

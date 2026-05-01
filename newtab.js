@@ -2890,17 +2890,18 @@
     }
     await storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
   }
-  async function loadVisitHistory() {
+  async function loadVisitHistory(app2) {
     if (!hasBrowserHistoryApi()) {
       return normalizeVisitHistory(await storageGet(HISTORY_KEY));
     }
+    const settings = normalizeVisitSettings(app2?.state?.visits, FALLBACK_CONFIG.visits);
     return await new Promise((resolve) => {
       const chromeApi = globalThis.chrome;
       chromeApi.history.search(
         {
           text: "",
           startTime: 0,
-          maxResults: VISIT_HISTORY_LIMIT * 3
+          maxResults: settings.frequentHistoryPool
         },
         (results) => {
           if (chromeApi.runtime.lastError) {
@@ -2920,7 +2921,7 @@
       return;
     }
     const [nextHistory, nextFrequent] = await Promise.all([
-      app2.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+      app2.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app2) : [],
       app2.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app2) : []
     ]);
     if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
@@ -4511,7 +4512,7 @@ ${result.error}`);
     app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
     app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
     [app.visitHistory, app.frequentVisits] = await Promise.all([
-      app.localPatch?.visits?.showRecent !== false ? loadVisitHistory() : [],
+      app.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app) : [],
       app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : []
     ]);
     applyTheme(app);
