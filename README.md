@@ -23,16 +23,16 @@ The goal is to have one convenient start page everywhere: at home, at work, on p
 3. Click `Load unpacked`.
 4. Select this repository folder.
 
-The repository root is a valid unpacked extension because the built `newtab.js` is committed. `src/`, `scripts/`, and package files remain in the folder, but Chrome only loads files referenced by `manifest.json` and `newtab.html`.
+The repository root is a valid unpacked extension because the built root assets are committed. `src/`, `scripts/`, and package files remain in the folder, but Chrome only loads files referenced by `manifest.json` and `newtab.html`.
 
 If the extension is installed from a Git checkout, update it with `git pull`, then click `Reload` on the extension card. You do not need to run `npm install` or build commands just to use the checked-out extension.
 
 ## Development
 
-Source code lives in `src/` and is bundled into the root `newtab.js`, which is what `newtab.html` loads.
+Source code lives in `src/`. JavaScript is bundled into the root `newtab.js`; CSS source lives in `src/styles/` and is bundled into the root `styles.css`. Those root files are what `newtab.html` loads.
 
-- `npm run dev` - watch `src/` and rebuild `newtab.js` with a sourcemap while you edit.
-- `npm run build:local` - rebuild the root `newtab.js` once for the unpacked extension.
+- `npm run dev` - watch `src/main.js` and `src/styles/index.css`, rebuilding root assets while you edit.
+- `npm run build:local` - rebuild the root `newtab.js` and `styles.css` once for the unpacked extension.
 - `npm run build` - create a clean, minified extension package next to the repo.
 
 Typical local workflow:
@@ -42,9 +42,9 @@ npm install
 npm run dev
 ```
 
-Then load this repository folder as the unpacked extension. Keep `npm run dev` running while editing files in `src/` or `styles.css`. The watcher updates the root `newtab.js`; after a change, reload the extension card in `chrome://extensions` or open a new tab if Chrome picked up the file change.
+Then load this repository folder as the unpacked extension. Keep `npm run dev` running while editing files in `src/`. The watcher updates the root assets; after a change, reload the extension card in `chrome://extensions` or open a new tab if Chrome picked up the file change.
 
-Do not edit the generated root `newtab.js` directly. Put JavaScript changes in `src/`, then run `npm run build:local` or keep `npm run dev` running.
+Do not edit the generated root `newtab.js` or `styles.css` directly. Put JavaScript and CSS changes in `src/`, then run `npm run build:local` or keep `npm run dev` running.
 
 If you need a clean folder for packaging, run `npm run build` and use the generated `../homer_or_not-release` folder.
 
@@ -58,7 +58,7 @@ The release build copies `manifest.json`, `newtab.html`, `newtab.config.js`, and
 
 ## Commit and Packaging
 
-This repository keeps the root `newtab.js` bundle committed so a fresh checkout can be loaded immediately as an unpacked extension.
+This repository keeps the root `newtab.js` and `styles.css` bundles committed so a fresh checkout can be loaded immediately as an unpacked extension.
 
 Before each commit, the versioned Git hook in `.githooks/pre-commit` runs:
 
@@ -66,7 +66,7 @@ Before each commit, the versioned Git hook in `.githooks/pre-commit` runs:
 npm run build:local
 ```
 
-It then stages the generated root `newtab.js`. The hook is installed by `npm install` through the `prepare` script, which sets Git's `core.hooksPath` to `.githooks`.
+It then stages the generated root assets. The hook is installed by `npm install` through the `prepare` script, which sets Git's `core.hooksPath` to `.githooks`.
 
 Use the repository root for normal unpacked installation and development. Use `../homer_or_not-release` only when you specifically want to package or share a clean extension folder without development files.
 
@@ -76,7 +76,7 @@ Pushing a tag like `v1.2.3` runs the GitHub Actions release workflow. The workfl
 
 - verifies that the tagged commit is reachable from `main`;
 - installs dependencies with `npm ci`;
-- builds the root `newtab.js`;
+- builds the root `newtab.js` and `styles.css`;
 - builds a clean `homer_or_not-release` folder;
 - writes the tag version into the release `manifest.json` as `version: "1.2.3"` and `version_name: "v1.2.3"`;
 - zips that release folder for GitHub download as `homer_or_not-release.zip`;

@@ -1,0 +1,208 @@
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(5, 4, 18, 0.72);
+}
+
+.settings-modal {
+  width: min(1060px, calc(100vw - 28px));
+  max-height: min(860px, calc(100vh - 28px));
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: var(--radius);
+  background: var(--card-strong);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.settings-modal::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-header,
+.settings-section-head,
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-header h1,
+.settings-section h2 {
+  margin: 0;
+  color: #fff;
+}
+
+.settings-header h1 {
+  font-size: 22px;
+}
+
+.settings-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-section h2 {
+  font-size: 16px;
+}
+
+.settings-rows {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.settings-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+}
+
+.engine-row {
+  grid-template-columns: 34px minmax(130px, 1fr) minmax(240px, 2fr) 72px 66px 34px;
+}
+
+.quick-row {
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(220px, 2fr) 72px 34px;
+}
+
+.settings-row input,
+.field-grid input,
+.field-grid select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  outline: 0;
+  background: rgba(6, 5, 18, 0.72);
+  color: #fff;
+}
+
+.settings-row input[type="color"] {
+  padding: 4px;
+}
+
+.settings-row input:focus,
+.field-grid input:focus,
+.field-grid select:focus {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.default-field,
+.check-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.default-field input,
+.check-field input {
+  width: auto;
+  height: auto;
+}
+
+.drag-handle {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  background: rgba(19, 17, 45, 0.7);
+  cursor: grab;
+  line-height: 1;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.drag-handle:hover,
+.dragging .drag-handle {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  background: rgba(38, 35, 83, 0.88);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.settings-row.dragging {
+  opacity: 0.55;
+}
+
+.settings-row.drag-over {
+  outline: 1px solid rgba(255, 255, 255, 0.34);
+  outline-offset: 3px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.field-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.secondary-button,
+.primary-button,
+.row-button {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+.field-grid .check-field {
+  display: inline-flex;
+  align-items: center;
+  align-self: end;
+  min-height: 38px;
+}
+
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.import-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.primary-button {
+  min-width: 120px;
+  background: #3867d6;
+}
+
+.danger-button,
+.row-button {
+  color: #ffd4d4;
+}
+
+.settings-footer {
+  margin-top: 22px;
+}

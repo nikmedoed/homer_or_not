@@ -276,51 +276,6 @@
     services: []
   };
 
-  // src/icons.js
-  var ICONS = {
-    network: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v5m-7 7v-3h14v3M5 20h4v-4H5v4Zm10 0h4v-4h-4v4Zm-5 0h4v-4h-4v4Z"/></svg>',
-    media: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm3 3v8l6-4-6-4Zm9 0h2m-2 4h2m-2 4h2"/></svg>',
-    sync: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5m10.4-2A7.5 7.5 0 0 0 6.2 7.2M4.6 14a7.5 7.5 0 0 0 13.2 3.8"/></svg>',
-    ethernet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h16v5H4v-5Zm2-9h3v9H6V6Zm5 3h3v6h-3V9Zm5-3h3v9h-3V6Z"/></svg>',
-    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3v-9Z"/></svg>'
-  };
-  var ICON_ALIASES = /* @__PURE__ */ new Map([
-    ["fas fa-network-wired", "network"],
-    ["fa-network-wired", "network"],
-    ["fas fa-photo-video", "media"],
-    ["fa-photo-video", "media"],
-    ["fas fa-rotate", "sync"],
-    ["fa-rotate", "sync"],
-    ["fas fa-sync", "sync"],
-    ["fas fa-ethernet", "ethernet"],
-    ["fa-ethernet", "ethernet"],
-    ["fas fa-home", "home"],
-    ["fa-home", "home"]
-  ]);
-  function normalizeSectionIcon(icon, name) {
-    const key = String(icon || "").trim().toLowerCase();
-    if (ICONS[key]) {
-      return key;
-    }
-    if (ICON_ALIASES.has(key)) {
-      return ICON_ALIASES.get(key);
-    }
-    const text = `${key} ${name || ""}`.toLowerCase();
-    if (text.includes("\u043C\u0435\u0434\u0438\u0430") || text.includes("media") || text.includes("photo")) {
-      return "media";
-    }
-    if (text.includes("sync") || text.includes("syncthing") || text.includes("rotate")) {
-      return "sync";
-    }
-    if (text.includes("\u0441\u0435\u0442\u044C") || text.includes("ethernet") || text.includes("router")) {
-      return "ethernet";
-    }
-    if (text.includes("\u0434\u043E\u043C") || text.includes("home")) {
-      return "home";
-    }
-    return "network";
-  }
-
   // src/utils.js
   function byId(id) {
     const node = document.getElementById(id);
@@ -528,6 +483,133 @@
       } catch {
       }
     }
+  }
+
+  // src/render/github-trending-widget.js
+  function renderGitHubTrending(app2) {
+    const { refs } = app2;
+    if (!refs.githubTrending) {
+      return;
+    }
+    if (app2.localPatch?.githubTrending?.disabled) {
+      refs.githubTrending.classList.add("hidden");
+      return;
+    }
+    const status = app2.githubTrendingStatus;
+    const summary = getGitHubTrendingSummary(app2.githubTrendingCache);
+    const hasItems = summary.items.length > 0;
+    refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
+    refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
+    refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
+    refs.githubTrendingList.replaceChildren();
+    if (!hasItems) {
+      const empty = document.createElement("p");
+      empty.className = "github-trending-message";
+      empty.textContent = status?.message || t("githubTrendingUnavailable");
+      refs.githubTrendingList.append(empty);
+      refs.githubTrendingMeta.textContent = t("githubTrendingSource");
+      return;
+    }
+    for (const item of summary.items) {
+      refs.githubTrendingList.append(createGitHubTrendingRow(app2, item));
+    }
+    if (status?.kind === "error") {
+      refs.githubTrendingMeta.textContent = t("githubTrendingStale", summary.updatedAt);
+      refs.githubTrendingMeta.title = [status.message, summary.updatedAtTitle].filter(Boolean).join(" \xB7 ");
+      return;
+    }
+    refs.githubTrendingMeta.textContent = summary.updatedAt ? t("githubTrendingUpdated", summary.updatedAt) : t("githubTrendingSource");
+    refs.githubTrendingMeta.title = summary.updatedAtTitle;
+  }
+  function createGitHubTrendingRow(app2, item) {
+    const anchor = document.createElement("a");
+    anchor.className = "github-trending-row";
+    anchor.href = item.url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.title = item.description || item.fullName;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.fullName,
+        url: item.url,
+        source: "github"
+      });
+    });
+    const avatar = document.createElement("span");
+    avatar.className = "github-trending-avatar";
+    if (item.ownerAvatarUrl) {
+      const image = document.createElement("img");
+      image.src = item.ownerAvatarUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      image.addEventListener("error", () => {
+        image.remove();
+        avatar.textContent = makeInitial(item.name);
+      });
+      avatar.append(image);
+    } else {
+      avatar.textContent = makeInitial(item.name);
+    }
+    const body = document.createElement("span");
+    body.className = "github-trending-body";
+    const title = document.createElement("span");
+    title.className = "github-trending-name";
+    title.textContent = item.fullName;
+    const description = document.createElement("span");
+    description.className = "github-trending-description";
+    description.textContent = item.description || t("githubTrendingNoDescription");
+    const meta = document.createElement("span");
+    meta.className = "github-trending-repo-meta";
+    const stars = formatStars(item.stars);
+    meta.textContent = [stars ? `\u2605 ${stars}` : "", item.language, formatRepositoryAge(item)].filter(Boolean).join(" \xB7 ");
+    body.append(title, description, meta);
+    anchor.append(avatar, body);
+    return anchor;
+  }
+
+  // src/icons.js
+  var ICONS = {
+    network: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v5m-7 7v-3h14v3M5 20h4v-4H5v4Zm10 0h4v-4h-4v4Zm-5 0h4v-4h-4v4Z"/></svg>',
+    media: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm3 3v8l6-4-6-4Zm9 0h2m-2 4h2m-2 4h2"/></svg>',
+    sync: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5m10.4-2A7.5 7.5 0 0 0 6.2 7.2M4.6 14a7.5 7.5 0 0 0 13.2 3.8"/></svg>',
+    ethernet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h16v5H4v-5Zm2-9h3v9H6V6Zm5 3h3v6h-3V9Zm5-3h3v9h-3V6Z"/></svg>',
+    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3v-9Z"/></svg>'
+  };
+  var ICON_ALIASES = /* @__PURE__ */ new Map([
+    ["fas fa-network-wired", "network"],
+    ["fa-network-wired", "network"],
+    ["fas fa-photo-video", "media"],
+    ["fa-photo-video", "media"],
+    ["fas fa-rotate", "sync"],
+    ["fa-rotate", "sync"],
+    ["fas fa-sync", "sync"],
+    ["fas fa-ethernet", "ethernet"],
+    ["fa-ethernet", "ethernet"],
+    ["fas fa-home", "home"],
+    ["fa-home", "home"]
+  ]);
+  function normalizeSectionIcon(icon, name) {
+    const key = String(icon || "").trim().toLowerCase();
+    if (ICONS[key]) {
+      return key;
+    }
+    if (ICON_ALIASES.has(key)) {
+      return ICON_ALIASES.get(key);
+    }
+    const text = `${key} ${name || ""}`.toLowerCase();
+    if (text.includes("\u043C\u0435\u0434\u0438\u0430") || text.includes("media") || text.includes("photo")) {
+      return "media";
+    }
+    if (text.includes("sync") || text.includes("syncthing") || text.includes("rotate")) {
+      return "sync";
+    }
+    if (text.includes("\u0441\u0435\u0442\u044C") || text.includes("ethernet") || text.includes("router")) {
+      return "ethernet";
+    }
+    if (text.includes("\u0434\u043E\u043C") || text.includes("home")) {
+      return "home";
+    }
+    return "network";
   }
 
   // src/homer.js
@@ -1181,114 +1263,6 @@
     };
   }
 
-  // src/history.js
-  async function addVisitHistoryItem(app2, item) {
-    const normalized = normalizeVisitHistoryItem(item);
-    if (!normalized) {
-      return;
-    }
-    normalized.visitedAt = Date.now();
-    app2.visitHistory = [
-      normalized,
-      ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url))
-    ].slice(0, VISIT_HISTORY_LIMIT);
-    app2.renderVisitPanels();
-    if (hasBrowserHistoryApi()) {
-      return;
-    }
-    await storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
-  }
-  async function loadVisitHistory() {
-    if (!hasBrowserHistoryApi()) {
-      return normalizeVisitHistory(await storageGet(HISTORY_KEY));
-    }
-    return await new Promise((resolve) => {
-      const chromeApi = globalThis.chrome;
-      chromeApi.history.search(
-        {
-          text: "",
-          startTime: 0,
-          maxResults: VISIT_HISTORY_LIMIT * 3
-        },
-        (results) => {
-          if (chromeApi.runtime.lastError) {
-            resolve([]);
-            return;
-          }
-          resolve(normalizeVisitHistory((results || []).filter((item) => isHttpUrl(item.url))));
-        }
-      );
-    });
-  }
-  async function refreshVisitHistory(app2) {
-    const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits(app2)]);
-    if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
-      return;
-    }
-    app2.visitHistory = nextHistory;
-    app2.frequentVisits = nextFrequent;
-    app2.renderVisitPanels();
-  }
-  function hasBrowserHistoryApi() {
-    return typeof globalThis.chrome?.history?.search === "function";
-  }
-  async function loadFrequentVisits(app2) {
-    if (!hasBrowserHistoryApi()) {
-      return [];
-    }
-    const settings = normalizeVisitSettings(app2.state.visits, FALLBACK_CONFIG.visits);
-    return await new Promise((resolve) => {
-      const chromeApi = globalThis.chrome;
-      chromeApi.history.search(
-        {
-          text: "",
-          startTime: 0,
-          maxResults: settings.frequentHistoryPool
-        },
-        (results) => {
-          if (chromeApi.runtime.lastError) {
-            resolve([]);
-            return;
-          }
-          const frequent = (results || []).filter(
-            (item) => isHttpUrl(item.url) && Number.isFinite(item.visitCount) && item.visitCount >= settings.frequentMinVisits
-          ).sort((a, b) => {
-            const visitsDiff = b.visitCount - a.visitCount;
-            if (visitsDiff) {
-              return visitsDiff;
-            }
-            return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
-          });
-          resolve(filterFrequentVisits(app2, normalizeVisitHistory(frequent)).slice(0, VISIT_HISTORY_LIMIT));
-        }
-      );
-    });
-  }
-  function filterFrequentVisits(app2, items) {
-    const excludedKeys = getFrequentVisitExcludedKeys(app2);
-    if (!excludedKeys.size) {
-      return items;
-    }
-    return items.filter((item) => {
-      const key = normalizeUrlKey(item.url);
-      return key && !excludedKeys.has(key);
-    });
-  }
-  function getFrequentVisitExcludedKeys(app2) {
-    const keys = /* @__PURE__ */ new Set();
-    for (const link of getVisibleQuickLinks(app2)) {
-      const key = normalizeUrlKey(link.url);
-      if (key) {
-        keys.add(key);
-      }
-    }
-    const homerKey = normalizeUrlKey(app2.state?.homer?.url);
-    if (homerKey) {
-      keys.add(homerKey);
-    }
-    return keys;
-  }
-
   // src/metadata.js
   var FAVICON_SIZE = 128;
   var MIN_FRESH_ICON_SIZE = 96;
@@ -1611,6 +1585,480 @@
         delete app2.searchEngineMeta[key];
       }
     }
+  }
+
+  // src/render/search.js
+  function renderSearchButtons(app2) {
+    const { refs } = app2;
+    refs.searchButtons.replaceChildren();
+    const engines = getVisibleSearchEngines(app2);
+    for (const engine of engines) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "search-button";
+      button.title = engine.title;
+      button.setAttribute("aria-label", button.title || t("searchAria"));
+      button.classList.toggle("active", engine.id === app2.state.search.defaultEngineId);
+      button.append(createSearchEngineIcon(app2, engine));
+      button.addEventListener("click", () => {
+        const query = refs.searchInput.value.trim();
+        if (query) {
+          app2.runSearch(engine, query);
+          return;
+        }
+        app2.localPatch.search.defaultEngineId = engine.id;
+        void app2.persistLocalPatch();
+        app2.state.search.defaultEngineId = engine.id;
+        renderSearchButtons(app2);
+        refs.searchInput.focus();
+      });
+      refs.searchButtons.append(button);
+    }
+  }
+  function createSearchEngineIcon(app2, engine) {
+    const icon = document.createElement("span");
+    icon.className = "search-icon";
+    const meta = getSearchEngineMeta(app2, engine);
+    if (meta?.iconDataUrl) {
+      const image = document.createElement("img");
+      image.src = meta.iconDataUrl;
+      image.alt = "";
+      image.addEventListener("error", () => {
+        image.remove();
+        icon.textContent = makeInitial(engine.title || engine.id);
+      });
+      icon.append(image);
+      return icon;
+    }
+    icon.textContent = makeInitial(engine.title || engine.id);
+    return icon;
+  }
+  function renderQuickLinks(app2) {
+    app2.refs.quickLinks.replaceChildren();
+    for (const link of getVisibleQuickLinks(app2)) {
+      app2.refs.quickLinks.append(createQuickLink(app2, link));
+    }
+  }
+  function createQuickLink(app2, link) {
+    const meta = getQuickLinkMeta(app2, link.url);
+    const title = getQuickLinkTitle(link, meta);
+    const iconDataUrl = meta?.iconDataUrl || "";
+    const anchor = document.createElement("a");
+    anchor.className = "quick-link";
+    anchor.href = link.url;
+    anchor.title = title;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title,
+        url: link.url,
+        source: "quick"
+      });
+    });
+    const icon = document.createElement("span");
+    icon.className = "quick-icon";
+    if (iconDataUrl) {
+      const image = document.createElement("img");
+      image.src = iconDataUrl;
+      image.alt = "";
+      image.addEventListener("error", () => {
+        image.remove();
+        icon.textContent = makeInitial(title);
+      });
+      icon.append(image);
+    } else {
+      icon.textContent = makeInitial(title);
+    }
+    const label = document.createElement("span");
+    label.className = "quick-label";
+    label.textContent = title;
+    anchor.append(icon, label);
+    return anchor;
+  }
+
+  // src/render/services.js
+  function renderServices(app2, services, emptyMessage = "") {
+    app2.refs.servicesGrid.replaceChildren();
+    if (!services.length) {
+      if (!emptyMessage) {
+        return;
+      }
+      const empty = document.createElement("p");
+      empty.className = "empty-message";
+      empty.textContent = emptyMessage;
+      app2.refs.servicesGrid.append(empty);
+      return;
+    }
+    for (const group of services) {
+      const article = document.createElement("article");
+      article.className = "service-group";
+      addClassTokens(article, group.className);
+      const heading = document.createElement("h2");
+      heading.className = "service-heading";
+      heading.append(createSectionIcon(group), document.createTextNode(group.name || t("miscellaneous")));
+      const card = document.createElement("div");
+      card.className = "service-card";
+      for (const item of group.items) {
+        card.append(createServiceRow(app2, item, group));
+      }
+      article.append(heading, card);
+      app2.refs.servicesGrid.append(article);
+    }
+  }
+  function createSectionIcon(group) {
+    const span = document.createElement("span");
+    span.className = "section-icon";
+    if (group.logo) {
+      const image = document.createElement("img");
+      image.src = group.logo;
+      image.alt = "";
+      image.loading = "lazy";
+      image.addEventListener("error", () => {
+        image.remove();
+        const normalized2 = normalizeSectionIcon(group.icon, group.name);
+        span.innerHTML = ICONS[normalized2] || ICONS.network;
+      });
+      span.append(image);
+      return span;
+    }
+    const normalized = normalizeSectionIcon(group.icon, group.name);
+    span.innerHTML = ICONS[normalized] || ICONS.network;
+    return span;
+  }
+  function createServiceRow(app2, item, group) {
+    const anchor = document.createElement("a");
+    anchor.className = "service-row";
+    addClassTokens(anchor, group.className);
+    addClassTokens(anchor, item.className);
+    anchor.href = item.url;
+    anchor.target = item.target || "_self";
+    if (anchor.target !== "_self") {
+      anchor.rel = "noreferrer";
+    }
+    anchor.title = item.name;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.name || item.url,
+        url: item.url,
+        source: "homer"
+      });
+    });
+    const content = document.createElement("span");
+    content.className = "service-content";
+    const media = document.createElement("span");
+    media.className = "service-media";
+    media.classList.toggle("no-subtitle", !item.subtitle);
+    const logo = document.createElement("span");
+    logo.className = "service-logo";
+    if (item.logo) {
+      const image = document.createElement("img");
+      image.src = item.logo;
+      image.alt = "";
+      image.loading = "lazy";
+      if (item.fallbackLogo && item.fallbackLogo !== item.logo) {
+        image.dataset.fallbackLogo = item.fallbackLogo;
+      }
+      image.addEventListener("error", () => {
+        if (image.dataset.fallbackLogo && image.src !== image.dataset.fallbackLogo) {
+          image.src = image.dataset.fallbackLogo;
+          delete image.dataset.fallbackLogo;
+          return;
+        }
+        image.remove();
+        logo.textContent = makeInitial(item.name);
+      });
+      logo.append(image);
+    } else {
+      logo.textContent = makeInitial(item.name);
+    }
+    const body = document.createElement("span");
+    body.className = "service-body";
+    const text = document.createElement("span");
+    text.className = "service-title";
+    text.textContent = item.name || item.url;
+    body.append(text);
+    if (item.subtitle) {
+      const subtitle = document.createElement("span");
+      subtitle.className = "service-subtitle";
+      subtitle.textContent = item.subtitle;
+      body.append(subtitle);
+    }
+    media.append(logo, body);
+    content.append(media);
+    if (item.tag) {
+      const tag = document.createElement("span");
+      tag.className = "service-tag";
+      addClassTokens(tag, item.tagstyle);
+      const tagText = document.createElement("strong");
+      tagText.className = "service-tag-text";
+      tagText.textContent = `#${item.tag}`;
+      tag.append(tagText);
+      content.append(tag);
+    }
+    anchor.append(content);
+    return anchor;
+  }
+  function addClassTokens(element, value) {
+    if (!value) {
+      return;
+    }
+    element.classList.add(...String(value).split(/\s+/).filter(Boolean));
+  }
+  function getVisibleServices(app2) {
+    if (app2.localPatch?.homer?.disabled || !app2.state.homer.url) {
+      return [];
+    }
+    if (app2.homerCache?.services?.length) {
+      return app2.homerCache.services;
+    }
+    return [];
+  }
+  function getEmptyServicesMessage(app2) {
+    return "";
+  }
+  function setStatusFromCurrentData(app2) {
+    if (app2.localPatch?.homer?.disabled) {
+      setStatus(app2, "local", "off", t("homerDisabled"));
+      return;
+    }
+    if (!app2.state.homer.url) {
+      setStatus(app2, "local", "no url", t("homerUrlMissing"));
+      return;
+    }
+    if (app2.homerCache?.services?.length) {
+      setStatus(app2, "cache", "cache", t("homerCache", formatDateTime(app2.homerCache.fetchedAt)));
+      return;
+    }
+    setStatus(app2, "local", app2.homerCache?.services?.length ? "away" : "no homer", getEmptyServicesMessage(app2));
+  }
+  function setStatus(app2, kind, text, title) {
+    app2.refs.statusButton.dataset.status = kind;
+    app2.refs.statusText.textContent = text;
+    app2.refs.statusButton.title = title;
+  }
+
+  // src/history.js
+  async function addVisitHistoryItem(app2, item) {
+    const normalized = normalizeVisitHistoryItem(item);
+    if (!normalized) {
+      return;
+    }
+    normalized.visitedAt = Date.now();
+    app2.visitHistory = [
+      normalized,
+      ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizeUrlKey(normalized.url))
+    ].slice(0, VISIT_HISTORY_LIMIT);
+    app2.renderVisitPanels();
+    if (hasBrowserHistoryApi()) {
+      return;
+    }
+    await storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
+  }
+  async function loadVisitHistory() {
+    if (!hasBrowserHistoryApi()) {
+      return normalizeVisitHistory(await storageGet(HISTORY_KEY));
+    }
+    return await new Promise((resolve) => {
+      const chromeApi = globalThis.chrome;
+      chromeApi.history.search(
+        {
+          text: "",
+          startTime: 0,
+          maxResults: VISIT_HISTORY_LIMIT * 3
+        },
+        (results) => {
+          if (chromeApi.runtime.lastError) {
+            resolve([]);
+            return;
+          }
+          resolve(normalizeVisitHistory((results || []).filter((item) => isHttpUrl(item.url))));
+        }
+      );
+    });
+  }
+  async function refreshVisitHistory(app2) {
+    const [nextHistory, nextFrequent] = await Promise.all([loadVisitHistory(), loadFrequentVisits(app2)]);
+    if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
+      return;
+    }
+    app2.visitHistory = nextHistory;
+    app2.frequentVisits = nextFrequent;
+    app2.renderVisitPanels();
+  }
+  function hasBrowserHistoryApi() {
+    return typeof globalThis.chrome?.history?.search === "function";
+  }
+  async function loadFrequentVisits(app2) {
+    if (!hasBrowserHistoryApi()) {
+      return [];
+    }
+    const settings = normalizeVisitSettings(app2.state.visits, FALLBACK_CONFIG.visits);
+    return await new Promise((resolve) => {
+      const chromeApi = globalThis.chrome;
+      chromeApi.history.search(
+        {
+          text: "",
+          startTime: 0,
+          maxResults: settings.frequentHistoryPool
+        },
+        (results) => {
+          if (chromeApi.runtime.lastError) {
+            resolve([]);
+            return;
+          }
+          const frequent = (results || []).filter(
+            (item) => isHttpUrl(item.url) && Number.isFinite(item.visitCount) && item.visitCount >= settings.frequentMinVisits
+          ).sort((a, b) => {
+            const visitsDiff = b.visitCount - a.visitCount;
+            if (visitsDiff) {
+              return visitsDiff;
+            }
+            return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
+          });
+          resolve(filterFrequentVisits(app2, normalizeVisitHistory(frequent)).slice(0, VISIT_HISTORY_LIMIT));
+        }
+      );
+    });
+  }
+  function filterFrequentVisits(app2, items) {
+    const excludedKeys = getFrequentVisitExcludedKeys(app2);
+    if (!excludedKeys.size) {
+      return items;
+    }
+    return items.filter((item) => {
+      const key = normalizeUrlKey(item.url);
+      return key && !excludedKeys.has(key);
+    });
+  }
+  function getFrequentVisitExcludedKeys(app2) {
+    const keys = /* @__PURE__ */ new Set();
+    for (const link of getVisibleQuickLinks(app2)) {
+      const key = normalizeUrlKey(link.url);
+      if (key) {
+        keys.add(key);
+      }
+    }
+    const homerKey = normalizeUrlKey(app2.state?.homer?.url);
+    if (homerKey) {
+      keys.add(homerKey);
+    }
+    return keys;
+  }
+
+  // src/render/visits.js
+  function renderVisitPanels(app2) {
+    renderVisitList({
+      panel: app2.refs.frequentPanel,
+      list: app2.refs.frequentList,
+      items: filterFrequentVisits(app2, app2.frequentVisits),
+      isEnabled: app2.localPatch?.visits?.showFrequent !== false,
+      metaFormatter: formatFrequentMeta,
+      showVisitCount: true,
+      app: app2
+    });
+    renderVisitList({
+      panel: app2.refs.historyPanel,
+      list: app2.refs.historyList,
+      items: app2.visitHistory,
+      isEnabled: app2.localPatch?.visits?.showRecent !== false,
+      metaFormatter: formatHistoryMeta,
+      showAddButton: true,
+      hideAddedAction: true,
+      app: app2
+    });
+  }
+  function renderVisitList({
+    panel,
+    list,
+    items,
+    isEnabled = true,
+    metaFormatter,
+    showVisitCount = false,
+    showAddButton = false,
+    hideAddedAction = false,
+    app: app2
+  }) {
+    list.replaceChildren();
+    const isEmpty = !isEnabled || !items.length;
+    panel.classList.toggle("hidden", isEmpty);
+    if (isEmpty) {
+      return;
+    }
+    for (const item of items) {
+      const row = document.createElement("div");
+      row.className = "visit-row";
+      const anchor = document.createElement("a");
+      anchor.className = "visit-link";
+      anchor.href = item.url;
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+      anchor.title = item.url;
+      anchor.addEventListener("click", () => {
+        void app2.addVisitHistoryItem(item);
+      });
+      const title = document.createElement("span");
+      title.className = "visit-title";
+      title.textContent = item.title || toDomain(item.url) || item.url;
+      const meta = document.createElement("span");
+      meta.className = "visit-meta";
+      meta.textContent = metaFormatter(item);
+      anchor.append(title, meta);
+      row.append(anchor);
+      if (showVisitCount || showAddButton) {
+        const action = createVisitAddButton(app2, item, { showVisitCount, hideAddedAction });
+        if (action) {
+          row.append(action);
+        }
+      }
+      list.append(row);
+    }
+  }
+  function createVisitAddButton(app2, item, { showVisitCount, hideAddedAction }) {
+    const isAdded = hasVisibleQuickLink(app2, item.url);
+    if (hideAddedAction && isAdded) {
+      return null;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = showVisitCount ? "visit-action visit-count" : "visit-action visit-add";
+    if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
+      button.textContent = String(item.visitCount);
+    } else {
+      button.append(createPlusIcon());
+    }
+    button.title = t("quickAddLinkTooltip");
+    button.setAttribute("aria-label", t("quickAddLinkAria", item.title || toDomain(item.url) || item.url));
+    if (isAdded) {
+      button.disabled = true;
+      button.title = t("quickLinkAlreadyAdded");
+    }
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof app2.addQuickLinkFromVisit === "function") {
+        void app2.addQuickLinkFromVisit(item);
+      }
+    });
+    return button;
+  }
+  function createPlusIcon() {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("class", "visit-add-icon");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    const horizontal = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    horizontal.setAttribute("d", "M5 12h14");
+    const vertical = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    vertical.setAttribute("d", "M12 5v14");
+    icon.append(horizontal, vertical);
+    return icon;
+  }
+  function hasVisibleQuickLink(app2, url) {
+    const key = normalizeUrlKey(url);
+    if (!key) {
+      return false;
+    }
+    return getVisibleQuickLinks(app2).some((link) => normalizeUrlKey(link.url) === key);
   }
 
   // src/weather.js
@@ -1994,250 +2442,7 @@
     return { icon, description };
   }
 
-  // src/render.js
-  function renderAll(app2) {
-    renderSearchButtons(app2);
-    renderQuickLinks(app2);
-    renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
-    renderWeatherWidget(app2);
-    renderGitHubTrending(app2);
-    renderVisitPanels(app2);
-    setStatusFromCurrentData(app2);
-  }
-  function renderSearchButtons(app2) {
-    const { refs } = app2;
-    refs.searchButtons.replaceChildren();
-    const engines = getVisibleSearchEngines(app2);
-    for (const engine of engines) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "search-button";
-      button.title = engine.title;
-      button.setAttribute("aria-label", button.title || t("searchAria"));
-      button.classList.toggle("active", engine.id === app2.state.search.defaultEngineId);
-      button.append(createSearchEngineIcon(app2, engine));
-      button.addEventListener("click", () => {
-        const query = refs.searchInput.value.trim();
-        if (query) {
-          app2.runSearch(engine, query);
-          return;
-        }
-        app2.localPatch.search.defaultEngineId = engine.id;
-        void app2.persistLocalPatch();
-        app2.state.search.defaultEngineId = engine.id;
-        renderSearchButtons(app2);
-        refs.searchInput.focus();
-      });
-      refs.searchButtons.append(button);
-    }
-  }
-  function createSearchEngineIcon(app2, engine) {
-    const icon = document.createElement("span");
-    icon.className = "search-icon";
-    const meta = getSearchEngineMeta(app2, engine);
-    if (meta?.iconDataUrl) {
-      const image = document.createElement("img");
-      image.src = meta.iconDataUrl;
-      image.alt = "";
-      image.addEventListener("error", () => {
-        image.remove();
-        icon.textContent = makeInitial(engine.title || engine.id);
-      });
-      icon.append(image);
-      return icon;
-    }
-    icon.textContent = makeInitial(engine.title || engine.id);
-    return icon;
-  }
-  function renderQuickLinks(app2) {
-    app2.refs.quickLinks.replaceChildren();
-    for (const link of getVisibleQuickLinks(app2)) {
-      app2.refs.quickLinks.append(createQuickLink(app2, link));
-    }
-  }
-  function createQuickLink(app2, link) {
-    const meta = getQuickLinkMeta(app2, link.url);
-    const title = getQuickLinkTitle(link, meta);
-    const iconDataUrl = meta?.iconDataUrl || "";
-    const anchor = document.createElement("a");
-    anchor.className = "quick-link";
-    anchor.href = link.url;
-    anchor.title = title;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title,
-        url: link.url,
-        source: "quick"
-      });
-    });
-    const icon = document.createElement("span");
-    icon.className = "quick-icon";
-    if (iconDataUrl) {
-      const image = document.createElement("img");
-      image.src = iconDataUrl;
-      image.alt = "";
-      image.addEventListener("error", () => {
-        image.remove();
-        icon.textContent = makeInitial(title);
-      });
-      icon.append(image);
-    } else {
-      icon.textContent = makeInitial(title);
-    }
-    const label = document.createElement("span");
-    label.className = "quick-label";
-    label.textContent = title;
-    anchor.append(icon, label);
-    return anchor;
-  }
-  function renderServices(app2, services, emptyMessage = "") {
-    app2.refs.servicesGrid.replaceChildren();
-    if (!services.length) {
-      if (!emptyMessage) {
-        return;
-      }
-      const empty = document.createElement("p");
-      empty.className = "empty-message";
-      empty.textContent = emptyMessage;
-      app2.refs.servicesGrid.append(empty);
-      return;
-    }
-    for (const group of services) {
-      const article = document.createElement("article");
-      article.className = "service-group";
-      addClassTokens(article, group.className);
-      const heading = document.createElement("h2");
-      heading.className = "service-heading";
-      heading.append(createSectionIcon(group), document.createTextNode(group.name || t("miscellaneous")));
-      const card = document.createElement("div");
-      card.className = "service-card";
-      for (const item of group.items) {
-        card.append(createServiceRow(app2, item, group));
-      }
-      article.append(heading, card);
-      app2.refs.servicesGrid.append(article);
-    }
-  }
-  function createSectionIcon(group) {
-    const span = document.createElement("span");
-    span.className = "section-icon";
-    if (group.logo) {
-      const image = document.createElement("img");
-      image.src = group.logo;
-      image.alt = "";
-      image.loading = "lazy";
-      image.addEventListener("error", () => {
-        image.remove();
-        const normalized2 = normalizeSectionIcon(group.icon, group.name);
-        span.innerHTML = ICONS[normalized2] || ICONS.network;
-      });
-      span.append(image);
-      return span;
-    }
-    const normalized = normalizeSectionIcon(group.icon, group.name);
-    span.innerHTML = ICONS[normalized] || ICONS.network;
-    return span;
-  }
-  function createServiceRow(app2, item, group) {
-    const anchor = document.createElement("a");
-    anchor.className = "service-row";
-    addClassTokens(anchor, group.className);
-    addClassTokens(anchor, item.className);
-    anchor.href = item.url;
-    anchor.target = item.target || "_self";
-    if (anchor.target !== "_self") {
-      anchor.rel = "noreferrer";
-    }
-    anchor.title = item.name;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title: item.name || item.url,
-        url: item.url,
-        source: "homer"
-      });
-    });
-    const content = document.createElement("span");
-    content.className = "service-content";
-    const media = document.createElement("span");
-    media.className = "service-media";
-    media.classList.toggle("no-subtitle", !item.subtitle);
-    const logo = document.createElement("span");
-    logo.className = "service-logo";
-    if (item.logo) {
-      const image = document.createElement("img");
-      image.src = item.logo;
-      image.alt = "";
-      image.loading = "lazy";
-      if (item.fallbackLogo && item.fallbackLogo !== item.logo) {
-        image.dataset.fallbackLogo = item.fallbackLogo;
-      }
-      image.addEventListener("error", () => {
-        if (image.dataset.fallbackLogo && image.src !== image.dataset.fallbackLogo) {
-          image.src = image.dataset.fallbackLogo;
-          delete image.dataset.fallbackLogo;
-          return;
-        }
-        image.remove();
-        logo.textContent = makeInitial(item.name);
-      });
-      logo.append(image);
-    } else {
-      logo.textContent = makeInitial(item.name);
-    }
-    const body = document.createElement("span");
-    body.className = "service-body";
-    const text = document.createElement("span");
-    text.className = "service-title";
-    text.textContent = item.name || item.url;
-    body.append(text);
-    if (item.subtitle) {
-      const subtitle = document.createElement("span");
-      subtitle.className = "service-subtitle";
-      subtitle.textContent = item.subtitle;
-      body.append(subtitle);
-    }
-    media.append(logo, body);
-    content.append(media);
-    if (item.tag) {
-      const tag = document.createElement("span");
-      tag.className = "service-tag";
-      addClassTokens(tag, item.tagstyle);
-      const tagText = document.createElement("strong");
-      tagText.className = "service-tag-text";
-      tagText.textContent = `#${item.tag}`;
-      tag.append(tagText);
-      content.append(tag);
-    }
-    anchor.append(content);
-    return anchor;
-  }
-  function addClassTokens(element, value) {
-    if (!value) {
-      return;
-    }
-    element.classList.add(...String(value).split(/\s+/).filter(Boolean));
-  }
-  function renderVisitPanels(app2) {
-    renderVisitList({
-      panel: app2.refs.frequentPanel,
-      list: app2.refs.frequentList,
-      items: filterFrequentVisits(app2, app2.frequentVisits),
-      isEnabled: app2.localPatch?.visits?.showFrequent !== false,
-      metaFormatter: formatFrequentMeta,
-      showVisitCount: true,
-      app: app2
-    });
-    renderVisitList({
-      panel: app2.refs.historyPanel,
-      list: app2.refs.historyList,
-      items: app2.visitHistory,
-      isEnabled: app2.localPatch?.visits?.showRecent !== false,
-      metaFormatter: formatHistoryMeta,
-      showAddButton: true,
-      hideAddedAction: true,
-      app: app2
-    });
-  }
+  // src/render/weather-widget.js
   function renderWeatherWidget(app2) {
     const { refs } = app2;
     document.body.dataset.topWeatherPlacement = app2.state.weather?.topWidgetPlacement || "actions";
@@ -2335,86 +2540,6 @@
     line.textContent = text;
     return line;
   }
-  function renderGitHubTrending(app2) {
-    const { refs } = app2;
-    if (!refs.githubTrending) {
-      return;
-    }
-    if (app2.localPatch?.githubTrending?.disabled) {
-      refs.githubTrending.classList.add("hidden");
-      return;
-    }
-    const status = app2.githubTrendingStatus;
-    const summary = getGitHubTrendingSummary(app2.githubTrendingCache);
-    const hasItems = summary.items.length > 0;
-    refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
-    refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
-    refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
-    refs.githubTrendingList.replaceChildren();
-    if (!hasItems) {
-      const empty = document.createElement("p");
-      empty.className = "github-trending-message";
-      empty.textContent = status?.message || t("githubTrendingUnavailable");
-      refs.githubTrendingList.append(empty);
-      refs.githubTrendingMeta.textContent = t("githubTrendingSource");
-      return;
-    }
-    for (const item of summary.items) {
-      refs.githubTrendingList.append(createGitHubTrendingRow(app2, item));
-    }
-    if (status?.kind === "error") {
-      refs.githubTrendingMeta.textContent = t("githubTrendingStale", summary.updatedAt);
-      refs.githubTrendingMeta.title = [status.message, summary.updatedAtTitle].filter(Boolean).join(" \xB7 ");
-      return;
-    }
-    refs.githubTrendingMeta.textContent = summary.updatedAt ? t("githubTrendingUpdated", summary.updatedAt) : t("githubTrendingSource");
-    refs.githubTrendingMeta.title = summary.updatedAtTitle;
-  }
-  function createGitHubTrendingRow(app2, item) {
-    const anchor = document.createElement("a");
-    anchor.className = "github-trending-row";
-    anchor.href = item.url;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
-    anchor.title = item.description || item.fullName;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title: item.fullName,
-        url: item.url,
-        source: "github"
-      });
-    });
-    const avatar = document.createElement("span");
-    avatar.className = "github-trending-avatar";
-    if (item.ownerAvatarUrl) {
-      const image = document.createElement("img");
-      image.src = item.ownerAvatarUrl;
-      image.alt = "";
-      image.loading = "lazy";
-      image.addEventListener("error", () => {
-        image.remove();
-        avatar.textContent = makeInitial(item.name);
-      });
-      avatar.append(image);
-    } else {
-      avatar.textContent = makeInitial(item.name);
-    }
-    const body = document.createElement("span");
-    body.className = "github-trending-body";
-    const title = document.createElement("span");
-    title.className = "github-trending-name";
-    title.textContent = item.fullName;
-    const description = document.createElement("span");
-    description.className = "github-trending-description";
-    description.textContent = item.description || t("githubTrendingNoDescription");
-    const meta = document.createElement("span");
-    meta.className = "github-trending-repo-meta";
-    const stars = formatStars(item.stars);
-    meta.textContent = [stars ? `\u2605 ${stars}` : "", item.language, formatRepositoryAge(item)].filter(Boolean).join(" \xB7 ");
-    body.append(title, description, meta);
-    anchor.append(avatar, body);
-    return anchor;
-  }
   function createWeatherTempLine(summary) {
     const fragment = document.createDocumentFragment();
     const current = document.createElement("span");
@@ -2429,131 +2554,16 @@
     }
     return fragment;
   }
-  function renderVisitList({
-    panel,
-    list,
-    items,
-    isEnabled = true,
-    metaFormatter,
-    showVisitCount = false,
-    showAddButton = false,
-    hideAddedAction = false,
-    app: app2
-  }) {
-    list.replaceChildren();
-    const isEmpty = !isEnabled || !items.length;
-    panel.classList.toggle("hidden", isEmpty);
-    if (isEmpty) {
-      return;
-    }
-    for (const item of items) {
-      const row = document.createElement("div");
-      row.className = "visit-row";
-      const anchor = document.createElement("a");
-      anchor.className = "visit-link";
-      anchor.href = item.url;
-      anchor.target = "_blank";
-      anchor.rel = "noreferrer";
-      anchor.title = item.url;
-      anchor.addEventListener("click", () => {
-        void app2.addVisitHistoryItem(item);
-      });
-      const title = document.createElement("span");
-      title.className = "visit-title";
-      title.textContent = item.title || toDomain(item.url) || item.url;
-      const meta = document.createElement("span");
-      meta.className = "visit-meta";
-      meta.textContent = metaFormatter(item);
-      anchor.append(title, meta);
-      row.append(anchor);
-      if (showVisitCount || showAddButton) {
-        const action = createVisitAddButton(app2, item, { showVisitCount, hideAddedAction });
-        if (action) {
-          row.append(action);
-        }
-      }
-      list.append(row);
-    }
-  }
-  function createVisitAddButton(app2, item, { showVisitCount, hideAddedAction }) {
-    const isAdded = hasVisibleQuickLink(app2, item.url);
-    if (hideAddedAction && isAdded) {
-      return null;
-    }
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = showVisitCount ? "visit-action visit-count" : "visit-action visit-add";
-    if (showVisitCount && Number.isFinite(item.visitCount) && item.visitCount > 0) {
-      button.textContent = String(item.visitCount);
-    } else {
-      button.append(createPlusIcon());
-    }
-    button.title = t("quickAddLinkTooltip");
-    button.setAttribute("aria-label", t("quickAddLinkAria", item.title || toDomain(item.url) || item.url));
-    if (isAdded) {
-      button.disabled = true;
-      button.title = t("quickLinkAlreadyAdded");
-    }
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (typeof app2.addQuickLinkFromVisit === "function") {
-        void app2.addQuickLinkFromVisit(item);
-      }
-    });
-    return button;
-  }
-  function createPlusIcon() {
-    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    icon.setAttribute("class", "visit-add-icon");
-    icon.setAttribute("viewBox", "0 0 24 24");
-    icon.setAttribute("aria-hidden", "true");
-    icon.setAttribute("focusable", "false");
-    const horizontal = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    horizontal.setAttribute("d", "M5 12h14");
-    const vertical = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    vertical.setAttribute("d", "M12 5v14");
-    icon.append(horizontal, vertical);
-    return icon;
-  }
-  function hasVisibleQuickLink(app2, url) {
-    const key = normalizeUrlKey(url);
-    if (!key) {
-      return false;
-    }
-    return getVisibleQuickLinks(app2).some((link) => normalizeUrlKey(link.url) === key);
-  }
-  function getVisibleServices(app2) {
-    if (app2.localPatch?.homer?.disabled || !app2.state.homer.url) {
-      return [];
-    }
-    if (app2.homerCache?.services?.length) {
-      return app2.homerCache.services;
-    }
-    return [];
-  }
-  function getEmptyServicesMessage(app2) {
-    return "";
-  }
-  function setStatusFromCurrentData(app2) {
-    if (app2.localPatch?.homer?.disabled) {
-      setStatus(app2, "local", "off", t("homerDisabled"));
-      return;
-    }
-    if (!app2.state.homer.url) {
-      setStatus(app2, "local", "no url", t("homerUrlMissing"));
-      return;
-    }
-    if (app2.homerCache?.services?.length) {
-      setStatus(app2, "cache", "cache", t("homerCache", formatDateTime(app2.homerCache.fetchedAt)));
-      return;
-    }
-    setStatus(app2, "local", app2.homerCache?.services?.length ? "away" : "no homer", getEmptyServicesMessage(app2));
-  }
-  function setStatus(app2, kind, text, title) {
-    app2.refs.statusButton.dataset.status = kind;
-    app2.refs.statusText.textContent = text;
-    app2.refs.statusButton.title = title;
+
+  // src/render.js
+  function renderAll(app2) {
+    renderSearchButtons(app2);
+    renderQuickLinks(app2);
+    renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
+    renderWeatherWidget(app2);
+    renderGitHubTrending(app2);
+    renderVisitPanels(app2);
+    setStatusFromCurrentData(app2);
   }
 
   // src/github-trending.js

@@ -31,7 +31,7 @@ await Promise.all([
     outfile: path.join(releaseDir, "newtab.js"),
   }),
   esbuild.build({
-    entryPoints: [path.join(rootDir, "styles.css")],
+    entryPoints: [path.join(rootDir, "src/styles/index.css")],
     bundle: true,
     minify: true,
     legalComments: "none",

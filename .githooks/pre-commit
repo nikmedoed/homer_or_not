@@ -4,4 +4,4 @@ set -eu
 echo "Building extension artifacts..."
 npm run build:local
 
-git add newtab.js
+git add newtab.js styles.css

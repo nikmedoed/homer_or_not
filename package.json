@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "esbuild src/main.js --bundle --format=iife --target=chrome114 --sourcemap --outfile=newtab.js --watch",
-    "build:local": "esbuild src/main.js --bundle --format=iife --target=chrome114 --outfile=newtab.js",
+    "dev": "node scripts/dev.mjs",
+    "build:local": "node scripts/build-local.mjs",
     "build": "node scripts/build.mjs",
     "prepare": "git config core.hooksPath .githooks"
   },

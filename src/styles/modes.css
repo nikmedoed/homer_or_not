@@ -1,0 +1,16 @@
+body[data-view-mode="base"] .visit-panel,
+body[data-view-mode="zen"] .services-area,
+body[data-view-mode="zen"] .status-button,
+body[data-view-mode="zen"] .top-weather-widget,
+body[data-view-mode="zen"] #syncButton {
+  display: none;
+}
+
+body[data-view-mode="zen"] .page-shell {
+  display: grid;
+  align-items: center;
+}
+
+body[data-view-mode="zen"] .launch-panel {
+  margin: 0 auto;
+}

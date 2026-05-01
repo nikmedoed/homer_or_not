@@ -7,6 +7,7 @@ Working notes for coding agents in this repository.
 - Browser extension new-tab page.
 - Source files live in `src/`.
 - `newtab.js` is generated from `src/main.js` by esbuild and must be rebuilt after source changes.
+- `styles.css` is generated from `src/styles/index.css` by esbuild and must be rebuilt after style source changes.
 - `newtab.html`, `styles.css`, `newtab.config.js`, `manifest.json`, and `icons/` are shipped directly.
 
 ## Commands
@@ -21,7 +22,7 @@ Working notes for coding agents in this repository.
 - Storage constants are in `src/constants.js`.
 - Synced settings use `chrome.storage.sync` via `STATE_KEY`.
 - Local-only data uses `chrome.storage.local`.
-- `newtab.js` must not be edited manually; edit `src/` and rebuild.
+- `newtab.js` and `styles.css` must not be edited manually; edit `src/` and rebuild.
 
 Current intended settings split:
 
