@@ -41,16 +41,22 @@ export async function syncGitHubTrending(app, { force = false } = {}) {
     isCacheFresh(app.githubTrendingCache, getSyncIntervalMinutes(app)) &&
     app.githubTrendingCache.queryKey === getTrendingQueryKey(app)
   ) {
+    const hadStatus = Boolean(app.githubTrendingStatus);
     app.githubTrendingStatus = null;
-    renderGitHubTrending(app);
+    if (hadStatus) {
+      renderGitHubTrending(app);
+    }
     return;
   }
 
-  app.githubTrendingStatus = {
-    kind: "loading",
-    message: app.githubTrendingCache ? "" : t("githubTrendingLoading"),
-  };
-  renderGitHubTrending(app);
+  const shouldShowLoading = force || !app.githubTrendingCache;
+  if (shouldShowLoading) {
+    app.githubTrendingStatus = {
+      kind: "loading",
+      message: app.githubTrendingCache ? "" : t("githubTrendingLoading"),
+    };
+    renderGitHubTrending(app);
+  }
 
   try {
     const query = getTrendingQuery();

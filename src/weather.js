@@ -55,19 +55,25 @@ export async function syncWeather(app, { force = false } = {}) {
   }
 
   if (!force && isWeatherCacheUsable(app)) {
+    const hadStatus = Boolean(app.weatherStatus);
     app.weatherStatus = null;
-    renderWeatherWidget(app);
+    if (hadStatus) {
+      renderWeatherWidget(app);
+    }
     return;
   }
   if (!isWeatherCacheForCurrentSettings(app)) {
     app.weatherCache = null;
   }
 
-  app.weatherStatus = {
-    kind: "loading",
-    message: hasManualLocation(app) ? t("weatherLoadingManual") : t("weatherLoadingGeo"),
-  };
-  renderWeatherWidget(app);
+  const shouldShowLoading = force || !app.weatherCache;
+  if (shouldShowLoading) {
+    app.weatherStatus = {
+      kind: "loading",
+      message: hasManualLocation(app) ? t("weatherLoadingManual") : t("weatherLoadingGeo"),
+    };
+    renderWeatherWidget(app);
+  }
 
   try {
     const location = hasManualLocation(app)

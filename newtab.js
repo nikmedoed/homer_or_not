@@ -7,6 +7,7 @@
   var QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v2";
   var SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v2";
   var HISTORY_KEY = "homerOrNot.visitHistory.v1";
+  var FREQUENT_HISTORY_KEY = "homerOrNot.frequentHistory.v1";
   var WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
   var GITHUB_TRENDING_CACHE_KEY = "homerOrNot.githubTrendingCache.v1";
   var NEWS_FEED_CACHE_KEY = "homerOrNot.newsFeedCache.v1";
@@ -756,7 +757,9 @@
       fetchedAt: Number.isFinite(raw.fetchedAt) ? raw.fetchedAt : Date.now(),
       sourceUrl: typeof raw.sourceUrl === "string" ? raw.sourceUrl : "",
       theme: typeof raw.theme === "string" ? raw.theme : "",
-      services
+      services,
+      renderKey: typeof raw.renderKey === "string" ? raw.renderKey : "",
+      servicesHtml: typeof raw.servicesHtml === "string" && raw.servicesHtml.length <= 5e5 ? raw.servicesHtml : ""
     };
   }
   function normalizeSyncMeta(raw) {
@@ -1683,8 +1686,14 @@
     return {
       updatedAt: cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: false }) : "",
       updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : "",
-      items: Array.isArray(cache?.items) ? cache.items : []
+      items: Array.isArray(cache?.items) ? cache.items : [],
+      rowsHtml: cache?.renderKey === getNewsRenderKey(source) ? cache.rowsHtml || "" : ""
     };
+  }
+  function getNewsRenderKey(source) {
+    return ["newsRows:v1", LOCALE, getNewsFeedQueryKey(source), source.id, source.title, source.type, source.sourceKey || ""].join(
+      "|"
+    );
   }
   function formatNewsMeta(item, { showAge = true, showDomain = true } = {}) {
     const parts = [];
@@ -1717,15 +1726,21 @@
     const currentCache = app2.newsFeedCache?.feeds?.[source.id] || null;
     const queryKey = getNewsFeedQueryKey(source);
     if (!force && isCacheFresh(currentCache, source.syncIntervalMinutes) && currentCache.queryKey === queryKey) {
+      const hadStatus = Boolean(app2.newsStatuses?.[source.id]);
       app2.newsStatuses[source.id] = null;
-      renderNewsFeedWidgets(app2);
+      if (hadStatus) {
+        renderNewsFeedWidgets(app2);
+      }
       return;
     }
-    app2.newsStatuses[source.id] = {
-      kind: "loading",
-      message: currentCache ? "" : t("newsLoading")
-    };
-    renderNewsFeedWidgets(app2);
+    const shouldShowLoading = force || !currentCache;
+    if (shouldShowLoading) {
+      app2.newsStatuses[source.id] = {
+        kind: "loading",
+        message: currentCache ? "" : t("newsLoading")
+      };
+      renderNewsFeedWidgets(app2);
+    }
     try {
       const items = sortAndDedupeItems(await fetchNewsSource(source)).slice(0, source.maxItems);
       const normalized = normalizeSingleFeedCache({
@@ -1761,7 +1776,9 @@
     return {
       fetchedAt,
       queryKey,
-      items
+      items,
+      renderKey: typeof raw.renderKey === "string" ? raw.renderKey : "",
+      rowsHtml: typeof raw.rowsHtml === "string" && raw.rowsHtml.length <= 5e5 ? raw.rowsHtml : ""
     };
   }
   function getNewsFeedQueryKey(source) {
@@ -2156,6 +2173,8 @@
     updatedText,
     staleText,
     updatedTitle,
+    rowsHtml = "",
+    afterRowsRendered = null,
     createRow
   }) {
     const hasItems = items.length > 0;
@@ -2177,8 +2196,15 @@
       meta.title = "";
       return;
     }
-    for (const item of items) {
-      list.append(createRow(item));
+    if (rowsHtml) {
+      list.innerHTML = rowsHtml;
+    } else {
+      for (const item of items) {
+        list.append(createRow(item));
+      }
+      if (typeof afterRowsRendered === "function") {
+        afterRowsRendered(list.innerHTML);
+      }
     }
     if (status?.kind === "error") {
       meta.textContent = staleText;
@@ -2220,6 +2246,8 @@
         updatedText: summary.updatedAt ? t("newsUpdated", summary.updatedAt) : source.title,
         staleText: summary.updatedAt ? t("newsStale", summary.updatedAt) : t("newsUnavailable"),
         updatedTitle: summary.updatedAtTitle,
+        rowsHtml: summary.rowsHtml,
+        afterRowsRendered: (rowsHtml) => saveNewsRowsHtml(app2, source, rowsHtml),
         createRow: (item) => createNewsRow(app2, item, source)
       });
     }
@@ -2257,6 +2285,36 @@
     const list = document.createElement("div");
     list.className = "feed-list news-list";
     list.dataset.feedList = "";
+    list.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const anchor = event.target.closest("a[data-news-url]");
+      if (!anchor || !list.contains(anchor)) {
+        return;
+      }
+      void app2.addVisitHistoryItem({
+        title: anchor.dataset.newsTitle || anchor.textContent || anchor.href,
+        url: anchor.dataset.newsUrl || anchor.href,
+        source: anchor.dataset.newsSource || `news:${source.id}`
+      });
+    });
+    list.addEventListener(
+      "error",
+      (event) => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement)) {
+          return;
+        }
+        const row = image.closest(".news-row");
+        const media = image.closest(".news-thumb");
+        if (row && media) {
+          row.classList.remove("news-row-has-thumb");
+          media.remove();
+        }
+      },
+      true
+    );
     header.append(heading, meta, refresh);
     section.append(header, list);
     refs.newsWidgetNodes[source.id] = section;
@@ -2274,13 +2332,9 @@
     anchor.target = "_blank";
     anchor.rel = "noreferrer";
     anchor.title = item.description || item.title;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title: item.title,
-        url: item.url,
-        source: `news:${source.id}`
-      });
-    });
+    anchor.dataset.newsTitle = item.title;
+    anchor.dataset.newsUrl = item.url;
+    anchor.dataset.newsSource = `news:${source.id}`;
     if (item.imageUrl) {
       anchor.classList.add("news-row-has-thumb");
       const media = document.createElement("span");
@@ -2296,10 +2350,6 @@
         image.width = item.imageWidth;
         image.height = item.imageHeight;
       }
-      image.addEventListener("error", () => {
-        anchor.classList.remove("news-row-has-thumb");
-        media.remove();
-      });
       media.append(image);
       anchor.append(media);
     }
@@ -2333,6 +2383,28 @@
     }
     anchor.append(body);
     return anchor;
+  }
+  function saveNewsRowsHtml(app2, source, rowsHtml) {
+    const cache = app2.newsFeedCache?.feeds?.[source.id];
+    if (!cache || !rowsHtml) {
+      return;
+    }
+    const renderKey = getNewsRenderKey(source);
+    if (cache.renderKey === renderKey && cache.rowsHtml === rowsHtml) {
+      return;
+    }
+    cache.renderKey = renderKey;
+    cache.rowsHtml = rowsHtml;
+    scheduleNewsCachePersist(app2);
+  }
+  function scheduleNewsCachePersist(app2) {
+    if (app2.newsCachePersistTimer) {
+      return;
+    }
+    app2.newsCachePersistTimer = window.setTimeout(() => {
+      app2.newsCachePersistTimer = 0;
+      void storageSet(NEWS_FEED_CACHE_KEY, app2.newsFeedCache, LOCAL_AREA);
+    }, 250);
   }
 
   // src/metadata.js
@@ -2748,8 +2820,10 @@
   }
 
   // src/render/services.js
+  var SERVICES_RENDER_VERSION = "servicesGrid:v1";
   function renderServices(app2, services, emptyMessage = "") {
     const grid = app2.refs.servicesGrid;
+    ensureServiceGridEvents(app2);
     grid.replaceChildren();
     grid.classList.toggle("hidden", !services.length && !emptyMessage);
     if (!services.length) {
@@ -2764,6 +2838,11 @@
       updateWidgetLayoutState(app2);
       return;
     }
+    if (canUseCachedServicesHtml(app2, services)) {
+      grid.innerHTML = app2.homerCache.servicesHtml;
+      updateWidgetLayoutState(app2);
+      return;
+    }
     for (const group of services) {
       const article = document.createElement("article");
       article.className = "service-group";
@@ -2774,11 +2853,12 @@
       const card = document.createElement("div");
       card.className = "service-card";
       for (const item of group.items) {
-        card.append(createServiceRow(app2, item, group));
+        card.append(createServiceRow(item, group));
       }
       article.append(heading, card);
       grid.append(article);
     }
+    saveServicesHtml(app2, services, grid.innerHTML);
     updateWidgetLayoutState(app2);
   }
   function createSectionIcon(group) {
@@ -2789,11 +2869,7 @@
       image.src = group.logo;
       image.alt = "";
       image.loading = "lazy";
-      image.addEventListener("error", () => {
-        image.remove();
-        const normalized2 = normalizeSectionIcon(group.icon, group.name);
-        span.innerHTML = ICONS[normalized2] || ICONS.network;
-      });
+      image.dataset.sectionIcon = normalizeSectionIcon(group.icon, group.name);
       span.append(image);
       return span;
     }
@@ -2801,7 +2877,7 @@
     span.innerHTML = ICONS[normalized] || ICONS.network;
     return span;
   }
-  function createServiceRow(app2, item, group) {
+  function createServiceRow(item, group) {
     const anchor = document.createElement("a");
     anchor.className = "service-row";
     addClassTokens(anchor, group.className);
@@ -2812,13 +2888,8 @@
       anchor.rel = "noreferrer";
     }
     anchor.title = item.name;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title: item.name || item.url,
-        url: item.url,
-        source: "homer"
-      });
-    });
+    anchor.dataset.serviceTitle = item.name || item.url;
+    anchor.dataset.serviceUrl = item.url;
     const content = document.createElement("span");
     content.className = "service-content";
     const media = document.createElement("span");
@@ -2834,15 +2905,7 @@
       if (item.fallbackLogo && item.fallbackLogo !== item.logo) {
         image.dataset.fallbackLogo = item.fallbackLogo;
       }
-      image.addEventListener("error", () => {
-        if (image.dataset.fallbackLogo && image.src !== image.dataset.fallbackLogo) {
-          image.src = image.dataset.fallbackLogo;
-          delete image.dataset.fallbackLogo;
-          return;
-        }
-        image.remove();
-        logo.textContent = makeInitial(item.name);
-      });
+      image.dataset.initial = makeInitial(item.name);
       logo.append(image);
     } else {
       logo.textContent = makeInitial(item.name);
@@ -2912,6 +2975,88 @@
     app2.refs.statusText.textContent = text;
     app2.refs.statusButton.title = title;
   }
+  function ensureServiceGridEvents(app2) {
+    const grid = app2.refs.servicesGrid;
+    if (grid.dataset.eventsBound === "true") {
+      return;
+    }
+    grid.dataset.eventsBound = "true";
+    grid.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const anchor = event.target.closest("a[data-service-url]");
+      if (!anchor || !grid.contains(anchor)) {
+        return;
+      }
+      void app2.addVisitHistoryItem({
+        title: anchor.dataset.serviceTitle || anchor.textContent || anchor.href,
+        url: anchor.dataset.serviceUrl || anchor.href,
+        source: "homer"
+      });
+    });
+    grid.addEventListener(
+      "error",
+      (event) => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement)) {
+          return;
+        }
+        if (image.dataset.sectionIcon) {
+          const holder2 = image.closest(".section-icon");
+          if (holder2) {
+            holder2.innerHTML = ICONS[image.dataset.sectionIcon] || ICONS.network;
+          }
+          return;
+        }
+        const fallbackLogo = image.dataset.fallbackLogo;
+        if (fallbackLogo && image.src !== fallbackLogo) {
+          image.src = fallbackLogo;
+          delete image.dataset.fallbackLogo;
+          return;
+        }
+        const holder = image.closest(".service-logo");
+        if (holder) {
+          image.remove();
+          holder.textContent = image.dataset.initial || "?";
+        }
+      },
+      true
+    );
+  }
+  function canUseCachedServicesHtml(app2, services) {
+    const cache = app2.homerCache;
+    return Boolean(
+      cache?.services === services && cache.servicesHtml && cache.renderKey === getServicesRenderKey(cache)
+    );
+  }
+  function saveServicesHtml(app2, services, servicesHtml) {
+    const cache = app2.homerCache;
+    if (!cache || cache.services !== services || !servicesHtml) {
+      return;
+    }
+    const renderKey = getServicesRenderKey(cache);
+    if (cache.renderKey === renderKey && cache.servicesHtml === servicesHtml) {
+      return;
+    }
+    cache.renderKey = renderKey;
+    cache.servicesHtml = servicesHtml;
+    scheduleHomerCachePersist(app2);
+  }
+  function getServicesRenderKey(cache) {
+    return [SERVICES_RENDER_VERSION, cache?.sourceUrl || "", cache?.fetchedAt || 0, cache?.theme || ""].join("|");
+  }
+  function scheduleHomerCachePersist(app2) {
+    if (app2.homerCachePersistTimer) {
+      return;
+    }
+    app2.homerCachePersistTimer = window.setTimeout(() => {
+      app2.homerCachePersistTimer = 0;
+      if (app2.homerCache) {
+        void storageSet(CACHE_KEY, app2.homerCache, LOCAL_AREA);
+      }
+    }, 250);
+  }
 
   // src/history.js
   async function addVisitHistoryItem(app2, item) {
@@ -2926,10 +3071,7 @@
       ...app2.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizedKey)
     ].slice(0, VISIT_HISTORY_LIMIT);
     app2.renderVisitPanels();
-    if (hasBrowserHistoryApi()) {
-      return;
-    }
-    await storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
+    void storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA);
   }
   async function loadVisitHistory(app2) {
     if (!hasBrowserHistoryApi()) {
@@ -2956,8 +3098,12 @@
   }
   async function refreshVisitHistory(app2) {
     if (app2.localPatch?.visits?.showRecent === false && app2.localPatch?.visits?.showFrequent === false) {
+      if (!app2.visitHistory.length && !app2.frequentVisits.length) {
+        return;
+      }
       app2.visitHistory = [];
       app2.frequentVisits = [];
+      await Promise.all([storageSet(HISTORY_KEY, [], LOCAL_AREA), storageSet(FREQUENT_HISTORY_KEY, [], LOCAL_AREA)]);
       app2.renderVisitPanels();
       return;
     }
@@ -2968,9 +3114,25 @@
     if (!nextHistory.length && !app2.visitHistory.length && !nextFrequent.length && !app2.frequentVisits.length) {
       return;
     }
+    if (areVisitListsEqual(nextHistory, app2.visitHistory) && areVisitListsEqual(nextFrequent, app2.frequentVisits)) {
+      return;
+    }
     app2.visitHistory = nextHistory;
     app2.frequentVisits = nextFrequent;
+    await Promise.all([
+      storageSet(HISTORY_KEY, app2.visitHistory, LOCAL_AREA),
+      storageSet(FREQUENT_HISTORY_KEY, app2.frequentVisits, LOCAL_AREA)
+    ]);
     app2.renderVisitPanels();
+  }
+  function areVisitListsEqual(left, right) {
+    if (left.length !== right.length) {
+      return false;
+    }
+    return left.every((item, index) => {
+      const other = right[index];
+      return item.title === other?.title && item.url === other?.url && item.source === other?.source && item.visitCount === other?.visitCount && item.visitedAt === other?.visitedAt;
+    });
   }
   function hasBrowserHistoryApi() {
     return typeof globalThis.chrome?.history?.search === "function";
@@ -3210,18 +3372,24 @@
       return;
     }
     if (!force && isWeatherCacheUsable(app2)) {
+      const hadStatus = Boolean(app2.weatherStatus);
       app2.weatherStatus = null;
-      renderWeatherWidget(app2);
+      if (hadStatus) {
+        renderWeatherWidget(app2);
+      }
       return;
     }
     if (!isWeatherCacheForCurrentSettings(app2)) {
       app2.weatherCache = null;
     }
-    app2.weatherStatus = {
-      kind: "loading",
-      message: hasManualLocation(app2) ? t("weatherLoadingManual") : t("weatherLoadingGeo")
-    };
-    renderWeatherWidget(app2);
+    const shouldShowLoading = force || !app2.weatherCache;
+    if (shouldShowLoading) {
+      app2.weatherStatus = {
+        kind: "loading",
+        message: hasManualLocation(app2) ? t("weatherLoadingManual") : t("weatherLoadingGeo")
+      };
+      renderWeatherWidget(app2);
+    }
     try {
       const location = hasManualLocation(app2) ? await resolveManualLocation(app2.localPatch.weather.locationName) : await getBrowserLocation();
       const forecast = await fetchForecast(location);
@@ -3697,15 +3865,21 @@
       return;
     }
     if (!force && isCacheFresh(app2.githubTrendingCache, getSyncIntervalMinutes(app2)) && app2.githubTrendingCache.queryKey === getTrendingQueryKey(app2)) {
+      const hadStatus = Boolean(app2.githubTrendingStatus);
       app2.githubTrendingStatus = null;
-      renderGitHubTrending(app2);
+      if (hadStatus) {
+        renderGitHubTrending(app2);
+      }
       return;
     }
-    app2.githubTrendingStatus = {
-      kind: "loading",
-      message: app2.githubTrendingCache ? "" : t("githubTrendingLoading")
-    };
-    renderGitHubTrending(app2);
+    const shouldShowLoading = force || !app2.githubTrendingCache;
+    if (shouldShowLoading) {
+      app2.githubTrendingStatus = {
+        kind: "loading",
+        message: app2.githubTrendingCache ? "" : t("githubTrendingLoading")
+      };
+      renderGitHubTrending(app2);
+    }
     try {
       const query = getTrendingQuery();
       const queryKey = getTrendingQueryKey(app2);
@@ -4416,7 +4590,6 @@ ${result.error}`);
     }
     if (!force && isCacheFresh(app2.homerCache, HOMER_SYNC_INTERVAL_MINUTES)) {
       setStatus(app2, "cache", "cache", t("homerCache", formatDateTime(app2.homerCache.fetchedAt)));
-      renderServices(app2, getVisibleServices(app2), getEmptyServicesMessage(app2));
       return;
     }
     if (!force && isFailureFresh(app2.syncMeta, HOMER_SYNC_INTERVAL_MINUTES, endpoints.configUrl)) {
@@ -4434,7 +4607,10 @@ ${result.error}`);
       setStatus(app2, "cache", app2.homerCache?.services?.length ? "away" : "no homer", t("homerAway"));
       return;
     }
-    setStatus(app2, "sync", "sync", t("homerSyncing"));
+    const shouldShowSync = force || !app2.homerCache?.services?.length;
+    if (shouldShowSync) {
+      setStatus(app2, "sync", "sync", t("homerSyncing"));
+    }
     try {
       const configText = await fetchTextWithTimeout(withCacheBuster(endpoints.configUrl), HOMER_FETCH_TIMEOUT_MS);
       const parsed = parseHomerConfig(configText, endpoints.configUrl);
@@ -4505,6 +4681,7 @@ ${result.error}`);
     state: null,
     localPatch: null,
     homerCache: null,
+    homerCachePersistTimer: 0,
     syncMeta: null,
     quickLinkMeta: {},
     searchEngineMeta: {},
@@ -4514,6 +4691,7 @@ ${result.error}`);
     githubTrendingStatus: null,
     newsFeedCache: null,
     newsStatuses: {},
+    newsCachePersistTimer: 0,
     visitHistory: [],
     frequentVisits: [],
     settingsDraft: null,
@@ -4541,16 +4719,19 @@ ${result.error}`);
     bindRefs();
     applyLocalization();
     bindEvents();
-    await loadSettingsState();
-    const localCache = await storageGetMany([
+    const localCachePromise = storageGetMany([
       CACHE_KEY,
       META_KEY,
       QUICK_LINK_META_KEY,
       SEARCH_ENGINE_META_KEY,
+      HISTORY_KEY,
+      FREQUENT_HISTORY_KEY,
       WEATHER_CACHE_KEY,
       GITHUB_TRENDING_CACHE_KEY,
       NEWS_FEED_CACHE_KEY
     ]);
+    await loadSettingsState();
+    const localCache = await localCachePromise;
     app.homerCache = normalizeHomerCache(localCache[CACHE_KEY]);
     app.syncMeta = normalizeSyncMeta(localCache[META_KEY]);
     app.quickLinkMeta = normalizeQuickLinkMeta(localCache[QUICK_LINK_META_KEY]);
@@ -4558,19 +4739,28 @@ ${result.error}`);
     app.weatherCache = normalizeWeatherCache(localCache[WEATHER_CACHE_KEY]);
     app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
     app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
-    [app.visitHistory, app.frequentVisits] = await Promise.all([
-      app.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app) : [],
-      app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : []
-    ]);
+    app.visitHistory = app.localPatch?.visits?.showRecent !== false ? normalizeVisitHistory(localCache[HISTORY_KEY]) : [];
+    app.frequentVisits = app.localPatch?.visits?.showFrequent !== false ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY]) : [];
     applyTheme(app);
     renderViewMode(app);
     renderAll(app);
-    void refreshSearchEngineMetadata(app, { force: false });
-    void refreshQuickLinkMetadata(app, { force: false });
-    void syncWeather(app, { force: false });
-    void syncNewsFeeds(app, { force: false });
-    void syncGitHubTrending(app, { force: false });
-    await syncHomer(app, { force: false });
+    scheduleInitialRefresh();
+  }
+  function scheduleInitialRefresh() {
+    const run = () => {
+      void refreshVisitHistory(app);
+      void refreshSearchEngineMetadata(app, { force: false });
+      void refreshQuickLinkMetadata(app, { force: false });
+      void syncWeather(app, { force: false });
+      void syncNewsFeeds(app, { force: false });
+      void syncGitHubTrending(app, { force: false });
+      void syncHomer(app, { force: false });
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 1e3 });
+      return;
+    }
+    window.setTimeout(run, 250);
   }
   function bindRefs() {
     const { refs } = app;
@@ -4919,6 +5109,7 @@ ${result.error}`);
           QUICK_LINK_META_KEY,
           SEARCH_ENGINE_META_KEY,
           HISTORY_KEY,
+          FREQUENT_HISTORY_KEY,
           WEATHER_CACHE_KEY,
           GITHUB_TRENDING_CACHE_KEY,
           NEWS_FEED_CACHE_KEY

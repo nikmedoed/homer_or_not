@@ -59,7 +59,14 @@ export function getNewsFeedSummary(app, source) {
     updatedAt: cache?.fetchedAt ? formatUpdatedAt(cache.fetchedAt, { includeDate: false }) : "",
     updatedAtTitle: cache?.fetchedAt ? formatDateTime(cache.fetchedAt) : "",
     items: Array.isArray(cache?.items) ? cache.items : [],
+    rowsHtml: cache?.renderKey === getNewsRenderKey(source) ? cache.rowsHtml || "" : "",
   };
+}
+
+export function getNewsRenderKey(source) {
+  return ["newsRows:v1", LOCALE, getNewsFeedQueryKey(source), source.id, source.title, source.type, source.sourceKey || ""].join(
+    "|",
+  );
 }
 
 export function formatNewsMeta(item, { showAge = true, showDomain = true } = {}) {
@@ -95,16 +102,22 @@ async function syncNewsFeed(app, source, { force }) {
   const currentCache = app.newsFeedCache?.feeds?.[source.id] || null;
   const queryKey = getNewsFeedQueryKey(source);
   if (!force && isCacheFresh(currentCache, source.syncIntervalMinutes) && currentCache.queryKey === queryKey) {
+    const hadStatus = Boolean(app.newsStatuses?.[source.id]);
     app.newsStatuses[source.id] = null;
-    renderNewsFeedWidgets(app);
+    if (hadStatus) {
+      renderNewsFeedWidgets(app);
+    }
     return;
   }
 
-  app.newsStatuses[source.id] = {
-    kind: "loading",
-    message: currentCache ? "" : t("newsLoading"),
-  };
-  renderNewsFeedWidgets(app);
+  const shouldShowLoading = force || !currentCache;
+  if (shouldShowLoading) {
+    app.newsStatuses[source.id] = {
+      kind: "loading",
+      message: currentCache ? "" : t("newsLoading"),
+    };
+    renderNewsFeedWidgets(app);
+  }
 
   try {
     const items = sortAndDedupeItems(await fetchNewsSource(source)).slice(0, source.maxItems);
@@ -145,6 +158,8 @@ function normalizeSingleFeedCache(raw) {
     fetchedAt,
     queryKey,
     items,
+    renderKey: typeof raw.renderKey === "string" ? raw.renderKey : "",
+    rowsHtml: typeof raw.rowsHtml === "string" && raw.rowsHtml.length <= 500000 ? raw.rowsHtml : "",
   };
 }
 

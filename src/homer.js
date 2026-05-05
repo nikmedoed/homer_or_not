@@ -18,6 +18,8 @@ export function normalizeHomerCache(raw) {
     sourceUrl: typeof raw.sourceUrl === "string" ? raw.sourceUrl : "",
     theme: typeof raw.theme === "string" ? raw.theme : "",
     services,
+    renderKey: typeof raw.renderKey === "string" ? raw.renderKey : "",
+    servicesHtml: typeof raw.servicesHtml === "string" && raw.servicesHtml.length <= 500000 ? raw.servicesHtml : "",
   };
 }
 

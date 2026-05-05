@@ -5,6 +5,7 @@ export const META_KEY = "homerOrNot.homerMeta.v2";
 export const QUICK_LINK_META_KEY = "homerOrNot.quickLinkMeta.v2";
 export const SEARCH_ENGINE_META_KEY = "homerOrNot.searchEngineMeta.v2";
 export const HISTORY_KEY = "homerOrNot.visitHistory.v1";
+export const FREQUENT_HISTORY_KEY = "homerOrNot.frequentHistory.v1";
 export const WEATHER_CACHE_KEY = "homerOrNot.weatherCache.v1";
 export const GITHUB_TRENDING_CACHE_KEY = "homerOrNot.githubTrendingCache.v1";
 export const NEWS_FEED_CACHE_KEY = "homerOrNot.newsFeedCache.v1";

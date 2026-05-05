@@ -12,6 +12,8 @@ export function renderFeedWidget({
   updatedText,
   staleText,
   updatedTitle,
+  rowsHtml = "",
+  afterRowsRendered = null,
   createRow,
 }) {
   const hasItems = items.length > 0;
@@ -36,8 +38,15 @@ export function renderFeedWidget({
     return;
   }
 
-  for (const item of items) {
-    list.append(createRow(item));
+  if (rowsHtml) {
+    list.innerHTML = rowsHtml;
+  } else {
+    for (const item of items) {
+      list.append(createRow(item));
+    }
+    if (typeof afterRowsRendered === "function") {
+      afterRowsRendered(list.innerHTML);
+    }
   }
 
   if (status?.kind === "error") {

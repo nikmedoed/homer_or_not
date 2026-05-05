@@ -39,7 +39,6 @@ export async function syncHomer(app, { force }) {
 
   if (!force && isCacheFresh(app.homerCache, HOMER_SYNC_INTERVAL_MINUTES)) {
     setStatus(app, "cache", "cache", t("homerCache", formatDateTime(app.homerCache.fetchedAt)));
-    renderServices(app, getVisibleServices(app), getEmptyServicesMessage(app));
     return;
   }
 
@@ -60,7 +59,10 @@ export async function syncHomer(app, { force }) {
     return;
   }
 
-  setStatus(app, "sync", "sync", t("homerSyncing"));
+  const shouldShowSync = force || !app.homerCache?.services?.length;
+  if (shouldShowSync) {
+    setStatus(app, "sync", "sync", t("homerSyncing"));
+  }
   try {
     const configText = await fetchTextWithTimeout(withCacheBuster(endpoints.configUrl), HOMER_FETCH_TIMEOUT_MS);
     const parsed = parseHomerConfig(configText, endpoints.configUrl);

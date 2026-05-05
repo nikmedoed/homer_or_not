@@ -1,5 +1,6 @@
 import {
   CACHE_KEY,
+  FREQUENT_HISTORY_KEY,
   GITHUB_TRENDING_CACHE_KEY,
   HISTORY_KEY,
   LOCAL_AREA,
@@ -16,7 +17,7 @@ import { FALLBACK_CONFIG } from "./default-config.js";
 import { normalizeGitHubTrendingCache, syncGitHubTrending } from "./github-trending.js";
 import { normalizeHomerCache, normalizeSyncMeta } from "./homer.js";
 import { applyLocalization, t } from "./i18n.js";
-import { addVisitHistoryItem, loadFrequentVisits, loadVisitHistory, refreshVisitHistory } from "./history.js";
+import { addVisitHistoryItem, refreshVisitHistory } from "./history.js";
 import { refreshQuickLinkMetadata, refreshSearchEngineMetadata } from "./metadata.js";
 import { getVisibleNewsSources, normalizeNewsFeedCache, syncNewsFeeds } from "./news.js";
 import {
@@ -44,6 +45,7 @@ import {
   normalizeQuickLinkMeta,
   normalizeSearchEngineMeta,
   normalizeSyncedState,
+  normalizeVisitHistory,
   normalizeViewMode,
   normalizeWidgetOrder,
   applyLocalPatch,
@@ -71,6 +73,7 @@ const app = {
   state: null,
   localPatch: null,
   homerCache: null,
+  homerCachePersistTimer: 0,
   syncMeta: null,
   quickLinkMeta: {},
   searchEngineMeta: {},
@@ -80,6 +83,7 @@ const app = {
   githubTrendingStatus: null,
   newsFeedCache: null,
   newsStatuses: {},
+  newsCachePersistTimer: 0,
   visitHistory: [],
   frequentVisits: [],
   settingsDraft: null,
@@ -110,16 +114,19 @@ async function init() {
   bindRefs();
   applyLocalization();
   bindEvents();
-  await loadSettingsState();
-  const localCache = await storageGetMany([
+  const localCachePromise = storageGetMany([
     CACHE_KEY,
     META_KEY,
     QUICK_LINK_META_KEY,
     SEARCH_ENGINE_META_KEY,
+    HISTORY_KEY,
+    FREQUENT_HISTORY_KEY,
     WEATHER_CACHE_KEY,
     GITHUB_TRENDING_CACHE_KEY,
     NEWS_FEED_CACHE_KEY,
   ]);
+  await loadSettingsState();
+  const localCache = await localCachePromise;
   app.homerCache = normalizeHomerCache(localCache[CACHE_KEY]);
   app.syncMeta = normalizeSyncMeta(localCache[META_KEY]);
   app.quickLinkMeta = normalizeQuickLinkMeta(localCache[QUICK_LINK_META_KEY]);
@@ -127,19 +134,30 @@ async function init() {
   app.weatherCache = normalizeWeatherCache(localCache[WEATHER_CACHE_KEY]);
   app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
   app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
-  [app.visitHistory, app.frequentVisits] = await Promise.all([
-    app.localPatch?.visits?.showRecent !== false ? loadVisitHistory(app) : [],
-    app.localPatch?.visits?.showFrequent !== false ? loadFrequentVisits(app) : [],
-  ]);
+  app.visitHistory = app.localPatch?.visits?.showRecent !== false ? normalizeVisitHistory(localCache[HISTORY_KEY]) : [];
+  app.frequentVisits =
+    app.localPatch?.visits?.showFrequent !== false ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY]) : [];
   applyTheme(app);
   renderViewMode(app);
   renderAll(app);
-  void refreshSearchEngineMetadata(app, { force: false });
-  void refreshQuickLinkMetadata(app, { force: false });
-  void syncWeather(app, { force: false });
-  void syncNewsFeeds(app, { force: false });
-  void syncGitHubTrending(app, { force: false });
-  await syncHomer(app, { force: false });
+  scheduleInitialRefresh();
+}
+
+function scheduleInitialRefresh() {
+  const run = () => {
+    void refreshVisitHistory(app);
+    void refreshSearchEngineMetadata(app, { force: false });
+    void refreshQuickLinkMetadata(app, { force: false });
+    void syncWeather(app, { force: false });
+    void syncNewsFeeds(app, { force: false });
+    void syncGitHubTrending(app, { force: false });
+    void syncHomer(app, { force: false });
+  };
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(run, { timeout: 1000 });
+    return;
+  }
+  window.setTimeout(run, 250);
 }
 
 function bindRefs() {
@@ -509,6 +527,7 @@ async function resetSettings() {
         QUICK_LINK_META_KEY,
         SEARCH_ENGINE_META_KEY,
         HISTORY_KEY,
+        FREQUENT_HISTORY_KEY,
         WEATHER_CACHE_KEY,
         GITHUB_TRENDING_CACHE_KEY,
         NEWS_FEED_CACHE_KEY,

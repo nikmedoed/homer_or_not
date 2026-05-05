@@ -1,4 +1,4 @@
-import { HISTORY_KEY, LOCAL_AREA, VISIT_HISTORY_LIMIT } from "./constants.js";
+import { FREQUENT_HISTORY_KEY, HISTORY_KEY, LOCAL_AREA, VISIT_HISTORY_LIMIT } from "./constants.js";
 import { FALLBACK_CONFIG } from "./default-config.js";
 import {
   getVisibleQuickLinks,
@@ -20,10 +20,7 @@ export async function addVisitHistoryItem(app, item) {
     ...app.visitHistory.filter((existing) => normalizeUrlKey(existing.url) !== normalizedKey),
   ].slice(0, VISIT_HISTORY_LIMIT);
   app.renderVisitPanels();
-  if (hasBrowserHistoryApi()) {
-    return;
-  }
-  await storageSet(HISTORY_KEY, app.visitHistory, LOCAL_AREA);
+  void storageSet(HISTORY_KEY, app.visitHistory, LOCAL_AREA);
 }
 
 export async function loadVisitHistory(app) {
@@ -52,8 +49,12 @@ export async function loadVisitHistory(app) {
 
 export async function refreshVisitHistory(app) {
   if (app.localPatch?.visits?.showRecent === false && app.localPatch?.visits?.showFrequent === false) {
+    if (!app.visitHistory.length && !app.frequentVisits.length) {
+      return;
+    }
     app.visitHistory = [];
     app.frequentVisits = [];
+    await Promise.all([storageSet(HISTORY_KEY, [], LOCAL_AREA), storageSet(FREQUENT_HISTORY_KEY, [], LOCAL_AREA)]);
     app.renderVisitPanels();
     return;
   }
@@ -64,9 +65,32 @@ export async function refreshVisitHistory(app) {
   if (!nextHistory.length && !app.visitHistory.length && !nextFrequent.length && !app.frequentVisits.length) {
     return;
   }
+  if (areVisitListsEqual(nextHistory, app.visitHistory) && areVisitListsEqual(nextFrequent, app.frequentVisits)) {
+    return;
+  }
   app.visitHistory = nextHistory;
   app.frequentVisits = nextFrequent;
+  await Promise.all([
+    storageSet(HISTORY_KEY, app.visitHistory, LOCAL_AREA),
+    storageSet(FREQUENT_HISTORY_KEY, app.frequentVisits, LOCAL_AREA),
+  ]);
   app.renderVisitPanels();
+}
+
+function areVisitListsEqual(left, right) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      item.title === other?.title &&
+      item.url === other?.url &&
+      item.source === other?.source &&
+      item.visitCount === other?.visitCount &&
+      item.visitedAt === other?.visitedAt
+    );
+  });
 }
 
 export function hasBrowserHistoryApi() {

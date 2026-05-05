@@ -1,7 +1,9 @@
-import { formatNewsMeta, formatNewsTime, getNewsFeedSummary, getVisibleNewsSources } from "../news.js";
+import { LOCAL_AREA, NEWS_FEED_CACHE_KEY } from "../constants.js";
+import { formatNewsMeta, formatNewsTime, getNewsFeedSummary, getNewsRenderKey, getVisibleNewsSources } from "../news.js";
 import { getNewsWidgetId } from "../state.js";
 import { t } from "../i18n.js";
 import { updateWidgetLayoutState } from "../layout.js";
+import { storageSet } from "../utils.js";
 import { renderFeedWidget } from "./feed-widget.js";
 
 export function renderNewsFeedWidgets(app) {
@@ -36,6 +38,8 @@ export function renderNewsFeedWidgets(app) {
       updatedText: summary.updatedAt ? t("newsUpdated", summary.updatedAt) : source.title,
       staleText: summary.updatedAt ? t("newsStale", summary.updatedAt) : t("newsUnavailable"),
       updatedTitle: summary.updatedAtTitle,
+      rowsHtml: summary.rowsHtml,
+      afterRowsRendered: (rowsHtml) => saveNewsRowsHtml(app, source, rowsHtml),
       createRow: (item) => createNewsRow(app, item, source),
     });
   }
@@ -80,6 +84,36 @@ function getOrCreateNewsSection(app, source) {
   const list = document.createElement("div");
   list.className = "feed-list news-list";
   list.dataset.feedList = "";
+  list.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const anchor = event.target.closest("a[data-news-url]");
+    if (!anchor || !list.contains(anchor)) {
+      return;
+    }
+    void app.addVisitHistoryItem({
+      title: anchor.dataset.newsTitle || anchor.textContent || anchor.href,
+      url: anchor.dataset.newsUrl || anchor.href,
+      source: anchor.dataset.newsSource || `news:${source.id}`,
+    });
+  });
+  list.addEventListener(
+    "error",
+    (event) => {
+      const image = event.target;
+      if (!(image instanceof HTMLImageElement)) {
+        return;
+      }
+      const row = image.closest(".news-row");
+      const media = image.closest(".news-thumb");
+      if (row && media) {
+        row.classList.remove("news-row-has-thumb");
+        media.remove();
+      }
+    },
+    true,
+  );
 
   header.append(heading, meta, refresh);
   section.append(header, list);
@@ -99,13 +133,9 @@ function createNewsRow(app, item, source) {
   anchor.target = "_blank";
   anchor.rel = "noreferrer";
   anchor.title = item.description || item.title;
-  anchor.addEventListener("click", () => {
-    void app.addVisitHistoryItem({
-      title: item.title,
-      url: item.url,
-      source: `news:${source.id}`,
-    });
-  });
+  anchor.dataset.newsTitle = item.title;
+  anchor.dataset.newsUrl = item.url;
+  anchor.dataset.newsSource = `news:${source.id}`;
 
   if (item.imageUrl) {
     anchor.classList.add("news-row-has-thumb");
@@ -123,10 +153,6 @@ function createNewsRow(app, item, source) {
       image.width = item.imageWidth;
       image.height = item.imageHeight;
     }
-    image.addEventListener("error", () => {
-      anchor.classList.remove("news-row-has-thumb");
-      media.remove();
-    });
 
     media.append(image);
     anchor.append(media);
@@ -167,4 +193,28 @@ function createNewsRow(app, item, source) {
   }
   anchor.append(body);
   return anchor;
+}
+
+function saveNewsRowsHtml(app, source, rowsHtml) {
+  const cache = app.newsFeedCache?.feeds?.[source.id];
+  if (!cache || !rowsHtml) {
+    return;
+  }
+  const renderKey = getNewsRenderKey(source);
+  if (cache.renderKey === renderKey && cache.rowsHtml === rowsHtml) {
+    return;
+  }
+  cache.renderKey = renderKey;
+  cache.rowsHtml = rowsHtml;
+  scheduleNewsCachePersist(app);
+}
+
+function scheduleNewsCachePersist(app) {
+  if (app.newsCachePersistTimer) {
+    return;
+  }
+  app.newsCachePersistTimer = window.setTimeout(() => {
+    app.newsCachePersistTimer = 0;
+    void storageSet(NEWS_FEED_CACHE_KEY, app.newsFeedCache, LOCAL_AREA);
+  }, 250);
 }
