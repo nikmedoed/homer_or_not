@@ -53,6 +53,22 @@ export function normalizeUrlKey(raw) {
   }
 }
 
+export function toPublicUrl(raw) {
+  const value = String(raw || "").trim();
+  try {
+    const url = new URL(value);
+    if (url.hostname === "api.github.com") {
+      const match = url.pathname.match(/^\/repos\/([^/]+)\/([^/]+)\/?$/i);
+      if (match) {
+        return `https://github.com/${match[1]}/${match[2]}`;
+      }
+    }
+  } catch {
+    // Preserve the original value; callers still validate it.
+  }
+  return value;
+}
+
 export function truncateTitle(title) {
   const value = String(title || "").replace(/\s+/g, " ").trim();
   return value.length > 22 ? `${value.slice(0, 21).trim()}…` : value;

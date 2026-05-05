@@ -5,7 +5,7 @@ import {
 } from "./constants.js";
 import { LOCALE, t } from "./i18n.js";
 import { renderGitHubTrending } from "./render.js";
-import { fetchJsonWithTimeout, isCacheFresh, storageSet } from "./utils.js";
+import { fetchJsonWithTimeout, isCacheFresh, storageSet, toPublicUrl } from "./utils.js";
 
 const SEARCH_URL = "https://api.github.com/search/repositories";
 const MAX_ITEMS = 12;
@@ -98,8 +98,13 @@ function normalizeTrendingItem(raw) {
       : typeof raw.full_name === "string"
         ? raw.full_name.trim()
         : "";
-  const url =
-    typeof raw.url === "string" ? raw.url.trim() : typeof raw.html_url === "string" ? raw.html_url.trim() : "";
+  const url = toPublicUrl(
+    typeof raw.html_url === "string" && raw.html_url.trim()
+      ? raw.html_url
+      : typeof raw.url === "string"
+        ? raw.url
+        : "",
+  );
   if (!name || !fullName || !url) {
     return null;
   }

@@ -1,7 +1,16 @@
 import { LOCAL_AREA, NEWS_FEED_CACHE_KEY, NEWS_FEED_FETCH_TIMEOUT_MS } from "./constants.js";
 import { LOCALE, t } from "./i18n.js";
 import { renderNewsFeedWidgets } from "./render.js";
-import { fetchJsonWithTimeout, fetchTextWithTimeout, formatDateTime, isCacheFresh, isHttpUrl, storageSet, toDomain } from "./utils.js";
+import {
+  fetchJsonWithTimeout,
+  fetchTextWithTimeout,
+  formatDateTime,
+  isCacheFresh,
+  isHttpUrl,
+  storageSet,
+  toDomain,
+  toPublicUrl,
+} from "./utils.js";
 
 const MAX_SOURCE_ITEMS = 60;
 const HN_ITEM_LIMIT = 30;
@@ -357,7 +366,7 @@ function normalizeNewsItem(raw) {
     return null;
   }
   const title = normalizeText(raw.title);
-  const url = typeof raw.url === "string" ? raw.url.trim() : "";
+  const url = toPublicUrl(raw.url);
   if (!title || !isHttpUrl(url)) {
     return null;
   }

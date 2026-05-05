@@ -552,6 +552,20 @@
       return "";
     }
   }
+  function toPublicUrl(raw) {
+    const value = String(raw || "").trim();
+    try {
+      const url = new URL(value);
+      if (url.hostname === "api.github.com") {
+        const match = url.pathname.match(/^\/repos\/([^/]+)\/([^/]+)\/?$/i);
+        if (match) {
+          return `https://github.com/${match[1]}/${match[2]}`;
+        }
+      }
+    } catch {
+    }
+    return value;
+  }
   function truncateTitle(title) {
     const value = String(title || "").replace(/\s+/g, " ").trim();
     return value.length > 22 ? `${value.slice(0, 21).trim()}\u2026` : value;
@@ -1940,7 +1954,7 @@
       return null;
     }
     const title = normalizeText2(raw.title);
-    const url = typeof raw.url === "string" ? raw.url.trim() : "";
+    const url = toPublicUrl(raw.url);
     if (!title || !isHttpUrl(url)) {
       return null;
     }
@@ -3731,7 +3745,9 @@
     }
     const name = typeof raw.name === "string" ? raw.name.trim() : "";
     const fullName = typeof raw.fullName === "string" ? raw.fullName.trim() : typeof raw.full_name === "string" ? raw.full_name.trim() : "";
-    const url = typeof raw.url === "string" ? raw.url.trim() : typeof raw.html_url === "string" ? raw.html_url.trim() : "";
+    const url = toPublicUrl(
+      typeof raw.html_url === "string" && raw.html_url.trim() ? raw.html_url : typeof raw.url === "string" ? raw.url : ""
+    );
     if (!name || !fullName || !url) {
       return null;
     }
