@@ -1,6 +1,8 @@
 # Homer or Not
 
-Local-first Chrome/Chromium new tab page with configurable search, quick links, visited-site columns, and cached Homer service data.
+![Homer or Not preview](./docs/preview.png)
+
+Local-first Chrome/Chromium new tab page with configurable search, quick links, visited-site columns, weather, news widgets, GitHub Trending, and cached Homer service data.
 
 The goal is to have one convenient start page everywhere: at home, at work, on public networks, and while travelling. Search, quick links, and visited-site columns work directly from the extension, so the new tab stays useful even when the private network is unavailable. When the browser is on the local network, the same page also integrates with Homer and shows its service tiles. The last successful Homer service list is kept locally for offline or away-from-home use.
 
@@ -11,8 +13,13 @@ The goal is to have one convenient start page everywhere: at home, at work, on p
 - Uses one selected search engine as the default for Enter.
 - Shows a configurable row of quick links with site icons and short labels.
 - Shows locally switchable frequent and recent visited-site columns.
+- Shows a top weather widget with either browser geolocation or a manual local location.
+- Shows configurable news feed widgets, including RSS, Hacker News, Reddit, and supported custom JSON feeds.
+- Shows a GitHub Trending widget with local filtering.
+- Lets the central widgets be reordered and locally enabled or disabled.
 - Reads Homer `assets/config.yml` and renders its service groups as tiles.
 - Caches Homer service data in the current browser after the first successful sync.
+- Caches weather, news, GitHub Trending, favicons, and visit lists locally for faster new-tab opens.
 - Avoids hitting Homer on every new tab by throttling sync attempts.
 - Works as an unpacked extension, so it can be installed from a Git checkout without the Chrome Web Store.
 
@@ -31,6 +38,7 @@ If the extension is installed from a Git checkout, update it with `git pull`, th
 
 Source code lives in `src/`. JavaScript is bundled into the root `newtab.js`; CSS source lives in `src/styles/` and is bundled into the root `styles.css`. Those root files are what `newtab.html` loads.
 
+- `npm install` or `npm ci` - install the build dependency (`esbuild`). `npm install` also installs the Git pre-commit hook.
 - `npm run dev` - watch `src/main.js` and `src/styles/index.css`, rebuilding root assets while you edit.
 - `npm run build:local` - rebuild the root `newtab.js` and `styles.css` once for the unpacked extension.
 - `npm run build` - create a clean, minified extension package next to the repo.
@@ -47,6 +55,17 @@ Then load this repository folder as the unpacked extension. Keep `npm run dev` r
 Do not edit the generated root `newtab.js` or `styles.css` directly. Put JavaScript and CSS changes in `src/`, then run `npm run build:local` or keep `npm run dev` running.
 
 If you need a clean folder for packaging, run `npm run build` and use the generated `../homer_or_not-release` folder.
+
+Local build:
+
+```sh
+npm run build:local
+```
+
+This updates the committed root assets used by the unpacked extension:
+
+- `newtab.js` from `src/main.js`
+- `styles.css` from `src/styles/index.css`
 
 Release build:
 
@@ -74,7 +93,7 @@ Use the repository root for normal unpacked installation and development. Use `.
 
 Pushing a tag like `v1.2.3` runs the GitHub Actions release workflow. The workflow:
 
-- verifies that the tagged commit is reachable from `main`;
+- verifies that the tagged commit is reachable from `master`;
 - installs dependencies with `npm ci`;
 - builds the root `newtab.js` and `styles.css`;
 - builds a clean `homer_or_not-release` folder;
@@ -85,7 +104,7 @@ Pushing a tag like `v1.2.3` runs the GitHub Actions release workflow. The workfl
 Example release flow:
 
 ```sh
-git checkout main
+git checkout master
 git pull
 git tag v1.2.3
 git push origin v1.2.3
@@ -98,11 +117,20 @@ The source `manifest.json` is not edited by the release workflow; only the gener
 Default settings live in [newtab.config.js](./newtab.config.js):
 
 - `search.engines` - search buttons and URL templates. Use `{q}` where the encoded query should go.
-- `search.defaultEngineId` - the engine used when pressing Enter.
 - `quickLinks` - the top quick-link row.
 - `homer.url` - Homer root, assets directory, or config URL.
 
-The settings button in the page can also edit search engines, quick links, the Homer URL, and visit-column options without changing files. `Reset` restores the values from `newtab.config.js`.
+The settings button in the page can also edit search engines, quick links, the Homer URL, weather, visit-column options, widget order, GitHub Trending options, and news sources without changing files. `Reset` restores the synced defaults from `newtab.config.js` and clears local-only cache and overrides.
+
+Some choices are intentionally local to the current browser and are not synced:
+
+- selected/default search engine;
+- locally disabled search engines;
+- locally disabled quick links;
+- local Homer disabled mode;
+- local widget visibility choices;
+- top weather location and visibility choices;
+- visit-column visibility.
 
 Quick-link labels are manual when `title` is set. If `title` is empty, the extension falls back to the domain. Quick-link and search-engine icons are fetched through Chrome's favicon endpoint and cached locally.
 
@@ -122,11 +150,11 @@ Homer sync runs when a new tab opens, but successful syncs and recent failures a
 
 ## Storage
 
-- User settings are stored in `chrome.storage.sync`.
-- Local overrides, Homer tiles, visit history, and fetched icons are stored in `chrome.storage.local`.
+- Synced configuration is stored in `chrome.storage.sync`.
+- Local overrides, selected search engine, disabled local items, Homer tiles, weather cache, news cache, GitHub Trending cache, visit history, frequent history, and fetched icons are stored in `chrome.storage.local`.
 - `manifest.json` includes a fixed extension `key`, so unpacked installs keep the same extension ID across machines.
 
-A new browser profile or work computer will receive synced settings, but it will not have Homer tiles until that browser successfully reaches Homer at least once. Local-only options include the selected search engine, locally disabled search engines or quick links, Homer disable mode, and visibility of the visited-site columns.
+A new browser profile or work computer will receive synced settings, but it will not have local cache data until that browser successfully fetches it. For example, Homer tiles appear after that machine can reach the configured Homer URL at least once, and weather/news/GitHub widgets fill after their own first successful refresh.
 
 ## Homer Assets
 

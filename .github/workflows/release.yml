@@ -33,12 +33,12 @@ jobs:
             echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Require tag on main
+      - name: Require tag on master
         if: github.event_name == 'push'
         run: |
-          git fetch origin main
+          git fetch origin master
           tag_commit="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
-          git merge-base --is-ancestor "$tag_commit" origin/main
+          git merge-base --is-ancestor "$tag_commit" origin/master
 
       - name: Setup Node
         uses: actions/setup-node@v4
