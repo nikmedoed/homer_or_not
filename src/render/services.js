@@ -1,17 +1,22 @@
 import { ICONS, normalizeSectionIcon } from "../homer.js";
 import { t } from "../i18n.js";
+import { updateWidgetLayoutState } from "../layout.js";
 import { formatDateTime, makeInitial } from "../utils.js";
 
 export function renderServices(app, services, emptyMessage = "") {
-  app.refs.servicesGrid.replaceChildren();
+  const grid = app.refs.servicesGrid;
+  grid.replaceChildren();
+  grid.classList.toggle("hidden", !services.length && !emptyMessage);
   if (!services.length) {
     if (!emptyMessage) {
+      updateWidgetLayoutState(app);
       return;
     }
     const empty = document.createElement("p");
     empty.className = "empty-message";
     empty.textContent = emptyMessage;
-    app.refs.servicesGrid.append(empty);
+    grid.append(empty);
+    updateWidgetLayoutState(app);
     return;
   }
 
@@ -31,8 +36,9 @@ export function renderServices(app, services, emptyMessage = "") {
     }
 
     article.append(heading, card);
-    app.refs.servicesGrid.append(article);
+    grid.append(article);
   }
+  updateWidgetLayoutState(app);
 }
 
 function createSectionIcon(group) {

@@ -461,6 +461,51 @@
     services: []
   };
 
+  // src/icons.js
+  var ICONS = {
+    network: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v5m-7 7v-3h14v3M5 20h4v-4H5v4Zm10 0h4v-4h-4v4Zm-5 0h4v-4h-4v4Z"/></svg>',
+    media: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm3 3v8l6-4-6-4Zm9 0h2m-2 4h2m-2 4h2"/></svg>',
+    sync: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5m10.4-2A7.5 7.5 0 0 0 6.2 7.2M4.6 14a7.5 7.5 0 0 0 13.2 3.8"/></svg>',
+    ethernet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h16v5H4v-5Zm2-9h3v9H6V6Zm5 3h3v6h-3V9Zm5-3h3v9h-3V6Z"/></svg>',
+    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3v-9Z"/></svg>'
+  };
+  var ICON_ALIASES = /* @__PURE__ */ new Map([
+    ["fas fa-network-wired", "network"],
+    ["fa-network-wired", "network"],
+    ["fas fa-photo-video", "media"],
+    ["fa-photo-video", "media"],
+    ["fas fa-rotate", "sync"],
+    ["fa-rotate", "sync"],
+    ["fas fa-sync", "sync"],
+    ["fas fa-ethernet", "ethernet"],
+    ["fa-ethernet", "ethernet"],
+    ["fas fa-home", "home"],
+    ["fa-home", "home"]
+  ]);
+  function normalizeSectionIcon(icon, name) {
+    const key = String(icon || "").trim().toLowerCase();
+    if (ICONS[key]) {
+      return key;
+    }
+    if (ICON_ALIASES.has(key)) {
+      return ICON_ALIASES.get(key);
+    }
+    const text = `${key} ${name || ""}`.toLowerCase();
+    if (text.includes("\u043C\u0435\u0434\u0438\u0430") || text.includes("media") || text.includes("photo")) {
+      return "media";
+    }
+    if (text.includes("sync") || text.includes("syncthing") || text.includes("rotate")) {
+      return "sync";
+    }
+    if (text.includes("\u0441\u0435\u0442\u044C") || text.includes("ethernet") || text.includes("router")) {
+      return "ethernet";
+    }
+    if (text.includes("\u0434\u043E\u043C") || text.includes("home")) {
+      return "home";
+    }
+    return "network";
+  }
+
   // src/utils.js
   var TIME_FORMATTER = new Intl.DateTimeFormat(LOCALE === "ru" ? "ru-RU" : "en-US", {
     hour: "2-digit",
@@ -682,133 +727,6 @@
       } catch {
       }
     }
-  }
-
-  // src/render/github-trending-widget.js
-  function renderGitHubTrending(app2) {
-    const { refs } = app2;
-    if (!refs.githubTrending) {
-      return;
-    }
-    if (app2.localPatch?.githubTrending?.disabled) {
-      refs.githubTrending.classList.add("hidden");
-      return;
-    }
-    const status = app2.githubTrendingStatus;
-    const summary = getGitHubTrendingSummary(app2.githubTrendingCache);
-    const hasItems = summary.items.length > 0;
-    refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
-    refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
-    refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
-    refs.githubTrendingList.replaceChildren();
-    if (!hasItems) {
-      const empty = document.createElement("p");
-      empty.className = "github-trending-message";
-      empty.textContent = status?.message || t("githubTrendingUnavailable");
-      refs.githubTrendingList.append(empty);
-      refs.githubTrendingMeta.textContent = t("githubTrendingSource");
-      return;
-    }
-    for (const item of summary.items) {
-      refs.githubTrendingList.append(createGitHubTrendingRow(app2, item));
-    }
-    if (status?.kind === "error") {
-      refs.githubTrendingMeta.textContent = t("githubTrendingStale", summary.updatedAt);
-      refs.githubTrendingMeta.title = [status.message, summary.updatedAtTitle].filter(Boolean).join(" \xB7 ");
-      return;
-    }
-    refs.githubTrendingMeta.textContent = summary.updatedAt ? t("githubTrendingUpdated", summary.updatedAt) : t("githubTrendingSource");
-    refs.githubTrendingMeta.title = summary.updatedAtTitle;
-  }
-  function createGitHubTrendingRow(app2, item) {
-    const anchor = document.createElement("a");
-    anchor.className = "github-trending-row";
-    anchor.href = item.url;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
-    anchor.title = item.description || item.fullName;
-    anchor.addEventListener("click", () => {
-      void app2.addVisitHistoryItem({
-        title: item.fullName,
-        url: item.url,
-        source: "github"
-      });
-    });
-    const avatar = document.createElement("span");
-    avatar.className = "github-trending-avatar";
-    if (item.ownerAvatarUrl) {
-      const image = document.createElement("img");
-      image.src = item.ownerAvatarUrl;
-      image.alt = "";
-      image.loading = "lazy";
-      image.addEventListener("error", () => {
-        image.remove();
-        avatar.textContent = makeInitial(item.name);
-      });
-      avatar.append(image);
-    } else {
-      avatar.textContent = makeInitial(item.name);
-    }
-    const body = document.createElement("span");
-    body.className = "github-trending-body";
-    const title = document.createElement("span");
-    title.className = "github-trending-name";
-    title.textContent = item.fullName;
-    const description = document.createElement("span");
-    description.className = "github-trending-description";
-    description.textContent = item.description || t("githubTrendingNoDescription");
-    const meta = document.createElement("span");
-    meta.className = "github-trending-repo-meta";
-    const stars = formatStars(item.stars);
-    meta.textContent = [stars ? `\u2605 ${stars}` : "", item.language, formatRepositoryAge(item)].filter(Boolean).join(" \xB7 ");
-    body.append(title, description, meta);
-    anchor.append(avatar, body);
-    return anchor;
-  }
-
-  // src/icons.js
-  var ICONS = {
-    network: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v5m-7 7v-3h14v3M5 20h4v-4H5v4Zm10 0h4v-4h-4v4Zm-5 0h4v-4h-4v4Z"/></svg>',
-    media: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm3 3v8l6-4-6-4Zm9 0h2m-2 4h2m-2 4h2"/></svg>',
-    sync: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5m10.4-2A7.5 7.5 0 0 0 6.2 7.2M4.6 14a7.5 7.5 0 0 0 13.2 3.8"/></svg>',
-    ethernet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h16v5H4v-5Zm2-9h3v9H6V6Zm5 3h3v6h-3V9Zm5-3h3v9h-3V6Z"/></svg>',
-    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3v-9Z"/></svg>'
-  };
-  var ICON_ALIASES = /* @__PURE__ */ new Map([
-    ["fas fa-network-wired", "network"],
-    ["fa-network-wired", "network"],
-    ["fas fa-photo-video", "media"],
-    ["fa-photo-video", "media"],
-    ["fas fa-rotate", "sync"],
-    ["fa-rotate", "sync"],
-    ["fas fa-sync", "sync"],
-    ["fas fa-ethernet", "ethernet"],
-    ["fa-ethernet", "ethernet"],
-    ["fas fa-home", "home"],
-    ["fa-home", "home"]
-  ]);
-  function normalizeSectionIcon(icon, name) {
-    const key = String(icon || "").trim().toLowerCase();
-    if (ICONS[key]) {
-      return key;
-    }
-    if (ICON_ALIASES.has(key)) {
-      return ICON_ALIASES.get(key);
-    }
-    const text = `${key} ${name || ""}`.toLowerCase();
-    if (text.includes("\u043C\u0435\u0434\u0438\u0430") || text.includes("media") || text.includes("photo")) {
-      return "media";
-    }
-    if (text.includes("sync") || text.includes("syncthing") || text.includes("rotate")) {
-      return "sync";
-    }
-    if (text.includes("\u0441\u0435\u0442\u044C") || text.includes("ethernet") || text.includes("router")) {
-      return "ethernet";
-    }
-    if (text.includes("\u0434\u043E\u043C") || text.includes("home")) {
-      return "home";
-    }
-    return "network";
   }
 
   // src/homer.js
@@ -1609,6 +1527,106 @@
         layout.append(node);
       }
     }
+    updateWidgetLayoutState(app2);
+  }
+  function updateWidgetLayoutState(app2) {
+    const layout = app2.refs.servicesLayout;
+    if (!layout) {
+      return;
+    }
+    let hasFirstVisible = false;
+    for (const node of layout.children) {
+      node.classList.remove("first-visible-widget");
+      if (hasFirstVisible || node.classList.contains("hidden")) {
+        continue;
+      }
+      node.classList.add("first-visible-widget");
+      hasFirstVisible = true;
+    }
+  }
+
+  // src/render/github-trending-widget.js
+  function renderGitHubTrending(app2) {
+    const { refs } = app2;
+    if (!refs.githubTrending) {
+      return;
+    }
+    if (app2.localPatch?.githubTrending?.disabled) {
+      refs.githubTrending.classList.add("hidden");
+      updateWidgetLayoutState(app2);
+      return;
+    }
+    const status = app2.githubTrendingStatus;
+    const summary = getGitHubTrendingSummary(app2.githubTrendingCache);
+    const hasItems = summary.items.length > 0;
+    refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
+    updateWidgetLayoutState(app2);
+    refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
+    refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
+    refs.githubTrendingList.replaceChildren();
+    if (!hasItems) {
+      const empty = document.createElement("p");
+      empty.className = "github-trending-message";
+      empty.textContent = status?.message || t("githubTrendingUnavailable");
+      refs.githubTrendingList.append(empty);
+      refs.githubTrendingMeta.textContent = t("githubTrendingSource");
+      return;
+    }
+    for (const item of summary.items) {
+      refs.githubTrendingList.append(createGitHubTrendingRow(app2, item));
+    }
+    if (status?.kind === "error") {
+      refs.githubTrendingMeta.textContent = t("githubTrendingStale", summary.updatedAt);
+      refs.githubTrendingMeta.title = [status.message, summary.updatedAtTitle].filter(Boolean).join(" \xB7 ");
+      return;
+    }
+    refs.githubTrendingMeta.textContent = summary.updatedAt ? t("githubTrendingUpdated", summary.updatedAt) : t("githubTrendingSource");
+    refs.githubTrendingMeta.title = summary.updatedAtTitle;
+  }
+  function createGitHubTrendingRow(app2, item) {
+    const anchor = document.createElement("a");
+    anchor.className = "github-trending-row";
+    anchor.href = item.url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.title = item.description || item.fullName;
+    anchor.addEventListener("click", () => {
+      void app2.addVisitHistoryItem({
+        title: item.fullName,
+        url: item.url,
+        source: "github"
+      });
+    });
+    const avatar = document.createElement("span");
+    avatar.className = "github-trending-avatar";
+    if (item.ownerAvatarUrl) {
+      const image = document.createElement("img");
+      image.src = item.ownerAvatarUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      image.addEventListener("error", () => {
+        image.remove();
+        avatar.textContent = makeInitial(item.name);
+      });
+      avatar.append(image);
+    } else {
+      avatar.textContent = makeInitial(item.name);
+    }
+    const body = document.createElement("span");
+    body.className = "github-trending-body";
+    const title = document.createElement("span");
+    title.className = "github-trending-name";
+    title.textContent = item.fullName;
+    const description = document.createElement("span");
+    description.className = "github-trending-description";
+    description.textContent = item.description || t("githubTrendingNoDescription");
+    const meta = document.createElement("span");
+    meta.className = "github-trending-repo-meta";
+    const stars = formatStars(item.stars);
+    meta.textContent = [stars ? `\u2605 ${stars}` : "", item.language, formatRepositoryAge(item)].filter(Boolean).join(" \xB7 ");
+    body.append(title, description, meta);
+    anchor.append(avatar, body);
+    return anchor;
   }
 
   // src/news.js
@@ -2191,6 +2209,7 @@
         createRow: (item) => createNewsRow(app2, item, source)
       });
     }
+    updateWidgetLayoutState(app2);
   }
   function getOrCreateNewsSection(app2, source) {
     const { refs } = app2;
@@ -2716,15 +2735,19 @@
 
   // src/render/services.js
   function renderServices(app2, services, emptyMessage = "") {
-    app2.refs.servicesGrid.replaceChildren();
+    const grid = app2.refs.servicesGrid;
+    grid.replaceChildren();
+    grid.classList.toggle("hidden", !services.length && !emptyMessage);
     if (!services.length) {
       if (!emptyMessage) {
+        updateWidgetLayoutState(app2);
         return;
       }
       const empty = document.createElement("p");
       empty.className = "empty-message";
       empty.textContent = emptyMessage;
-      app2.refs.servicesGrid.append(empty);
+      grid.append(empty);
+      updateWidgetLayoutState(app2);
       return;
     }
     for (const group of services) {
@@ -2740,8 +2763,9 @@
         card.append(createServiceRow(app2, item, group));
       }
       article.append(heading, card);
-      app2.refs.servicesGrid.append(article);
+      grid.append(article);
     }
+    updateWidgetLayoutState(app2);
   }
   function createSectionIcon(group) {
     const span = document.createElement("span");
@@ -3539,6 +3563,7 @@
       disabled: app2.localPatch?.weather?.topDisabled === true,
       splitUpdated: true
     });
+    updateWidgetLayoutState(app2);
   }
   function renderWeatherBlock(app2, refs) {
     if (!refs.widget) {

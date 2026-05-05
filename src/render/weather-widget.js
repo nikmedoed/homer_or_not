@@ -1,4 +1,5 @@
 import { t } from "../i18n.js";
+import { updateWidgetLayoutState } from "../layout.js";
 import { getWeatherSummary } from "../weather.js";
 
 export function renderWeatherWidget(app) {
@@ -36,6 +37,7 @@ export function renderWeatherWidget(app) {
     disabled: app.localPatch?.weather?.topDisabled === true,
     splitUpdated: true,
   });
+  updateWidgetLayoutState(app);
 }
 
 function renderWeatherBlock(app, refs) {

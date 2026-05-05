@@ -18,6 +18,10 @@
   margin-top: 42px;
 }
 
+.services-layout > .first-visible-widget {
+  margin-top: 0;
+}
+
 .services-layout > .news-widget:first-child,
 .services-layout > .github-trending:first-child,
 .services-layout > .weather-widget:first-child,

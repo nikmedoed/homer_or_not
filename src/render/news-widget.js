@@ -1,6 +1,7 @@
 import { formatNewsMeta, formatNewsTime, getNewsFeedSummary, getVisibleNewsSources } from "../news.js";
 import { getNewsWidgetId } from "../state.js";
 import { t } from "../i18n.js";
+import { updateWidgetLayoutState } from "../layout.js";
 import { renderFeedWidget } from "./feed-widget.js";
 
 export function renderNewsFeedWidgets(app) {
@@ -38,6 +39,7 @@ export function renderNewsFeedWidgets(app) {
       createRow: (item) => createNewsRow(app, item, source),
     });
   }
+  updateWidgetLayoutState(app);
 }
 
 function getOrCreateNewsSection(app, source) {

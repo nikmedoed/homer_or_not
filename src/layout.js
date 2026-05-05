@@ -23,4 +23,22 @@ export function applyWidgetLayout(app) {
       layout.append(node);
     }
   }
+  updateWidgetLayoutState(app);
+}
+
+export function updateWidgetLayoutState(app) {
+  const layout = app.refs.servicesLayout;
+  if (!layout) {
+    return;
+  }
+
+  let hasFirstVisible = false;
+  for (const node of layout.children) {
+    node.classList.remove("first-visible-widget");
+    if (hasFirstVisible || node.classList.contains("hidden")) {
+      continue;
+    }
+    node.classList.add("first-visible-widget");
+    hasFirstVisible = true;
+  }
 }

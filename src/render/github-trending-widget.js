@@ -1,5 +1,6 @@
 import { formatRepositoryAge, formatStars, getGitHubTrendingSummary } from "../github-trending.js";
 import { t } from "../i18n.js";
+import { updateWidgetLayoutState } from "../layout.js";
 import { makeInitial } from "../utils.js";
 
 export function renderGitHubTrending(app) {
@@ -9,6 +10,7 @@ export function renderGitHubTrending(app) {
   }
   if (app.localPatch?.githubTrending?.disabled) {
     refs.githubTrending.classList.add("hidden");
+    updateWidgetLayoutState(app);
     return;
   }
 
@@ -16,6 +18,7 @@ export function renderGitHubTrending(app) {
   const summary = getGitHubTrendingSummary(app.githubTrendingCache);
   const hasItems = summary.items.length > 0;
   refs.githubTrending.classList.toggle("hidden", !hasItems && !status);
+  updateWidgetLayoutState(app);
   refs.githubTrending.dataset.state = status?.kind || (hasItems ? "ready" : "empty");
   refs.githubTrendingRefreshButton.disabled = status?.kind === "loading";
   refs.githubTrendingList.replaceChildren();
