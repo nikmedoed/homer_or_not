@@ -14,7 +14,8 @@
   var SYNC_AREA = "sync";
   var LOCAL_AREA = "local";
   var QUICK_LINK_META_TTL_MS = 1e3 * 60 * 60 * 24 * 7;
-  var VISIT_HISTORY_LIMIT = 50;
+  var VISIT_HISTORY_LIMIT = 90;
+  var FREQUENT_VISIT_LIMIT = 90;
   var HOMER_SYNC_INTERVAL_MINUTES = 5;
   var HOMER_FETCH_TIMEOUT_MS = 7e3;
   var LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;
@@ -1486,10 +1487,11 @@
     }
     return out;
   }
-  function normalizeVisitHistory(raw) {
+  function normalizeVisitHistory(raw, limit = VISIT_HISTORY_LIMIT) {
     if (!Array.isArray(raw)) {
       return [];
     }
+    const maxItems = clampInt(limit, 1, 500, VISIT_HISTORY_LIMIT);
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     for (const item of raw) {
@@ -1500,7 +1502,7 @@
       }
       seen.add(key);
       out.push(normalized);
-      if (out.length >= VISIT_HISTORY_LIMIT) {
+      if (out.length >= maxItems) {
         break;
       }
     }
@@ -1541,10 +1543,18 @@
     for (const id of normalizeWidgetOrder(app2.localPatch?.widgets?.order, app2.state)) {
       const node = nodes[id];
       if (node) {
-        layout.append(node);
+        insertCentralWidget(layout, node);
       }
     }
     updateWidgetLayoutState(app2);
+  }
+  function insertCentralWidget(layout, node) {
+    const sideColumnAnchor = layout.querySelector(".visit-panel");
+    if (sideColumnAnchor) {
+      layout.insertBefore(node, sideColumnAnchor);
+      return;
+    }
+    layout.append(node);
   }
   function updateWidgetLayoutState(app2) {
     const layout = app2.refs.servicesLayout;
@@ -2318,7 +2328,7 @@
     header.append(heading, meta, refresh);
     section.append(header, list);
     refs.newsWidgetNodes[source.id] = section;
-    refs.servicesLayout.append(section);
+    insertCentralWidget(refs.servicesLayout, section);
     return section;
   }
   function createNewsRow(app2, item, source) {
@@ -3164,7 +3174,7 @@
             }
             return (b.lastVisitTime || 0) - (a.lastVisitTime || 0);
           });
-          resolve(filterFrequentVisits(app2, normalizeVisitHistory(frequent)).slice(0, VISIT_HISTORY_LIMIT));
+          resolve(filterFrequentVisits(app2, normalizeVisitHistory(frequent, FREQUENT_VISIT_LIMIT)).slice(0, FREQUENT_VISIT_LIMIT));
         }
       );
     });
@@ -3181,12 +3191,6 @@
   }
   function getFrequentVisitExcludedKeys(app2) {
     const keys = /* @__PURE__ */ new Set();
-    for (const link of getVisibleQuickLinks(app2)) {
-      const key = normalizeUrlKey(link.url);
-      if (key) {
-        keys.add(key);
-      }
-    }
     const homerKey = normalizeUrlKey(app2.state?.homer?.url);
     if (homerKey) {
       keys.add(homerKey);
@@ -4740,7 +4744,7 @@ ${result.error}`);
     app.githubTrendingCache = normalizeGitHubTrendingCache(localCache[GITHUB_TRENDING_CACHE_KEY]);
     app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
     app.visitHistory = app.localPatch?.visits?.showRecent !== false ? normalizeVisitHistory(localCache[HISTORY_KEY]) : [];
-    app.frequentVisits = app.localPatch?.visits?.showFrequent !== false ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY]) : [];
+    app.frequentVisits = app.localPatch?.visits?.showFrequent !== false ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY], FREQUENT_VISIT_LIMIT) : [];
     applyTheme(app);
     renderViewMode(app);
     renderAll(app);

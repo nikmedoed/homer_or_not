@@ -20,10 +20,19 @@ export function applyWidgetLayout(app) {
   for (const id of normalizeWidgetOrder(app.localPatch?.widgets?.order, app.state)) {
     const node = nodes[id];
     if (node) {
-      layout.append(node);
+      insertCentralWidget(layout, node);
     }
   }
   updateWidgetLayoutState(app);
+}
+
+export function insertCentralWidget(layout, node) {
+  const sideColumnAnchor = layout.querySelector(".visit-panel");
+  if (sideColumnAnchor) {
+    layout.insertBefore(node, sideColumnAnchor);
+    return;
+  }
+  layout.append(node);
 }
 
 export function updateWidgetLayoutState(app) {

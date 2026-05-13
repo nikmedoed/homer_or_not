@@ -472,10 +472,11 @@ export function normalizeSearchEngineMeta(raw) {
   return out;
 }
 
-export function normalizeVisitHistory(raw) {
+export function normalizeVisitHistory(raw, limit = VISIT_HISTORY_LIMIT) {
   if (!Array.isArray(raw)) {
     return [];
   }
+  const maxItems = clampInt(limit, 1, 500, VISIT_HISTORY_LIMIT);
   const seen = new Set();
   const out = [];
   for (const item of raw) {
@@ -486,7 +487,7 @@ export function normalizeVisitHistory(raw) {
     }
     seen.add(key);
     out.push(normalized);
-    if (out.length >= VISIT_HISTORY_LIMIT) {
+    if (out.length >= maxItems) {
       break;
     }
   }

@@ -14,7 +14,8 @@ export const SYNC_AREA = "sync";
 export const LOCAL_AREA = "local";
 
 export const QUICK_LINK_META_TTL_MS = 1000 * 60 * 60 * 24 * 7;
-export const VISIT_HISTORY_LIMIT = 50;
+export const VISIT_HISTORY_LIMIT = 90;
+export const FREQUENT_VISIT_LIMIT = 90;
 export const HOMER_SYNC_INTERVAL_MINUTES = 5;
 export const HOMER_FETCH_TIMEOUT_MS = 7000;
 export const LOCAL_IP_DETECTION_TIMEOUT_MS = 1200;

@@ -2,7 +2,7 @@ import { LOCAL_AREA, NEWS_FEED_CACHE_KEY } from "../constants.js";
 import { formatNewsMeta, formatNewsTime, getNewsFeedSummary, getNewsRenderKey, getVisibleNewsSources } from "../news.js";
 import { getNewsWidgetId } from "../state.js";
 import { t } from "../i18n.js";
-import { updateWidgetLayoutState } from "../layout.js";
+import { insertCentralWidget, updateWidgetLayoutState } from "../layout.js";
 import { storageSet } from "../utils.js";
 import { renderFeedWidget } from "./feed-widget.js";
 
@@ -118,7 +118,7 @@ function getOrCreateNewsSection(app, source) {
   header.append(heading, meta, refresh);
   section.append(header, list);
   refs.newsWidgetNodes[source.id] = section;
-  refs.servicesLayout.append(section);
+  insertCentralWidget(refs.servicesLayout, section);
   return section;
 }
 

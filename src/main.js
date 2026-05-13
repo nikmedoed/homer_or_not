@@ -1,6 +1,7 @@
 import {
   CACHE_KEY,
   FREQUENT_HISTORY_KEY,
+  FREQUENT_VISIT_LIMIT,
   GITHUB_TRENDING_CACHE_KEY,
   HISTORY_KEY,
   LOCAL_AREA,
@@ -136,7 +137,9 @@ async function init() {
   app.newsFeedCache = normalizeNewsFeedCache(localCache[NEWS_FEED_CACHE_KEY]);
   app.visitHistory = app.localPatch?.visits?.showRecent !== false ? normalizeVisitHistory(localCache[HISTORY_KEY]) : [];
   app.frequentVisits =
-    app.localPatch?.visits?.showFrequent !== false ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY]) : [];
+    app.localPatch?.visits?.showFrequent !== false
+      ? normalizeVisitHistory(localCache[FREQUENT_HISTORY_KEY], FREQUENT_VISIT_LIMIT)
+      : [];
   applyTheme(app);
   renderViewMode(app);
   renderAll(app);
