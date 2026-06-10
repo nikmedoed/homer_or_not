@@ -122,6 +122,7 @@ const I18N = {
     quickAddLinkTooltip: "Добавить в быстрые ссылки",
     quickAddLinkAria: (title) => `Добавить «${title}» в быстрые ссылки`,
     quickLinkAlreadyAdded: "Уже есть в быстрых ссылках",
+    authorCredit: "Сделал Никита Муромцев",
   },
   en: {
     topActions: "Controls",
@@ -244,6 +245,7 @@ const I18N = {
     quickAddLinkTooltip: "Add to quick links",
     quickAddLinkAria: (title) => `Add ${title} to quick links`,
     quickLinkAlreadyAdded: "Already in quick links",
+    authorCredit: "Made by Nikita Muromtsev",
   },
 };
 

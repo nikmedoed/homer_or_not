@@ -147,7 +147,8 @@
       visitCount: (count) => `${count} \u043F\u043E\u0441\u0435\u0449.`,
       quickAddLinkTooltip: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u0441\u044B\u043B\u043A\u0438",
       quickAddLinkAria: (title) => `\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \xAB${title}\xBB \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u0441\u044B\u043B\u043A\u0438`,
-      quickLinkAlreadyAdded: "\u0423\u0436\u0435 \u0435\u0441\u0442\u044C \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0445 \u0441\u0441\u044B\u043B\u043A\u0430\u0445"
+      quickLinkAlreadyAdded: "\u0423\u0436\u0435 \u0435\u0441\u0442\u044C \u0432 \u0431\u044B\u0441\u0442\u0440\u044B\u0445 \u0441\u0441\u044B\u043B\u043A\u0430\u0445",
+      authorCredit: "\u0421\u0434\u0435\u043B\u0430\u043B \u041D\u0438\u043A\u0438\u0442\u0430 \u041C\u0443\u0440\u043E\u043C\u0446\u0435\u0432"
     },
     en: {
       topActions: "Controls",
@@ -269,7 +270,8 @@
       visitCount: (count) => `${count} visits`,
       quickAddLinkTooltip: "Add to quick links",
       quickAddLinkAria: (title) => `Add ${title} to quick links`,
-      quickLinkAlreadyAdded: "Already in quick links"
+      quickLinkAlreadyAdded: "Already in quick links",
+      authorCredit: "Made by Nikita Muromtsev"
     }
   };
   function getPreferredLocale() {
