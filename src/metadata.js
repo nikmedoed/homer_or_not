@@ -3,7 +3,6 @@ import { getVisibleQuickLinks, getVisibleSearchEngines } from "./state.js";
 import { blobToDataUrl, fetchWithTimeout, isHttpUrl, normalizeUrlKey, storageSet, toDomain, truncateTitle } from "./utils.js";
 
 const FAVICON_SIZE = 128;
-const MIN_FRESH_ICON_SIZE = 96;
 const MAX_ICON_BYTES = 512 * 1024;
 
 export function getQuickLinkMeta(app, url) {
@@ -114,11 +113,21 @@ export async function refreshSearchEngineMetadata(app, { force }) {
 
 async function fetchQuickLinkMetadata(url) {
   const pageUrl = url;
+  const directCandidates = [
+    createIconCandidate(getChromeFaviconUrl(pageUrl, FAVICON_SIZE), 2, FAVICON_SIZE),
+    createIconCandidate(getDefaultFaviconUrl(pageUrl), 1, 16),
+  ].filter(Boolean);
+
+  for (const candidate of directCandidates) {
+    const icon = await fetchIconDataUrl(candidate.url, candidate.size);
+    if (icon.iconDataUrl) {
+      return { title: "", ...icon };
+    }
+  }
+
   const pageMeta = await fetchPageMetadata(pageUrl);
   const candidates = [
     ...pageMeta.iconCandidates,
-    createIconCandidate(getChromeFaviconUrl(pageUrl, FAVICON_SIZE), 1, FAVICON_SIZE),
-    createIconCandidate(getDefaultFaviconUrl(pageUrl), 0, 16),
   ]
     .filter(Boolean)
     .sort(compareIconCandidates);
@@ -141,12 +150,7 @@ async function fetchQuickLinkMetadata(url) {
 }
 
 function isFreshIconMeta(meta) {
-  return Boolean(
-    meta?.fetchedAt &&
-      Date.now() - meta.fetchedAt < QUICK_LINK_META_TTL_MS &&
-      meta.iconDataUrl &&
-      meta.iconSize >= MIN_FRESH_ICON_SIZE,
-  );
+  return Boolean(meta?.fetchedAt && Date.now() - meta.fetchedAt < QUICK_LINK_META_TTL_MS);
 }
 
 async function fetchPageMetadata(pageUrl) {
@@ -161,28 +165,28 @@ async function fetchPageMetadata(pageUrl) {
     }
 
     const html = await response.text();
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const title = normalizeTitle(doc.querySelector("title")?.textContent);
-    const candidates = collectHtmlIconCandidates(doc, pageUrl);
-    const manifestCandidates = await collectManifestIconCandidates(doc, pageUrl);
+    const links = collectLinkMetadata(html);
+    const title = normalizeTitle(decodeHtmlEntities(html.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1]));
+    const candidates = collectHtmlIconCandidates(links, pageUrl);
+    const manifestCandidates = await collectManifestIconCandidates(links, pageUrl);
     return { title, iconCandidates: [...manifestCandidates, ...candidates] };
   } catch {
     return { title: "", iconCandidates: [] };
   }
 }
 
-function collectHtmlIconCandidates(doc, pageUrl) {
+function collectHtmlIconCandidates(links, pageUrl) {
   const candidates = [];
-  doc.querySelectorAll("link[rel][href]").forEach((link) => {
-    const rel = String(link.getAttribute("rel") || "").toLowerCase();
+  links.forEach((link) => {
+    const rel = String(link.rel || "").toLowerCase();
     if (!/\b(icon|apple-touch-icon|mask-icon)\b/.test(rel)) {
       return;
     }
-    const href = resolveUrl(link.getAttribute("href"), pageUrl);
+    const href = resolveUrl(link.href, pageUrl);
     if (!href) {
       return;
     }
-    const size = parseSizes(link.getAttribute("sizes"));
+    const size = parseSizes(link.sizes);
     let weight = 2;
     if (rel.includes("apple-touch-icon")) {
       weight = 5;
@@ -196,8 +200,9 @@ function collectHtmlIconCandidates(doc, pageUrl) {
   return candidates.filter(Boolean);
 }
 
-async function collectManifestIconCandidates(doc, pageUrl) {
-  const manifestUrl = resolveUrl(doc.querySelector('link[rel~="manifest"][href]')?.getAttribute("href"), pageUrl);
+async function collectManifestIconCandidates(links, pageUrl) {
+  const manifestLink = links.find((link) => String(link.rel || "").toLowerCase().split(/\s+/).includes("manifest"));
+  const manifestUrl = resolveUrl(manifestLink?.href, pageUrl);
   if (!manifestUrl) {
     return [];
   }
@@ -226,6 +231,27 @@ async function collectManifestIconCandidates(doc, pageUrl) {
   } catch {
     return [];
   }
+}
+
+function collectLinkMetadata(html) {
+  const links = [];
+  for (const match of String(html || "").matchAll(/<link\b([^>]*)>/gi)) {
+    const attributes = {};
+    for (const attribute of match[1].matchAll(/([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+      attributes[attribute[1].toLowerCase()] = decodeHtmlEntities(attribute[2] ?? attribute[3] ?? attribute[4] ?? "");
+    }
+    if (attributes.rel && attributes.href) {
+      links.push(attributes);
+    }
+  }
+  return links;
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&#(\d+);?/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
+    .replace(/&#x([\da-f]+);?/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&(amp|quot|apos|lt|gt);/gi, (_, name) => ({ amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" })[name.toLowerCase()]);
 }
 
 async function fetchIconDataUrl(iconUrl, expectedSize = 0) {

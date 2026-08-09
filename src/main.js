@@ -490,8 +490,8 @@ async function saveSettings() {
   await Promise.all([persistState(), persistLocalPatch()]);
   closeSettings(app);
   renderAll(app);
-  void refreshSearchEngineMetadata(app, { force: true });
-  void refreshQuickLinkMetadata(app, { force: true });
+  void refreshSearchEngineMetadata(app, { force: false });
+  void refreshQuickLinkMetadata(app, { force: false });
   void syncWeather(app, { force: true });
   void syncNewsFeeds(app, { force: false });
   void syncGitHubTrending(app, { force: false });
